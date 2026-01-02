@@ -2,6 +2,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import '../../../../core/widgets/premium_app_bar.dart';
 import '../../domain/entities/app_usage_point.dart';
 import '../../domain/entities/device_app.dart';
@@ -132,13 +133,24 @@ class AppDetailsPage extends ConsumerWidget {
             borderRadius: BorderRadius.circular(20),
             border: Border.all(color: stackColor.withOpacity(0.3)),
           ),
-          child: Text(
-            app.stack,
-            style: TextStyle(
-              color: stackColor,
-              fontWeight: FontWeight.w600,
-              fontSize: 14,
-            ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SvgPicture.asset(
+                _getStackIconPath(app.stack),
+                width: 20,
+                height: 20,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                app.stack,
+                style: TextStyle(
+                  color: stackColor,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
+                ),
+              ),
+            ],
           ),
         ),
       ],
@@ -527,5 +539,26 @@ class AppDetailsPage extends ConsumerWidget {
         letterSpacing: -0.5,
       ),
     );
+  }
+
+  String _getStackIconPath(String stack) {
+    switch (stack.toLowerCase()) {
+      case 'flutter':
+        return 'assets/vectors/icon_flutter.svg';
+      case 'react native':
+        return 'assets/vectors/icon_reactnative.svg';
+      case 'kotlin':
+        return 'assets/vectors/icon_kotlin.svg';
+      case 'java':
+        return 'assets/vectors/icon_java.svg';
+      case 'swift':
+        return 'assets/vectors/icon_swift.svg';
+      case 'ionic':
+        return 'assets/vectors/icon_ionic.svg';
+      case 'xamarin':
+        return 'assets/vectors/icon_xamarin.svg';
+      default:
+        return 'assets/vectors/icon_android.svg';
+    }
   }
 }

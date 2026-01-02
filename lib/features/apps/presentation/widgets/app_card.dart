@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../domain/entities/device_app.dart';
 import '../pages/app_details_page.dart';
-import 'package:intl/intl.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 class AppCard extends StatelessWidget {
   final DeviceApp app;
@@ -17,6 +17,27 @@ class AppCard extends StatelessWidget {
     return Colors.grey;
   }
 
+  String _getStackIconPath(String stack) {
+    switch (stack.toLowerCase()) {
+      case 'flutter':
+        return 'assets/vectors/icon_flutter.svg';
+      case 'react native':
+        return 'assets/vectors/icon_reactnative.svg';
+      case 'kotlin':
+        return 'assets/vectors/icon_kotlin.svg';
+      case 'java':
+        return 'assets/vectors/icon_java.svg';
+      case 'swift':
+        return 'assets/vectors/icon_swift.svg';
+      case 'ionic':
+        return 'assets/vectors/icon_ionic.svg';
+      case 'xamarin':
+        return 'assets/vectors/icon_xamarin.svg';
+      default:
+        return 'assets/vectors/icon_android.svg';
+    }
+  }
+
   String _formatDuration(Duration duration) {
     if (duration.inMinutes < 60) {
       return "${duration.inMinutes}m";
@@ -30,7 +51,6 @@ class AppCard extends StatelessWidget {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final stackColor = _getStackColor(app.stack, isDark);
-    final dateFormat = DateFormat('MMM d, y');
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -101,22 +121,33 @@ class AppCard extends StatelessWidget {
                             Container(
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 10,
-                                vertical: 4,
+                                vertical: 6,
                               ),
                               decoration: BoxDecoration(
-                                color: stackColor.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(20),
+                                color: stackColor.withOpacity(0.08),
+                                borderRadius: BorderRadius.circular(12),
                                 border: Border.all(
-                                  color: stackColor.withOpacity(0.3),
+                                  color: stackColor.withOpacity(0.2),
                                 ),
                               ),
-                              child: Text(
-                                app.stack,
-                                style: TextStyle(
-                                  color: stackColor,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  SvgPicture.asset(
+                                    _getStackIconPath(app.stack),
+                                    width: 14,
+                                    height: 14,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    app.stack,
+                                    style: TextStyle(
+                                      color: stackColor,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                             if (app.totalTimeInForeground > 0) ...[
@@ -142,6 +173,32 @@ class AppCard extends StatelessWidget {
                     ),
                   ),
                 ],
+              ),
+              const SizedBox(width: 8),
+              Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.surface,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: theme.colorScheme.outline.withOpacity(0.1),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Center(
+                  child: Icon(
+                    Icons.chevron_right_rounded,
+                    size: 20,
+                    color: theme.colorScheme.onSurface.withOpacity(0.6),
+                  ),
+                ),
               ),
               // The content that was previously in ExpansionTile's children
               // This part will now always be visible or can be moved to AppDetailsPage
