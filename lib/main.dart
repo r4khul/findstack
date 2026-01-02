@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/theme/app_theme.dart';
 import 'features/home/presentation/pages/home_page.dart';
 
 void main() {
-  runApp(const FindStackApp());
+  runApp(const ProviderScope(child: FindStackApp()));
 }
 
 class FindStackApp extends StatelessWidget {
