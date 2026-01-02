@@ -125,7 +125,7 @@ class HomePage extends ConsumerWidget {
                           loading: () => const SizedBox.shrink(),
                         ),
                         Text(
-                          "Your Digital Life",
+                          "Your Device has",
                           style: theme.textTheme.labelLarge?.copyWith(
                             color: theme.colorScheme.primary.withOpacity(0.6),
                           ),

@@ -138,8 +138,7 @@ class MainActivity : FlutterActivity() {
             
             if (pm.getLaunchIntentForPackage(pkg.packageName) != null) {
                 
-                val sourceDir = appInfo.sourceDir
-                val (stack, libs) = detectStackAndLibs(sourceDir)
+                val (stack, libs) = detectStackAndLibs(appInfo)
                 
                 val isSystem = (appInfo.flags and ApplicationInfo.FLAG_SYSTEM) != 0
                 val usage = usageMap[pkg.packageName]
@@ -282,54 +281,93 @@ class MainActivity : FlutterActivity() {
         return result.reversed() // Oldest to newest
     }
 
-    private fun detectStackAndLibs(apkPath: String): Pair<String, List<String>> {
+    private fun detectStackAndLibs(appInfo: ApplicationInfo): Pair<String, List<String>> {
+        val apkPaths = mutableListOf<String>()
+        apkPaths.add(appInfo.sourceDir)
+        
+        appInfo.splitSourceDirs?.let { splits ->
+            apkPaths.addAll(splits)
+        }
+
         val libs = mutableListOf<String>()
         var stack = "Native" 
         var isKotlin = false
-        
-        try {
-            val file = File(apkPath)
-            if (!file.exists() || !file.canRead()) return Pair("Unknown", emptyList())
+        var hasFlutterAssets = false
+        var hasReactNativeBundle = false
+        var hasXamarin = false
+        var hasIonic = false
+        var hasUnity = false
+        var hasGodot = false
 
-            ZipFile(file).use { zip ->
-                val entries = zip.entries()
-                while (entries.hasMoreElements()) {
-                    val entry = entries.nextElement()
-                    val name = entry.name
-                    
-                    if (name.endsWith(".kotlin_module") || name.startsWith("kotlin/")) {
-                        isKotlin = true
-                    }
-                    
-                    if (name.startsWith("lib/") && name.endsWith(".so")) {
-                        val parts = name.split("/")
-                        if (parts.isNotEmpty()) {
-                            val fileName = parts.last()
-                            if (fileName.startsWith("lib") && fileName.endsWith(".so")) {
-                                val libName = fileName.substring(3, fileName.length - 3)
-                                if (!libs.contains(libName)) libs.add(libName)
+        for (apkPath in apkPaths) {
+            try {
+                val file = File(apkPath)
+                if (!file.exists() || !file.canRead()) continue
+
+                ZipFile(file).use { zip ->
+                    val entries = zip.entries()
+                    while (entries.hasMoreElements()) {
+                        val entry = entries.nextElement()
+                        val name = entry.name
+                        
+                        // Kotlin check
+                        if (name.endsWith(".kotlin_module") || name.startsWith("kotlin/")) {
+                            isKotlin = true
+                        }
+                        
+                        // Native Libraries check
+                        if (name.startsWith("lib/") && name.endsWith(".so")) {
+                            val parts = name.split("/")
+                            if (parts.isNotEmpty()) {
+                                val fileName = parts.last()
+                                if (fileName.startsWith("lib") && fileName.endsWith(".so")) {
+                                    val libName = fileName.substring(3, fileName.length - 3)
+                                    if (!libs.contains(libName)) libs.add(libName)
+                                }
                             }
                         }
-                    }
 
-                    if (stack == "Native") {
-                        if (name.contains("flutter_assets")) stack = "Flutter"
-                        else if (name.contains("index.android.bundle")) stack = "React Native"
-                        else if (name.contains("libmonodroid.so")) stack = "Xamarin"
-                        else if (name.contains("cordova.js")) stack = "Cordova"
-                        else if (name.contains("www/index.html")) stack = "Ionic" 
-                        else if (name.contains("libgodot_android.so")) stack = "Godot"
-                        else if (name.contains("libunity.so")) stack = "Unity"
+                        // Framework specific asset checks
+                        // Flutter: check for flutter_assets or libapp.so/app.so (Flutter AOT)
+                        if (name.contains("flutter_assets") || name.endsWith("libapp.so") || name.endsWith("app.so")) hasFlutterAssets = true
+                        
+                        // React Native: bundle
+                        else if (name.contains("index.android.bundle")) hasReactNativeBundle = true
+                        
+                        // Xamarin
+                        else if (name.contains("libmonodroid.so")) hasXamarin = true
+                        
+                        // Ionic/Cordova
+                        else if (name.contains("www/index.html")) hasIonic = true
+                        
+                        // Game Engines
+                        else if (name.contains("libgodot_android.so")) hasGodot = true
+                        else if (name.contains("libunity.so")) hasUnity = true
                     }
                 }
-            }
-        } catch (e: Exception) { }
+            } catch (e: Exception) { }
+        }
 
-        if (libs.contains("flutter")) stack = "Flutter"
-        if (libs.contains("reactnativejni") || libs.contains("hermes")) stack = "React Native"
-        if (libs.contains("unity")) stack = "Unity"
-        
-        if (stack == "Native") {
+        // Heuristics with Priority
+
+        // 1. Heavy Frameworks (Rule out first)
+        // Check libs AND flags. Sometimes libflutter.so is renamed or split.
+        if (libs.contains("flutter") || hasFlutterAssets) {
+             stack = "Flutter"
+        } else if (libs.contains("reactnativejni") || libs.contains("hermes") || hasReactNativeBundle) {
+             stack = "React Native"
+        } else if (libs.contains("unity") || hasUnity) {
+             stack = "Unity"
+        } else if (libs.contains("godot_android") || hasGodot) {
+             stack = "Godot"
+        } else if (hasXamarin) {
+             stack = "Xamarin"
+        } else if (hasIonic) {
+             stack = "Ionic"
+        } else {
+            // 2. Native Fallback
+            // If no heavy framework detected, assume Native.
+            // Differentiate Java vs Kotlin based on .kotlin_module presence
             stack = if (isKotlin) "Kotlin" else "Java"
         }
         
