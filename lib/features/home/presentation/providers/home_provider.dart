@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 import '../../data/device_apps_repository.dart';
 import '../../domain/device_app.dart';
 import '../../domain/scan_progress.dart';
@@ -18,4 +19,26 @@ final scanProgressProvider = StreamProvider<ScanProgress>((ref) {
 final usagePermissionProvider = FutureProvider<bool>((ref) async {
   final repository = ref.watch(deviceAppsRepositoryProvider);
   return await repository.checkUsagePermission();
+});
+
+final categoryFilterProvider = StateProvider<AppCategory?>((ref) => null);
+final searchFilterProvider = StateProvider<String>((ref) => '');
+
+final filteredAppsProvider = Provider<List<DeviceApp>>((ref) {
+  final appsAsync = ref.watch(installedAppsProvider);
+  final query = ref.watch(searchFilterProvider).toLowerCase();
+  final category = ref.watch(categoryFilterProvider);
+
+  return appsAsync.maybeWhen(
+    data: (apps) {
+      return apps.where((app) {
+        final matchesQuery =
+            app.appName.toLowerCase().contains(query) ||
+            app.packageName.toLowerCase().contains(query);
+        final matchesCategory = category == null || app.category == category;
+        return matchesQuery && matchesCategory;
+      }).toList();
+    },
+    orElse: () => [],
+  );
 });

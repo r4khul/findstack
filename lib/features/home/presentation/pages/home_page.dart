@@ -5,6 +5,7 @@ import '../providers/home_provider.dart';
 import '../widgets/app_card.dart';
 import '../widgets/scan_progress_widget.dart';
 import '../pages/search_page.dart';
+import '../../domain/device_app.dart';
 
 class HomePage extends ConsumerWidget {
   const HomePage({super.key});
@@ -29,6 +30,11 @@ class HomePage extends ConsumerWidget {
       ),
       body: appsAsync.when(
         data: (apps) {
+          final category = ref.watch(categoryFilterProvider);
+          final filteredApps = apps.where((app) {
+            return category == null || app.category == category;
+          }).toList();
+
           return CustomScrollView(
             physics: const BouncingScrollPhysics(),
             slivers: [
@@ -180,14 +186,44 @@ class HomePage extends ConsumerWidget {
                           ),
                         ),
                       ),
+                      const SizedBox(height: 16),
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        physics: const BouncingScrollPhysics(),
+                        child: Row(
+                          children: [
+                            _buildCategoryChip(
+                              context,
+                              ref,
+                              label: "All Apps",
+                              category: null,
+                              isSelected:
+                                  ref.watch(categoryFilterProvider) == null,
+                            ),
+                            ...AppCategory.values
+                                .where((c) => c != AppCategory.unknown)
+                                .map((cat) {
+                                  return _buildCategoryChip(
+                                    context,
+                                    ref,
+                                    label: cat.name.toUpperCase(),
+                                    category: cat,
+                                    isSelected:
+                                        ref.watch(categoryFilterProvider) ==
+                                        cat,
+                                  );
+                                }),
+                          ],
+                        ),
+                      ),
                     ],
                   ),
                 ),
               ),
               SliverList(
                 delegate: SliverChildBuilderDelegate(
-                  (context, index) => AppCard(app: apps[index]),
-                  childCount: apps.length,
+                  (context, index) => AppCard(app: filteredApps[index]),
+                  childCount: filteredApps.length,
                 ),
               ),
               const SliverToBoxAdapter(child: SizedBox(height: 32)),
@@ -216,6 +252,45 @@ class HomePage extends ConsumerWidget {
                 color: theme.colorScheme.error,
               ),
             ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCategoryChip(
+    BuildContext context,
+    WidgetRef ref, {
+    required String label,
+    required AppCategory? category,
+    required bool isSelected,
+  }) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: FilterChip(
+        label: Text(label),
+        selected: isSelected,
+        onSelected: (_) {
+          ref.read(categoryFilterProvider.notifier).state = category;
+        },
+        backgroundColor: theme.colorScheme.surface,
+        selectedColor: theme.colorScheme.primary,
+        checkmarkColor: theme.colorScheme.onPrimary,
+        labelStyle: TextStyle(
+          color: isSelected
+              ? theme.colorScheme.onPrimary
+              : theme.colorScheme.onSurface,
+          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+          fontSize: 12,
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide(
+            color: isSelected
+                ? Colors.transparent
+                : theme.colorScheme.outline.withOpacity(0.3),
           ),
         ),
       ),

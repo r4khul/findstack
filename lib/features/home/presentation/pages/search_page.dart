@@ -1,32 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_riverpod/legacy.dart';
 import '../../domain/device_app.dart';
 import '../providers/home_provider.dart';
 import '../widgets/app_card.dart';
 
-// Provides filtered apps based on search query and category
-final searchFilterProvider = StateProvider<String>((ref) => '');
-final categoryFilterProvider = StateProvider<AppCategory?>((ref) => null);
-
-final filteredAppsProvider = Provider<List<DeviceApp>>((ref) {
-  final appsAsync = ref.watch(installedAppsProvider);
-  final query = ref.watch(searchFilterProvider).toLowerCase();
-  final category = ref.watch(categoryFilterProvider);
-
-  return appsAsync.maybeWhen(
-    data: (apps) {
-      return apps.where((app) {
-        final matchesQuery =
-            app.appName.toLowerCase().contains(query) ||
-            app.packageName.toLowerCase().contains(query);
-        final matchesCategory = category == null || app.category == category;
-        return matchesQuery && matchesCategory;
-      }).toList();
-    },
-    orElse: () => [],
-  );
-});
+// Providers are now in home_provider.dart
 
 class SearchPage extends ConsumerWidget {
   const SearchPage({super.key});
@@ -85,11 +63,6 @@ class SearchPage extends ConsumerWidget {
                           icon: const Icon(Icons.clear),
                           onPressed: () {
                             ref.read(searchFilterProvider.notifier).state = '';
-                            // Also clear text field visually if controller was used,
-                            // but we are using onChanged.
-                            // Ideally use controller but for simplicity this works
-                            // provided the initial state matches.
-                            // Actually, TextField needs controller to clear text programmatically properly.
                           },
                         ),
                     ],

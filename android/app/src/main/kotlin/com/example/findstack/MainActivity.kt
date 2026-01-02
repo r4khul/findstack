@@ -162,7 +162,21 @@ class MainActivity : FlutterActivity() {
                     "receivers" to receivers,
                     "providers" to providers,
                     "totalTimeInForeground" to (usage?.totalTimeInForeground ?: 0),
-                    "lastTimeUsed" to (usage?.lastTimeUsed ?: 0)
+                    "lastTimeUsed" to (usage?.lastTimeUsed ?: 0),
+                    "category" to (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        when (appInfo.category) {
+                            ApplicationInfo.CATEGORY_GAME -> "game"
+                            ApplicationInfo.CATEGORY_AUDIO -> "audio"
+                            ApplicationInfo.CATEGORY_VIDEO -> "video"
+                            ApplicationInfo.CATEGORY_IMAGE -> "image"
+                            ApplicationInfo.CATEGORY_SOCIAL -> "social"
+                            ApplicationInfo.CATEGORY_NEWS -> "news"
+                            ApplicationInfo.CATEGORY_MAPS -> "maps"
+                            ApplicationInfo.CATEGORY_PRODUCTIVITY -> "productivity"
+                            -1 -> "unknown" // Undefined
+                            else -> "tools" // Fallback for other defined categories
+                        }
+                    } else "unknown")
                 ))
             }
         }
