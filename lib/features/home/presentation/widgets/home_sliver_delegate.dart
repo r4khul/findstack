@@ -178,7 +178,7 @@ class HomeSliverDelegate extends SliverPersistentHeaderDelegate {
                   const SizedBox(height: 12),
                   const CategorySlider(
                     isCompact: true,
-                    contentPadding: EdgeInsets.zero,
+                    contentPadding: EdgeInsets.symmetric(horizontal: 20),
                   ),
                 ],
               ),
@@ -212,9 +212,21 @@ class HomeSliverDelegate extends SliverPersistentHeaderDelegate {
                                 ? Row(
                                     key: const ValueKey('collapsed'),
                                     children: [
-                                      Image.asset(
-                                        'assets/icons/findstack-nobg.png',
-                                        height: 28,
+                                      Container(
+                                        padding: const EdgeInsets.all(4),
+                                        decoration: BoxDecoration(
+                                          border: Border.all(
+                                            color: theme.colorScheme.outline
+                                                .withOpacity(0.2),
+                                          ),
+                                          borderRadius: BorderRadius.circular(
+                                            10,
+                                          ),
+                                        ),
+                                        child: Image.asset(
+                                          'assets/icons/findstack-nobg.png',
+                                          height: 20,
+                                        ),
                                       ),
                                       const SizedBox(width: 8),
                                       Container(

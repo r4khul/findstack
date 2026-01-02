@@ -16,122 +16,130 @@ class SearchPage extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Search Header
-            Container(
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              decoration: BoxDecoration(
-                color: theme.scaffoldBackgroundColor,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
+      body: NestedScrollView(
+        headerSliverBuilder: (context, innerBoxIsScrolled) {
+          return [
+            SliverAppBar(
+              backgroundColor: theme.scaffoldBackgroundColor,
+              surfaceTintColor: theme.scaffoldBackgroundColor,
+              floating: true,
+              pinned: true,
+              snap: false,
+              elevation: 0,
+              centerTitle: false,
+              titleSpacing: 0,
+              leading: IconButton(
+                icon: Icon(
+                  Icons.arrow_back_rounded,
+                  color: theme.colorScheme.onSurface,
+                ),
+                onPressed: () => Navigator.pop(context),
               ),
-              child: Column(
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Row(
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.arrow_back),
-                          onPressed: () => Navigator.pop(context),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: theme.colorScheme.surfaceContainerHighest
-                                  .withOpacity(0.3),
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            child: TextField(
-                              autofocus: true,
-                              decoration: InputDecoration(
-                                hintText: "Search apps...",
-                                border: InputBorder.none,
-                                contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 14,
-                                ),
-                                hintStyle: theme.textTheme.bodyLarge?.copyWith(
-                                  color: theme.hintColor.withOpacity(0.5),
-                                ),
-                                suffixIcon: searchQuery.isNotEmpty
-                                    ? IconButton(
-                                        icon: const Icon(Icons.close, size: 20),
-                                        onPressed: () {
-                                          ref
-                                                  .read(
-                                                    searchFilterProvider
-                                                        .notifier,
-                                                  )
-                                                  .state =
-                                              '';
-                                        },
-                                      )
-                                    : null,
-                              ),
-                              style: theme.textTheme.bodyLarge,
-                              onChanged: (val) =>
-                                  ref
-                                          .read(searchFilterProvider.notifier)
-                                          .state =
-                                      val,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        const TechStackFilter(),
-                      ],
-                    ),
+              title: Container(
+                height: 50,
+                margin: const EdgeInsets.only(right: 12),
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.surface,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: theme.colorScheme.outline.withOpacity(0.2),
+                    width: 1.5,
                   ),
-                  const SizedBox(height: 16),
-
-                  // Category Slider
-                  const CategorySlider(isCompact: false),
-                ],
-              ),
-            ),
-
-            // Results List
-            Expanded(
-              child: apps.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.search_off,
-                            size: 64,
-                            color: theme.disabledColor,
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        autofocus: true,
+                        textAlignVertical: TextAlignVertical.center,
+                        decoration: InputDecoration(
+                          hintText: "Search apps...",
+                          border: InputBorder.none,
+                          focusedBorder: InputBorder.none,
+                          enabledBorder: InputBorder.none,
+                          errorBorder: InputBorder.none,
+                          disabledBorder: InputBorder.none,
+                          hintStyle: theme.textTheme.bodyLarge?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant
+                                .withOpacity(0.8),
                           ),
-                          const SizedBox(height: 16),
-                          Text(
-                            "No apps found",
-                            style: theme.textTheme.titleMedium?.copyWith(
-                              color: theme.disabledColor,
-                            ),
+                          contentPadding: EdgeInsets.zero,
+                          isDense: true,
+                        ),
+                        style: theme.textTheme.bodyLarge?.copyWith(
+                          fontSize: 16,
+                        ),
+                        onChanged: (val) =>
+                            ref.read(searchFilterProvider.notifier).state = val,
+                        controller: TextEditingController(text: searchQuery)
+                          ..selection = TextSelection.fromPosition(
+                            TextPosition(offset: searchQuery.length),
                           ),
-                        ],
                       ),
-                    )
-                  : ListView.builder(
-                      padding: const EdgeInsets.only(top: 16, bottom: 32),
-                      itemCount: apps.length,
-                      physics: const BouncingScrollPhysics(),
-                      itemBuilder: (context, index) {
-                        return AppCard(app: apps[index]);
-                      },
                     ),
+                    if (searchQuery.isNotEmpty)
+                      GestureDetector(
+                        onTap: () =>
+                            ref.read(searchFilterProvider.notifier).state = '',
+                        child: Icon(
+                          Icons.close,
+                          size: 20,
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              actions: [const TechStackFilter(), const SizedBox(width: 20)],
+              bottom: PreferredSize(
+                preferredSize: const Size.fromHeight(60),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const SizedBox(height: 8),
+                    const CategorySlider(
+                      isCompact: true,
+                      contentPadding: EdgeInsets.symmetric(horizontal: 20),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+                ),
+              ),
             ),
-          ],
-        ),
+          ];
+        },
+        body: apps.isEmpty
+            ? Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.search_off,
+                      size: 64,
+                      color: theme.disabledColor,
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      "No apps found",
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        color: theme.disabledColor,
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            : ListView.builder(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 12,
+                ),
+                itemCount: apps.length,
+                itemBuilder: (context, index) => Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: AppCard(app: apps[index]),
+                ),
+              ),
       ),
     );
   }
