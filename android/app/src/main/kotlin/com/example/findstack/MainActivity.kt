@@ -39,6 +39,17 @@ class MainActivity : FlutterActivity() {
                         handler.post { result.success(apps) }
                     }
                 }
+                "getAppUsageHistory" -> {
+                    val packageName = call.argument<String>("packageName")
+                    if (packageName != null) {
+                        executor.execute {
+                            val history = getAppUsageHistory(packageName)
+                            handler.post { result.success(history) }
+                        }
+                    } else {
+                        result.error("INVALID_ARGUMENT", "Package name is null", null)
+                    }
+                }
                 "checkUsagePermission" -> {
                     result.success(hasUsageStatsPermission())
                 }
@@ -162,6 +173,61 @@ class MainActivity : FlutterActivity() {
         }
 
         return appList
+    }
+
+    private fun getAppUsageHistory(packageName: String): List<Map<String, Any>> {
+        if (!hasUsageStatsPermission()) return emptyList()
+
+        val usageStatsManager = getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
+        val calendar = Calendar.getInstance()
+        val endTime = calendar.timeInMillis
+        calendar.add(Calendar.DAY_OF_YEAR, -7) // Last 7 days
+        val startTime = calendar.timeInMillis
+
+        // Query daily intervals
+        val usageStatsList = usageStatsManager.queryUsageStats(
+            UsageStatsManager.INTERVAL_DAILY,
+            startTime,
+            endTime
+        )
+
+        // Group by day to handle multiple entries per day (common in INTERVAL_DAILY)
+        val dailyUsage = mutableMapOf<Long, Long>()
+        
+        // Normalize to start of day for grouping
+        val cal = Calendar.getInstance()
+
+        for (stats in usageStatsList) {
+            if (stats.packageName == packageName) {
+                cal.timeInMillis = stats.firstTimeStamp
+                cal.set(Calendar.HOUR_OF_DAY, 0)
+                cal.set(Calendar.MINUTE, 0)
+                cal.set(Calendar.SECOND, 0)
+                cal.set(Calendar.MILLISECOND, 0)
+                val dayStart = cal.timeInMillis
+                
+                dailyUsage[dayStart] = (dailyUsage[dayStart] ?: 0L) + stats.totalTimeInForeground
+            }
+        }
+
+        // Fill in missing days with 0
+        val result = mutableListOf<Map<String, Any>>()
+        for (i in 0 until 7) {
+            val dateCal = Calendar.getInstance()
+            dateCal.add(Calendar.DAY_OF_YEAR, -i)
+            dateCal.set(Calendar.HOUR_OF_DAY, 0)
+            dateCal.set(Calendar.MINUTE, 0)
+            dateCal.set(Calendar.SECOND, 0)
+            dateCal.set(Calendar.MILLISECOND, 0)
+            val dayStart = dateCal.timeInMillis
+            
+            result.add(mapOf(
+                "date" to dayStart,
+                "usage" to (dailyUsage[dayStart] ?: 0L)
+            ))
+        }
+        
+        return result.reversed() // Oldest to newest
     }
 
     private fun detectStackAndLibs(apkPath: String): Pair<String, List<String>> {

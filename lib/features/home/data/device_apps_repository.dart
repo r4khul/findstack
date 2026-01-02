@@ -1,6 +1,7 @@
 import 'package:flutter/services.dart';
 import '../domain/device_app.dart';
 import '../domain/scan_progress.dart';
+import '../domain/app_usage_point.dart';
 
 class DeviceAppsRepository {
   static const platform = MethodChannel('com.rakhul.findstack/apps');
@@ -52,6 +53,22 @@ class DeviceAppsRepository {
       await platform.invokeMethod('requestUsagePermission');
     } on PlatformException catch (e) {
       print("Failed to request permission: '${e.message}'");
+    }
+  }
+
+  Future<List<AppUsagePoint>> getAppUsageHistory(String packageName) async {
+    try {
+      final List<Object?> result = await platform.invokeMethod(
+        'getAppUsageHistory',
+        {'packageName': packageName},
+      );
+      return result
+          .cast<Map<Object?, Object?>>()
+          .map((e) => AppUsagePoint.fromMap(e))
+          .toList();
+    } on PlatformException catch (e) {
+      print("Failed to get usage history: '${e.message}'");
+      return [];
     }
   }
 }
