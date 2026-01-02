@@ -240,103 +240,120 @@ class _ScanDialog extends StatelessWidget {
       child: Material(
         color: Colors.transparent,
         child: Container(
-          width: 320,
+          width: 340,
           margin: const EdgeInsets.all(24),
           decoration: BoxDecoration(
             color: isDark ? const Color(0xFF1E1E1E) : const Color(0xFFFFFFFF),
-            borderRadius: BorderRadius.circular(24),
+            borderRadius: BorderRadius.circular(28),
             border: Border.all(
               color: theme.colorScheme.outline.withOpacity(0.1),
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.2),
-                blurRadius: 20,
-                offset: const Offset(0, 10),
+                color: Colors.black.withOpacity(0.25),
+                blurRadius: 32,
+                offset: const Offset(0, 16),
               ),
             ],
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  children: [
-                    Text(
-                      "Scanner Options",
-                      style: theme.textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      "Choose how you want to update your app list.",
-                      textAlign: TextAlign.center,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.primary.withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.radar_rounded,
+                    color: theme.colorScheme.primary,
+                    size: 28,
+                  ),
                 ),
-              ),
-              const Divider(height: 1),
-              _buildOption(
-                context,
-                title: "Full Scan",
-                description: "Deep clean cache & rescan all apps",
-                icon: Icons.cleaning_services_rounded,
-                isHighlight: true,
-                onTap: onFullScan,
-              ),
-              const Divider(height: 1),
-              _buildOption(
-                context,
-                title: "Revalidate",
-                description: "Refresh list & check for updates",
-                icon: Icons.refresh_rounded,
-                isHighlight: false,
-                onTap: onRevalidate,
-              ),
-              const SizedBox(height: 8),
-            ],
+                const SizedBox(height: 16),
+                Text(
+                  "Scan Options",
+                  style: theme.textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: -0.5,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  "Choose how you want to update your app database.",
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                    height: 1.4,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                _buildOptionTile(
+                  context,
+                  title: "Full System Scan",
+                  description: "Deep analysis & stack detection",
+                  icon: Icons.travel_explore_rounded,
+                  color: isDark
+                      ? const Color(0xFF64B5F6)
+                      : const Color(0xFF1976D2), // Blue
+                  onTap: onFullScan,
+                ),
+                const SizedBox(height: 12),
+                _buildOptionTile(
+                  context,
+                  title: "Smart Revalidate",
+                  description: "Quickly check for app changes",
+                  icon: Icons.published_with_changes_rounded,
+                  color: isDark
+                      ? const Color(0xFF81C784)
+                      : const Color(0xFF388E3C), // Green
+                  onTap: onRevalidate,
+                ),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildOption(
+  Widget _buildOptionTile(
     BuildContext context, {
     required String title,
     required String description,
     required IconData icon,
-    required bool isHighlight,
+    required Color color,
     required VoidCallback onTap,
   }) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
     return InkWell(
       onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: isDark
+              ? Colors.white.withOpacity(0.05)
+              : Colors.grey.withOpacity(0.05),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: theme.colorScheme.outline.withOpacity(0.05),
+          ),
+        ),
         child: Row(
           children: [
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: isHighlight
-                    ? theme.colorScheme.primaryContainer
-                    : theme.colorScheme.surfaceContainerHighest,
-                shape: BoxShape.circle,
+                color: color.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(14),
               ),
-              child: Icon(
-                icon,
-                color: isHighlight
-                    ? theme.colorScheme.primary
-                    : theme.colorScheme.onSurfaceVariant,
-                size: 24,
-              ),
+              child: Icon(icon, color: color, size: 24),
             ),
             const SizedBox(width: 16),
             Expanded(
@@ -347,10 +364,10 @@ class _ScanDialog extends StatelessWidget {
                     title,
                     style: theme.textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w600,
-                      color: theme.colorScheme.onSurface,
+                      fontSize: 15,
                     ),
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 2),
                   Text(
                     description,
                     style: theme.textTheme.bodySmall?.copyWith(
@@ -361,7 +378,8 @@ class _ScanDialog extends StatelessWidget {
               ),
             ),
             Icon(
-              Icons.chevron_right_rounded,
+              Icons.arrow_forward_ios_rounded,
+              size: 14,
               color: theme.colorScheme.onSurfaceVariant.withOpacity(0.5),
             ),
           ],
