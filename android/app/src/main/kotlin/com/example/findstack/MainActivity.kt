@@ -13,6 +13,7 @@ import android.os.Looper
 import android.provider.Settings
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
+import io.flutter.plugin.common.EventChannel
 import io.flutter.plugin.common.MethodChannel
 import java.io.File
 import java.util.Calendar
@@ -21,11 +22,15 @@ import java.util.zip.ZipFile
 
 class MainActivity : FlutterActivity() {
     private val CHANNEL = "com.rakhul.findstack/apps"
-    private val executor = Executors.newFixedThreadPool(4) // Parallel processing
+    private val EVENT_CHANNEL = "com.rakhul.findstack/scan_progress"
+    
+    private val executor = Executors.newFixedThreadPool(4) 
     private val handler = Handler(Looper.getMainLooper())
+    private var eventSink: EventChannel.EventSink? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL).setMethodCallHandler { call, result ->
             when (call.method) {
                 "getInstalledApps" -> {
@@ -44,6 +49,17 @@ class MainActivity : FlutterActivity() {
                 else -> result.notImplemented()
             }
         }
+
+        EventChannel(flutterEngine.dartExecutor.binaryMessenger, EVENT_CHANNEL).setStreamHandler(
+            object : EventChannel.StreamHandler {
+                override fun onListen(arguments: Any?, events: EventChannel.EventSink?) {
+                    eventSink = events
+                }
+                override fun onCancel(arguments: Any?) {
+                    eventSink = null
+                }
+            }
+        )
     }
 
     private fun hasUsageStatsPermission(): Boolean {
@@ -59,20 +75,25 @@ class MainActivity : FlutterActivity() {
     private fun getInstalledApps(): List<Map<String, Any?>> {
         val pm = packageManager
         
-        // Request comprehensive flags for "Root-like" depth
         val flags = PackageManager.GET_META_DATA or 
                    PackageManager.GET_PERMISSIONS or 
                    PackageManager.GET_SERVICES or 
                    PackageManager.GET_RECEIVERS or 
                    PackageManager.GET_PROVIDERS
 
+        // Emit start
+        handler.post { 
+            eventSink?.success(mapOf("status" to "Fetching app list...", "percent" to 0)) 
+        }
+
         val packages = pm.getInstalledPackages(flags)
+        val total = packages.size
         
         // Get Usage Stats
         val usageStatsManager = getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
         val calendar = Calendar.getInstance()
         val endTime = calendar.timeInMillis
-        calendar.add(Calendar.YEAR, -1) // Last 1 year
+        calendar.add(Calendar.YEAR, -1) 
         val startTime = calendar.timeInMillis
         
         val usageMap = if (hasUsageStatsPermission()) {
@@ -81,13 +102,24 @@ class MainActivity : FlutterActivity() {
             emptyMap()
         }
 
-        // Parallel processing is tricky with mutable lists in a loop, doing sequential for safety but optimized
         val appList = mutableListOf<Map<String, Any?>>()
 
-        for (pkg in packages) {
+        for ((index, pkg) in packages.withIndex()) {
             val appInfo = pkg.applicationInfo ?: continue
+            val packageName = pkg.packageName
+
+            // Updates every 5 apps or so to not flood channel, but specific enough
+            if (index % 1 == 0) { // actually let's do every 1 for "True" feel
+                 handler.post { 
+                    eventSink?.success(mapOf(
+                        "status" to "Scanning $packageName", 
+                        "percent" to ((index.toDouble() / total) * 100).toInt(),
+                        "current" to index + 1,
+                        "total" to total
+                    )) 
+                }
+            }
             
-            // Filter: Only show apps that can be launched (user facing) or are notable system apps
             if (pm.getLaunchIntentForPackage(pkg.packageName) != null) {
                 
                 val sourceDir = appInfo.sourceDir
@@ -96,7 +128,6 @@ class MainActivity : FlutterActivity() {
                 val isSystem = (appInfo.flags and ApplicationInfo.FLAG_SYSTEM) != 0
                 val usage = usageMap[pkg.packageName]
                 
-                // Deep Data Extraction
                 val permissions = pkg.requestedPermissions?.toList() ?: emptyList()
                 val services = pkg.services?.map { it.name } ?: emptyList()
                 val receivers = pkg.receivers?.map { it.name } ?: emptyList()
@@ -124,6 +155,12 @@ class MainActivity : FlutterActivity() {
                 ))
             }
         }
+        
+        // Done
+        handler.post { 
+            eventSink?.success(mapOf("status" to "Complete", "percent" to 100)) 
+        }
+
         return appList
     }
 
@@ -157,7 +194,7 @@ class MainActivity : FlutterActivity() {
                         else if (name.contains("index.android.bundle")) stack = "React Native"
                         else if (name.contains("libmonodroid.so")) stack = "Xamarin"
                         else if (name.contains("cordova.js")) stack = "Cordova"
-                        else if (name.contains("www/index.html")) stack = "Ionic" // Ionic often wraps Cordova/Capacitor
+                        else if (name.contains("www/index.html")) stack = "Ionic" 
                         else if (name.contains("libgodot_android.so")) stack = "Godot"
                         else if (name.contains("libunity.so")) stack = "Unity"
                     }

@@ -1,8 +1,26 @@
 import 'package:flutter/services.dart';
 import '../domain/device_app.dart';
+import '../domain/scan_progress.dart';
 
 class DeviceAppsRepository {
   static const platform = MethodChannel('com.rakhul.findstack/apps');
+  static const eventChannel = EventChannel(
+    'com.rakhul.findstack/scan_progress',
+  );
+
+  Stream<ScanProgress> get scanProgressStream {
+    return eventChannel.receiveBroadcastStream().map((event) {
+      if (event is Map) {
+        return ScanProgress.fromMap(event);
+      }
+      return ScanProgress(
+        status: "Initializing",
+        percent: 0,
+        processedCount: 0,
+        totalCount: 0,
+      );
+    });
+  }
 
   Future<List<DeviceApp>> getInstalledApps() async {
     try {

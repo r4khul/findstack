@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/device_apps_repository.dart';
 import '../providers/home_provider.dart';
 import '../widgets/app_card.dart';
+import '../widgets/scan_progress_widget.dart';
 
 class HomePage extends ConsumerWidget {
   const HomePage({super.key});
@@ -118,18 +119,17 @@ class HomePage extends ConsumerWidget {
             ],
           );
         },
-        loading: () => Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const CircularProgressIndicator(),
-              const SizedBox(height: 24),
-              Text(
-                "Deep scanning system...",
-                style: theme.textTheme.titleMedium,
-              ),
-            ],
-          ),
+        loading: () => Consumer(
+          builder: (context, ref, _) {
+            final progressAsync = ref.watch(scanProgressProvider);
+            return progressAsync.when(
+              data: (progress) => ScanProgressWidget(progress: progress),
+              // If stream hasn't emitted yet, show indefinite spinner
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (_, __) =>
+                  const Center(child: CircularProgressIndicator()),
+            );
+          },
         ),
         error: (err, stack) => Center(
           child: Padding(
