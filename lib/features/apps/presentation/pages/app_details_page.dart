@@ -39,6 +39,7 @@ class AppDetailsPage extends ConsumerWidget {
                 bottom: 20,
               ),
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   _buildAppHeader(context, theme, isDark),
                   const SizedBox(height: 32),
@@ -57,7 +58,7 @@ class AppDetailsPage extends ConsumerWidget {
                   _buildDeveloperSection(context, theme, isDark),
                   const SizedBox(height: 32),
                   if (app.permissions.isNotEmpty) ...[
-                    _buildPermissionsSection(theme, isDark),
+                    _buildPermissionsSection(context, theme, isDark),
                     const SizedBox(height: 40),
                   ],
                 ],
@@ -104,6 +105,7 @@ class AppDetailsPage extends ConsumerWidget {
     }
 
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Hero(
           tag: app.packageName,
@@ -507,6 +509,7 @@ class AppDetailsPage extends ConsumerWidget {
         Wrap(
           spacing: 8,
           runSpacing: 8,
+          alignment: WrapAlignment.start,
           children: app.nativeLibraries
               .map(
                 (lib) => Container(
@@ -515,17 +518,29 @@ class AppDetailsPage extends ConsumerWidget {
                     vertical: 8,
                   ),
                   decoration: BoxDecoration(
-                    color: theme.colorScheme.surface,
+                    color: isDark ? const Color(0xFF2C2C2E) : Colors.grey[100],
                     border: Border.all(
-                      color: theme.colorScheme.outline.withOpacity(0.3),
+                      color: theme.colorScheme.outline.withOpacity(0.1),
                     ),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Text(
-                    lib,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.settings_system_daydream_rounded,
+                        size: 14,
+                        color: theme.colorScheme.onSurface.withOpacity(0.6),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        lib,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: theme.colorScheme.onSurface.withOpacity(0.8),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               )
@@ -535,7 +550,15 @@ class AppDetailsPage extends ConsumerWidget {
     );
   }
 
-  Widget _buildPermissionsSection(ThemeData theme, bool isDark) {
+  Widget _buildPermissionsSection(
+    BuildContext context,
+    ThemeData theme,
+    bool isDark,
+  ) {
+    const int maxVisible = 5;
+    final displayedPermissions = app.permissions.take(maxVisible).toList();
+    final remainingCount = app.permissions.length - maxVisible;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -553,34 +576,134 @@ class AppDetailsPage extends ConsumerWidget {
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            children: app.permissions
-                .map(
-                  (p) => Padding(
-                    padding: const EdgeInsets.only(bottom: 8.0),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.check_circle_outline,
-                          size: 16,
-                          color: theme.colorScheme.primary,
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            p.split('.').last,
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                      ],
+            children: [
+              ...displayedPermissions.map((p) => _buildPermissionRow(theme, p)),
+              if (remainingCount > 0) ...[
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton(
+                    onPressed: () => _showAllPermissions(context, theme),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      side: BorderSide(
+                        color: theme.colorScheme.primary.withOpacity(0.5),
+                      ),
+                    ),
+                    child: Text(
+                      "View $remainingCount More",
+                      style: TextStyle(color: theme.colorScheme.primary),
                     ),
                   ),
-                )
-                .toList(),
+                ),
+              ],
+            ],
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildPermissionRow(ThemeData theme, String permission) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8.0),
+      child: Row(
+        children: [
+          Icon(
+            Icons.check_circle_outline,
+            size: 16,
+            color: theme.colorScheme.primary,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              permission.split('.').last,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w500,
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showAllPermissions(BuildContext context, ThemeData theme) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.6,
+        minChildSize: 0.4,
+        maxChildSize: 0.9,
+        builder: (_, controller) => Container(
+          decoration: BoxDecoration(
+            color: theme.cardColor,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: Column(
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.symmetric(vertical: 12),
+                  decoration: BoxDecoration(
+                    color: theme.dividerColor,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    Text(
+                      "Permissions",
+                      style: theme.textTheme.headlineSmall,
+                    ),
+                    const Spacer(),
+                    IconButton(
+                      icon: const Icon(Icons.keyboard_arrow_down),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: ListView.builder(
+                  controller: controller,
+                  itemCount: app.permissions.length,
+                  itemBuilder: (context, index) {
+                    return ListTile(
+                      leading: Icon(
+                        Icons.check_circle_outline,
+                        color: theme.colorScheme.primary,
+                      ),
+                      title: Text(
+                        app.permissions[index].split('.').last,
+                        style: theme.textTheme.bodyMedium,
+                      ),
+                      subtitle: Text(
+                        app.permissions[index],
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          fontSize: 10,
+                          color: theme.colorScheme.onSurface.withOpacity(0.5),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
