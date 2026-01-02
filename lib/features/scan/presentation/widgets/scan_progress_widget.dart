@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../domain/scan_progress.dart';
+import '../../domain/entities/scan_progress.dart';
 
 class ScanProgressWidget extends StatelessWidget {
   final ScanProgress progress;

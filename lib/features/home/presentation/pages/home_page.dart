@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../data/device_apps_repository.dart';
-import '../providers/home_provider.dart';
-import '../widgets/app_card.dart';
-import '../widgets/scan_progress_widget.dart';
-import '../pages/search_page.dart';
-import '../../domain/device_app.dart';
+import '../../../apps/presentation/providers/apps_provider.dart';
+import '../../../scan/presentation/providers/scan_provider.dart';
+import '../../../search/presentation/providers/search_provider.dart';
+import '../../../apps/presentation/widgets/app_card.dart';
+import '../../../scan/presentation/widgets/scan_progress_widget.dart';
+import '../../../search/presentation/pages/search_page.dart';
+import '../../../apps/domain/entities/device_app.dart';
 
 class HomePage extends ConsumerWidget {
   const HomePage({super.key});

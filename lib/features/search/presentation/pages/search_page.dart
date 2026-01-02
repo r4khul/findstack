@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../domain/device_app.dart';
-import '../providers/home_provider.dart';
-import '../widgets/app_card.dart';
-
-// Providers are now in home_provider.dart
+import '../../../apps/domain/entities/device_app.dart';
+import '../providers/search_provider.dart';
+import '../../../apps/presentation/widgets/app_card.dart';
 
 class SearchPage extends ConsumerWidget {
   const SearchPage({super.key});

@@ -1,25 +1,7 @@
-import 'package:findstack/features/apps/domain/entities/device_app.dart';
-import 'package:findstack/features/scan/domain/entities/scan_progress.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
-import '../../data/device_apps_repository.dart';
-
-final deviceAppsRepositoryProvider = Provider((ref) => DeviceAppsRepository());
-
-final installedAppsProvider = FutureProvider<List<DeviceApp>>((ref) async {
-  final repository = ref.watch(deviceAppsRepositoryProvider);
-  return await repository.getInstalledApps();
-});
-
-final scanProgressProvider = StreamProvider<ScanProgress>((ref) {
-  final repository = ref.watch(deviceAppsRepositoryProvider);
-  return repository.scanProgressStream;
-});
-
-final usagePermissionProvider = FutureProvider<bool>((ref) async {
-  final repository = ref.watch(deviceAppsRepositoryProvider);
-  return await repository.checkUsagePermission();
-});
+import '../../../apps/domain/entities/device_app.dart';
+import '../../../apps/presentation/providers/apps_provider.dart';
 
 final categoryFilterProvider = StateProvider<AppCategory?>((ref) => null);
 final searchFilterProvider = StateProvider<String>((ref) => '');

@@ -2,9 +2,9 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import '../../domain/app_usage_point.dart';
-import '../../domain/device_app.dart';
-import '../../presentation/providers/app_detail_provider.dart';
+import '../../domain/entities/app_usage_point.dart';
+import '../../domain/entities/device_app.dart';
+import '../providers/app_detail_provider.dart';
 
 class AppDetailsPage extends ConsumerWidget {
   final DeviceApp app;

@@ -1,7 +1,7 @@
 import 'package:flutter/services.dart';
-import '../domain/device_app.dart';
-import '../domain/scan_progress.dart';
-import '../domain/app_usage_point.dart';
+import '../../domain/entities/device_app.dart';
+import '../../../scan/domain/entities/scan_progress.dart';
+import '../../domain/entities/app_usage_point.dart';
 
 class DeviceAppsRepository {
   static const platform = MethodChannel('com.rakhul.findstack/apps');

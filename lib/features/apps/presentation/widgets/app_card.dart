@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../domain/device_app.dart';
+import '../../domain/entities/device_app.dart';
 import '../pages/app_details_page.dart';
 import 'package:intl/intl.dart';
 
