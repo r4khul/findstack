@@ -7,6 +7,10 @@ import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.drawable.BitmapDrawable
+import android.graphics.drawable.Drawable
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
@@ -15,6 +19,7 @@ import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.EventChannel
 import io.flutter.plugin.common.MethodChannel
+import java.io.ByteArrayOutputStream
 import java.io.File
 import java.util.Calendar
 import java.util.concurrent.Executors
@@ -144,10 +149,15 @@ class MainActivity : FlutterActivity() {
                 val receivers = pkg.receivers?.map { it.name } ?: emptyList()
                 val providers = pkg.providers?.map { it.name } ?: emptyList()
 
+                // Get icon
+                val iconDrawable = pm.getApplicationIcon(appInfo)
+                val iconBytes = drawableToByteArray(iconDrawable)
+
                 appList.add(mapOf(
                     "appName" to pm.getApplicationLabel(appInfo).toString(),
                     "packageName" to pkg.packageName,
                     "version" to pkg.versionName,
+                    "icon" to iconBytes,
                     "versionCode" to (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) pkg.longVersionCode else pkg.versionCode.toLong()),
                     "stack" to stack,
                     "nativeLibraries" to libs,
@@ -187,6 +197,27 @@ class MainActivity : FlutterActivity() {
         }
 
         return appList
+    }
+
+    private fun drawableToByteArray(drawable: Drawable): ByteArray {
+        val bitmap = if (drawable is BitmapDrawable) {
+            drawable.bitmap
+        } else {
+            val width = if (drawable.intrinsicWidth > 0) drawable.intrinsicWidth else 1
+            val height = if (drawable.intrinsicHeight > 0) drawable.intrinsicHeight else 1
+            val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+            val canvas = Canvas(bitmap)
+            drawable.setBounds(0, 0, canvas.width, canvas.height)
+            drawable.draw(canvas)
+            bitmap
+        }
+        
+        // Resize for performance - 96x96 is roughly 3KB per icon
+        val scaledBitmap = Bitmap.createScaledBitmap(bitmap, 96, 96, true)
+
+        val stream = ByteArrayOutputStream()
+        scaledBitmap.compress(Bitmap.CompressFormat.PNG, 100, stream)
+        return stream.toByteArray()
     }
 
     private fun getAppUsageHistory(packageName: String): List<Map<String, Any>> {

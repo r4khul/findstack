@@ -60,16 +60,21 @@ class AppCard extends StatelessWidget {
                 children: [
                   CircleAvatar(
                     backgroundColor: stackColor.withOpacity(0.1),
-                    child: Text(
-                      app.appName.isNotEmpty
-                          ? app.appName[0].toUpperCase()
-                          : "?",
-                      style: TextStyle(
-                        color: stackColor,
-                        fontWeight: FontWeight.bold,
-                        fontFamily: "UncutSans",
-                      ),
-                    ),
+                    backgroundImage: app.icon != null
+                        ? MemoryImage(app.icon!)
+                        : null,
+                    child: app.icon == null
+                        ? Text(
+                            app.appName.isNotEmpty
+                                ? app.appName[0].toUpperCase()
+                                : "?",
+                            style: TextStyle(
+                              color: stackColor,
+                              fontWeight: FontWeight.bold,
+                              fontFamily: "UncutSans",
+                            ),
+                          )
+                        : null,
                   ),
                   const SizedBox(width: 16),
                   Expanded(

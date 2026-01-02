@@ -163,5 +163,6 @@ class DeviceApp extends Equatable {
     totalTimeInForeground,
     lastTimeUsed,
     category,
+    icon,
   ];
 }
