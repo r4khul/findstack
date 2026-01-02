@@ -24,7 +24,8 @@ class HomeSliverDelegate extends SliverPersistentHeaderDelegate {
     final theme = Theme.of(context);
     final progress = shrinkOffset / (maxExtent - minExtent);
     final percent = progress.clamp(0.0, 1.0);
-    final isCollapsed = percent > 0.6; // Switch earlier for smoothness
+    // Transition phase for Title -> Logo (0.0 to 1.0)
+    final t = ((percent - 0.6) / 0.3).clamp(0.0, 1.0);
 
     // Fade out stats quickly so they don't overlap with sliding up content
     final statsOpacity = (1.0 - (percent * 3)).clamp(0.0, 1.0);
@@ -204,75 +205,81 @@ class HomeSliverDelegate extends SliverPersistentHeaderDelegate {
                     children: [
                       // Logo / Title Transition
                       Expanded(
-                        child: Align(
+                        child: Stack(
                           alignment: Alignment.centerLeft,
-                          child: AnimatedSwitcher(
-                            duration: const Duration(milliseconds: 300),
-                            child: isCollapsed
-                                ? Row(
-                                    key: const ValueKey('collapsed'),
-                                    children: [
-                                      Container(
-                                        padding: const EdgeInsets.all(4),
-                                        decoration: BoxDecoration(
-                                          border: Border.all(
-                                            color: theme.colorScheme.outline
-                                                .withOpacity(0.2),
-                                          ),
-                                          borderRadius: BorderRadius.circular(
-                                            10,
-                                          ),
-                                        ),
-                                        child: Image.asset(
-                                          'assets/icons/findstack-nobg.png',
-                                          height: 20,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 8,
-                                          vertical: 4,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: theme.colorScheme.primary
-                                              .withOpacity(0.1),
-                                          borderRadius: BorderRadius.circular(
-                                            8,
-                                          ),
-                                        ),
-                                        child: Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            Icon(
-                                              Icons.install_mobile,
-                                              size: 14,
-                                              color: theme.colorScheme.primary,
-                                            ),
-                                            const SizedBox(width: 4),
-                                            Text(
-                                              "$appCount",
-                                              style: theme.textTheme.labelMedium
-                                                  ?.copyWith(
-                                                    fontWeight: FontWeight.bold,
-                                                    color: theme
-                                                        .colorScheme
-                                                        .primary,
-                                                  ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ],
-                                  )
-                                : Text(
-                                    "FindStack",
-                                    key: const ValueKey('expanded'),
-                                    style: theme.textTheme.titleLarge?.copyWith(
-                                      fontWeight: FontWeight.bold,
-                                    ),
+                          children: [
+                            // Expanded Title (Exiting)
+                            Transform.translate(
+                              offset: Offset(0, -10 * t),
+                              child: Opacity(
+                                opacity: (1 - t).clamp(0.0, 1.0),
+                                child: Text(
+                                  "FindStack",
+                                  style: theme.textTheme.titleLarge?.copyWith(
+                                    fontWeight: FontWeight.bold,
                                   ),
-                          ),
+                                ),
+                              ),
+                            ),
+
+                            // Collapsed Logo (Entering)
+                            Transform.translate(
+                              offset: Offset(0, 10 * (1 - t)),
+                              child: Opacity(
+                                opacity: t.clamp(0.0, 1.0),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(4),
+                                      decoration: BoxDecoration(
+                                        border: Border.all(
+                                          color: theme.colorScheme.outline
+                                              .withOpacity(0.2),
+                                        ),
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                      child: Image.asset(
+                                        'assets/icons/findstack-nobg.png',
+                                        height: 20,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 4,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: theme.colorScheme.primary
+                                            .withOpacity(0.1),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(
+                                            Icons.install_mobile,
+                                            size: 14,
+                                            color: theme.colorScheme.primary,
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            "$appCount",
+                                            style: theme.textTheme.labelMedium
+                                                ?.copyWith(
+                                                  fontWeight: FontWeight.bold,
+                                                  color:
+                                                      theme.colorScheme.primary,
+                                                ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                       const ScanButton(),
