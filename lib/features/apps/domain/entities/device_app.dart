@@ -125,6 +125,31 @@ class DeviceApp extends Equatable {
   DateTime get lastUsedDate =>
       DateTime.fromMillisecondsSinceEpoch(lastTimeUsed);
 
+  Map<String, dynamic> toMap() {
+    return {
+      'appName': appName,
+      'packageName': packageName,
+      'version': version,
+      'icon':
+          icon, // Assuming icon is Uint8List which might need base64 encoding for JSON
+      'stack': stack,
+      'nativeLibraries': nativeLibraries,
+      'permissions': permissions,
+      'services': services,
+      'receivers': receivers,
+      'providers': providers,
+      'firstInstallTime': installDate.millisecondsSinceEpoch,
+      'lastUpdateTime': updateDate.millisecondsSinceEpoch,
+      'minSdkVersion': minSdkVersion,
+      'targetSdkVersion': targetSdkVersion,
+      'uid': uid,
+      'versionCode': versionCode,
+      'totalTimeInForeground': totalTimeInForeground,
+      'lastTimeUsed': lastTimeUsed,
+      'category': category.name,
+    };
+  }
+
   @override
   List<Object?> get props => [
     appName,

@@ -1,6 +1,7 @@
 import 'package:flutter/services.dart';
 import '../../domain/entities/device_app.dart';
 import '../../../scan/domain/entities/scan_progress.dart';
+import '../datasources/apps_local_datasource.dart';
 import '../../domain/entities/app_usage_point.dart';
 
 class DeviceAppsRepository {
@@ -23,15 +24,37 @@ class DeviceAppsRepository {
     });
   }
 
-  Future<List<DeviceApp>> getInstalledApps() async {
+  final AppsLocalDataSource _localDataSource = AppsLocalDataSource();
+
+  // Expose cache stream directly if needed, but for SWR via Riverpod, we just expose methods.
+
+  Future<List<DeviceApp>> getInstalledApps({bool forceRefresh = false}) async {
+    if (!forceRefresh) {
+      final cachedApps = await _localDataSource.getCachedApps();
+      if (cachedApps.isNotEmpty) {
+        // Return cached apps immediately
+        // In a real SWR setup here, we might want to return this BUT also trigger a fresh fetch?
+        // But future can only return once.
+        // So we return cached apps. The provider will call this, get data.
+        // To refresh, the provider calls again with forceRefresh=true.
+        return cachedApps;
+      }
+    }
+
+    // Fetch fresh
     try {
       final List<Object?> result = await platform.invokeMethod(
         'getInstalledApps',
       );
-      return result
+      final apps = result
           .cast<Map<Object?, Object?>>()
           .map((e) => DeviceApp.fromMap(Map<String, dynamic>.from(e)))
           .toList();
+
+      // Save to cache
+      await _localDataSource.cacheApps(apps);
+
+      return apps;
     } on PlatformException catch (e) {
       print("Failed to get apps: '${e.message}'");
       return [];

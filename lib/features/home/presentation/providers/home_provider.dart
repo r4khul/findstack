@@ -1,8 +1,8 @@
+import 'package:findstack/features/apps/data/repositories/device_apps_repository.dart';
 import 'package:findstack/features/apps/domain/entities/device_app.dart';
 import 'package:findstack/features/scan/domain/entities/scan_progress.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
-import '../../data/device_apps_repository.dart';
 
 final deviceAppsRepositoryProvider = Provider((ref) => DeviceAppsRepository());
 
