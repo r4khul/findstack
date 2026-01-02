@@ -28,15 +28,13 @@ class DeviceAppsRepository {
 
   // Expose cache stream directly if needed, but for SWR via Riverpod, we just expose methods.
 
-  Future<List<DeviceApp>> getInstalledApps({bool forceRefresh = false}) async {
-    if (!forceRefresh) {
+  Future<List<DeviceApp>> getInstalledApps({
+    bool forceRefresh = false,
+    bool includeDetails = true,
+  }) async {
+    if (!forceRefresh && includeDetails) {
       final cachedApps = await _localDataSource.getCachedApps();
       if (cachedApps.isNotEmpty) {
-        // Return cached apps immediately
-        // In a real SWR setup here, we might want to return this BUT also trigger a fresh fetch?
-        // But future can only return once.
-        // So we return cached apps. The provider will call this, get data.
-        // To refresh, the provider calls again with forceRefresh=true.
         return cachedApps;
       }
     }
@@ -45,20 +43,54 @@ class DeviceAppsRepository {
     try {
       final List<Object?> result = await platform.invokeMethod(
         'getInstalledApps',
+        {'includeDetails': includeDetails},
       );
       final apps = result
           .cast<Map<Object?, Object?>>()
           .map((e) => DeviceApp.fromMap(Map<String, dynamic>.from(e)))
           .toList();
 
-      // Save to cache
-      await _localDataSource.cacheApps(apps);
+      // Only cache if we have details
+      if (includeDetails) {
+        await _localDataSource.cacheApps(apps);
+      }
 
       return apps;
     } on PlatformException catch (e) {
       print("Failed to get apps: '${e.message}'");
       return [];
     }
+  }
+
+  Future<List<DeviceApp>> getAppsDetails(List<String> packageNames) async {
+    final allApps = <DeviceApp>[];
+    // Batch to prevent TransactionTooLargeException (Binder 1MB limit)
+    // 20 apps * 20KB (approx icon size) = ~400KB. Safe margin.
+    const int batchSize = 20;
+
+    for (var i = 0; i < packageNames.length; i += batchSize) {
+      final end = (i + batchSize < packageNames.length)
+          ? i + batchSize
+          : packageNames.length;
+      final batch = packageNames.sublist(i, end);
+
+      try {
+        final List<Object?> result = await platform.invokeMethod(
+          'getAppsDetails',
+          {'packageNames': batch},
+        );
+
+        allApps.addAll(
+          result.cast<Map<Object?, Object?>>().map(
+            (e) => DeviceApp.fromMap(Map<String, dynamic>.from(e)),
+          ),
+        );
+      } on PlatformException catch (e) {
+        print("Failed to get app details chunk: '${e.message}'");
+        // Continue with other chunks even if one fails
+      }
+    }
+    return allApps;
   }
 
   Future<bool> checkUsagePermission() async {
@@ -93,6 +125,10 @@ class DeviceAppsRepository {
       print("Failed to get usage history: '${e.message}'");
       return [];
     }
+  }
+
+  Future<void> updateCache(List<DeviceApp> apps) async {
+    await _localDataSource.cacheApps(apps);
   }
 
   Future<void> clearCache() async {

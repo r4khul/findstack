@@ -24,6 +24,8 @@ import java.io.File
 import java.util.Calendar
 import java.util.concurrent.Executors
 import java.util.zip.ZipFile
+import java.util.stream.Collectors
+import android.util.Log
 
 class MainActivity : FlutterActivity() {
     private val CHANNEL = "com.rakhul.findstack/apps"
@@ -39,14 +41,31 @@ class MainActivity : FlutterActivity() {
         
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL).setMethodCallHandler { call, result ->
             when (call.method) {
+                "getAppsDetails" -> {
+                    val packageNames = call.argument<List<String>>("packageNames") ?: emptyList()
+                    executor.execute {
+                        try {
+                            val details = getAppsDetails(packageNames)
+                            handler.post { result.success(details) }
+                        } catch (e: Exception) {
+                            handler.post { result.error("ERROR", e.message, null) }
+                        }
+                    }
+                }
                 "getInstalledApps" -> {
+                    val includeDetails = call.argument<Boolean>("includeDetails") ?: true
                     currentScanId++
                     val myScanId = currentScanId
                     executor.execute {
-                        val apps = getInstalledApps(myScanId)
-                        // Only return result if this is still the latest scan (optional, but good)
-                        if (myScanId == currentScanId) {
-                             handler.post { result.success(apps) }
+                        try {
+                            val apps = getInstalledApps(myScanId, includeDetails)
+                            if (myScanId == currentScanId) {
+                                 handler.post { result.success(apps) }
+                            } else {
+                                 handler.post { result.error("ABORTED", "Scan superseded by new request", null) }
+                            }
+                        } catch (e: Exception) {
+                            handler.post { result.error("ERROR", e.message, null) }
                         }
                     }
                 }
@@ -54,8 +73,12 @@ class MainActivity : FlutterActivity() {
                     val packageName = call.argument<String>("packageName")
                     if (packageName != null) {
                         executor.execute {
-                            val history = getAppUsageHistory(packageName)
-                            handler.post { result.success(history) }
+                            try {
+                                val history = getAppUsageHistory(packageName)
+                                handler.post { result.success(history) }
+                            } catch (e: Exception) {
+                                handler.post { result.error("ERROR", e.message, null) }
+                            }
                         }
                     } else {
                         result.error("INVALID_ARGUMENT", "Package name is null", null)
@@ -94,7 +117,7 @@ class MainActivity : FlutterActivity() {
         return mode == AppOpsManager.MODE_ALLOWED
     }
 
-    private fun getInstalledApps(scanId: Long): List<Map<String, Any?>> {
+    private fun getInstalledApps(scanId: Long, includeDetails: Boolean): List<Map<String, Any?>> {
         val pm = packageManager
         
         val flags = PackageManager.GET_META_DATA or 
@@ -104,7 +127,7 @@ class MainActivity : FlutterActivity() {
                    PackageManager.GET_PROVIDERS
 
         // Emit start
-        if (scanId == currentScanId) {
+        if (scanId == currentScanId && includeDetails) {
             handler.post { 
                 eventSink?.success(mapOf("status" to "Fetching app list...", "percent" to 0)) 
             }
@@ -113,17 +136,15 @@ class MainActivity : FlutterActivity() {
         val packages = pm.getInstalledPackages(flags)
         val total = packages.size
         
-        // Get Usage Stats
         val usageStatsManager = getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
-        val calendar = Calendar.getInstance()
-        val endTime = calendar.timeInMillis
-        calendar.add(Calendar.YEAR, -1) 
-        val startTime = calendar.timeInMillis
-        
-        val usageMap = if (hasUsageStatsPermission()) {
+        val usageMap = if (includeDetails && hasUsageStatsPermission()) {
+            val calendar = Calendar.getInstance()
+            val endTime = calendar.timeInMillis
+            calendar.add(Calendar.YEAR, -1) 
+            val startTime = calendar.timeInMillis
             usageStatsManager.queryAndAggregateUsageStats(startTime, endTime)
         } else {
-            emptyMap()
+            emptyMap<String, android.app.usage.UsageStats>()
         }
 
         val appList = mutableListOf<Map<String, Any?>>()
@@ -135,8 +156,8 @@ class MainActivity : FlutterActivity() {
             val appInfo = pkg.applicationInfo ?: continue
             val packageName = pkg.packageName
 
-            // Updates every 1 app
-            if (index % 1 == 0 && scanId == currentScanId) { 
+            // Updates every 1 app if detailed
+            if (includeDetails && index % 1 == 0 && scanId == currentScanId) { 
                  handler.post { 
                     // Verify again before sending in case new scan came in
                     if (scanId == currentScanId) {
@@ -151,70 +172,135 @@ class MainActivity : FlutterActivity() {
             }
             
             if (pm.getLaunchIntentForPackage(pkg.packageName) != null) {
-                
-                val (stack, libs) = detectStackAndLibs(appInfo)
-                
-                val isSystem = (appInfo.flags and ApplicationInfo.FLAG_SYSTEM) != 0
-                val usage = usageMap[pkg.packageName]
-                
-                val permissions = pkg.requestedPermissions?.toList() ?: emptyList()
-                val services = pkg.services?.map { it.name } ?: emptyList()
-                val receivers = pkg.receivers?.map { it.name } ?: emptyList()
-                val providers = pkg.providers?.map { it.name } ?: emptyList()
-
-                // Get icon
-                val iconDrawable = pm.getApplicationIcon(appInfo)
-                val iconBytes = drawableToByteArray(iconDrawable)
-
-                appList.add(mapOf(
-                    "appName" to pm.getApplicationLabel(appInfo).toString(),
-                    "packageName" to pkg.packageName,
-                    "version" to pkg.versionName,
-                    "icon" to iconBytes,
-                    "versionCode" to (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) pkg.longVersionCode else pkg.versionCode.toLong()),
-                    "stack" to stack,
-                    "nativeLibraries" to libs,
-                    "isSystem" to isSystem,
-                    "firstInstallTime" to pkg.firstInstallTime,
-                    "lastUpdateTime" to pkg.lastUpdateTime,
-                    "minSdkVersion" to (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) appInfo.minSdkVersion else 0),
-                    "targetSdkVersion" to appInfo.targetSdkVersion,
-                    "uid" to appInfo.uid,
-                    "permissions" to permissions,
-                    "services" to services,
-                    "receivers" to receivers,
-                    "providers" to providers,
-                    "totalTimeInForeground" to (usage?.totalTimeInForeground ?: 0),
-                    "lastTimeUsed" to (usage?.lastTimeUsed ?: 0),
-                    "category" to (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                        when (appInfo.category) {
-                            ApplicationInfo.CATEGORY_GAME -> "game"
-                            ApplicationInfo.CATEGORY_AUDIO -> "audio"
-                            ApplicationInfo.CATEGORY_VIDEO -> "video"
-                            ApplicationInfo.CATEGORY_IMAGE -> "image"
-                            ApplicationInfo.CATEGORY_SOCIAL -> "social"
-                            ApplicationInfo.CATEGORY_NEWS -> "news"
-                            ApplicationInfo.CATEGORY_MAPS -> "maps"
-                            ApplicationInfo.CATEGORY_PRODUCTIVITY -> "productivity"
-                            -1 -> "unknown" // Undefined
-                            else -> "tools" // Fallback for other defined categories
-                        }
-                    } else "unknown"),
-                    "size" to (if (File(appInfo.sourceDir).exists()) File(appInfo.sourceDir).length() else 0L),
-                    "apkPath" to appInfo.sourceDir,
-                    "dataDir" to appInfo.dataDir
-                ))
+                appList.add(convertPackageToMap(pkg, pm, includeDetails, usageMap))
             }
         }
         
         // Done
-        if (scanId == currentScanId) {
+        if (scanId == currentScanId && includeDetails) {
             handler.post { 
                 eventSink?.success(mapOf("status" to "Complete", "percent" to 100)) 
             }
         }
 
         return appList
+    }
+
+    private fun getAppsDetails(packageNames: List<String>): List<Map<String, Any?>> {
+         Log.d("FindStack", "getAppsDetails called for ${packageNames.size} apps")
+         val pm = packageManager
+         val flags = PackageManager.GET_META_DATA or 
+                   PackageManager.GET_PERMISSIONS or 
+                   PackageManager.GET_SERVICES or 
+                   PackageManager.GET_RECEIVERS or 
+                   PackageManager.GET_PROVIDERS
+         
+         val usageStatsManager = getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
+         val usageMap = if (hasUsageStatsPermission()) {
+            val calendar = Calendar.getInstance()
+            val endTime = calendar.timeInMillis
+            calendar.add(Calendar.YEAR, -1) 
+            val startTime = calendar.timeInMillis
+            usageStatsManager.queryAndAggregateUsageStats(startTime, endTime)
+        } else {
+            emptyMap<String, android.app.usage.UsageStats>()
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+             return packageNames.parallelStream()
+                .map { name -> 
+                    try {
+                        val pkg = pm.getPackageInfo(name, flags)
+                        if (pm.getLaunchIntentForPackage(pkg.packageName) != null && pkg.applicationInfo != null) {
+                            convertPackageToMap(pkg, pm, true, usageMap)
+                        } else null
+                    } catch (e: Exception) { null }
+                }
+                .filter { it != null }
+                .collect(Collectors.toList())
+                .filterNotNull()
+        } else {
+            val list = mutableListOf<Map<String, Any?>>()
+            for (name in packageNames) {
+                try {
+                    val pkg = pm.getPackageInfo(name, flags)
+                    if (pm.getLaunchIntentForPackage(pkg.packageName) != null && pkg.applicationInfo != null) {
+                        list.add(convertPackageToMap(pkg, pm, true, usageMap))
+                    }
+                } catch (e: Exception) {}
+            }
+            return list
+        }
+    }
+
+    private fun convertPackageToMap(
+        pkg: PackageInfo, 
+        pm: PackageManager, 
+        includeDetails: Boolean, 
+        usageMap: Map<String, android.app.usage.UsageStats>?
+    ): Map<String, Any?> {
+        val appInfo = pkg.applicationInfo!!
+        
+        var stack = "Unknown"
+        var libs = emptyList<String>()
+        var iconBytes = ByteArray(0)
+        var usage: android.app.usage.UsageStats? = null
+
+        if (includeDetails) {
+             val pair = detectStackAndLibs(appInfo)
+             stack = pair.first
+             libs = pair.second
+             
+             usage = usageMap?.get(pkg.packageName)
+             
+             val iconDrawable = pm.getApplicationIcon(appInfo)
+             iconBytes = drawableToByteArray(iconDrawable)
+        }
+        
+        val isSystem = (appInfo.flags and ApplicationInfo.FLAG_SYSTEM) != 0
+        val permissions = pkg.requestedPermissions?.toList() ?: emptyList()
+        val services = pkg.services?.map { it.name } ?: emptyList()
+        val receivers = pkg.receivers?.map { it.name } ?: emptyList()
+        val providers = pkg.providers?.map { it.name } ?: emptyList()
+
+        return mapOf(
+            "appName" to pm.getApplicationLabel(appInfo).toString(),
+            "packageName" to pkg.packageName,
+            "version" to pkg.versionName,
+            "icon" to iconBytes,
+            "versionCode" to (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) pkg.longVersionCode else pkg.versionCode.toLong()),
+            "stack" to stack,
+            "nativeLibraries" to libs,
+            "isSystem" to isSystem,
+            "firstInstallTime" to pkg.firstInstallTime,
+            "lastUpdateTime" to pkg.lastUpdateTime,
+            "minSdkVersion" to (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) appInfo.minSdkVersion else 0),
+            "targetSdkVersion" to appInfo.targetSdkVersion,
+            "uid" to appInfo.uid,
+            "permissions" to permissions,
+            "services" to services,
+            "receivers" to receivers,
+            "providers" to providers,
+            "totalTimeInForeground" to (usage?.totalTimeInForeground ?: 0),
+            "lastTimeUsed" to (usage?.lastTimeUsed ?: 0),
+            "category" to (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                when (appInfo.category) {
+                    ApplicationInfo.CATEGORY_GAME -> "game"
+                    ApplicationInfo.CATEGORY_AUDIO -> "audio"
+                    ApplicationInfo.CATEGORY_VIDEO -> "video"
+                    ApplicationInfo.CATEGORY_IMAGE -> "image"
+                    ApplicationInfo.CATEGORY_SOCIAL -> "social"
+                    ApplicationInfo.CATEGORY_NEWS -> "news"
+                    ApplicationInfo.CATEGORY_MAPS -> "maps"
+                    ApplicationInfo.CATEGORY_PRODUCTIVITY -> "productivity"
+                    -1 -> "unknown" 
+                    else -> "tools" 
+                }
+            } else "unknown"),
+            "size" to (if (File(appInfo.sourceDir).exists()) File(appInfo.sourceDir).length() else 0L),
+            "apkPath" to appInfo.sourceDir,
+            "dataDir" to appInfo.dataDir
+        )
     }
 
     private fun drawableToByteArray(drawable: Drawable): ByteArray {

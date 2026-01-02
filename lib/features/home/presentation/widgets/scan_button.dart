@@ -76,14 +76,17 @@ class _ScanButtonState extends ConsumerState<ScanButton>
               },
             );
 
-            // Minimum wait time to ensure user sees the animation
+            // Capture navigator to ensure we can pop even if widget rebuilds
+            final navigator = Navigator.of(context);
+
             final minWait = Future.delayed(const Duration(milliseconds: 1200));
             final action = ref
                 .read(installedAppsProvider.notifier)
-                .revalidate();
+                .revalidate()
+                .timeout(const Duration(seconds: 30));
 
-            Future.wait([minWait, action]).then((_) {
-              if (context.mounted) Navigator.of(context).pop();
+            Future.wait([minWait, action]).whenComplete(() {
+              navigator.pop();
             });
           },
         );

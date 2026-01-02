@@ -56,22 +56,69 @@ class InstalledAppsNotifier extends AsyncNotifier<List<DeviceApp>> {
 
   Future<void> revalidate() async {
     final repository = ref.read(deviceAppsRepositoryProvider);
-    // Silent update: don't set state to loading immediately to avoid flicker,
-    // but we can set it to loading with existing data if we want 'refreshing' state.
-    // However, user wants 'subtle'.
-    // We will just fetch and update.
-    // But Riverpod's AsyncValue doesn't easily support "loading with data" unless we specifically construct it.
-    // Let's just run the fetch. The UI can listen to a separate "isRevalidating" provider if needed,
-    // or we just rely on the future completing.
-    // Actually, updating `state` will notify listeners.
 
-    final newState = await AsyncValue.guard(
-      () => repository.getInstalledApps(forceRefresh: true),
-    );
+    try {
+      print("[FindStack] Revalidate: Start");
+      // 1. Get cached apps
+      final cachedApps = await repository.getInstalledApps(forceRefresh: false);
+      final cachedMap = {for (var app in cachedApps) app.packageName: app};
+      print("[FindStack] Revalidate: Cached apps count: ${cachedApps.length}");
 
-    // Only update if successful to avoid error screens on transient failures during revalidate
-    if (!newState.hasError) {
-      state = newState;
+      // 2. Get fresh "lite" list (fast)
+      print("[FindStack] Revalidate: Fetching lite apps...");
+      final liteApps = await repository.getInstalledApps(
+        forceRefresh: true,
+        includeDetails: false,
+      );
+      print("[FindStack] Revalidate: Lite apps count: ${liteApps.length}");
+
+      final finalApps = <DeviceApp>[];
+      final appsToResolve = <String>[];
+
+      for (var liteApp in liteApps) {
+        final cached = cachedMap[liteApp.packageName];
+        // Check update time.
+        if (cached != null && cached.updateDate == liteApp.updateDate) {
+          finalApps.add(cached);
+        } else {
+          // New or Updated app
+          appsToResolve.add(liteApp.packageName);
+        }
+      }
+
+      // 3. Resolve missing details
+      print(
+        "[FindStack] Revalidate: Need to resolve ${appsToResolve.length} apps",
+      );
+      if (appsToResolve.isNotEmpty) {
+        // Fetch details for new/updated apps
+        // If list is huge (e.g. first run after clear cache?), this falls back to batch fetch.
+        // Ideally we batch this if too large, but for now just one call.
+        final details = await repository.getAppsDetails(appsToResolve);
+        finalApps.addAll(details);
+        print("[FindStack] Revalidate: Resolved details");
+      }
+
+      // 4. Update Cache & State
+      // We manually cache here because `getInstalledApps` only caches during full detail fetch.
+      // We need to access the local data source directly or expose a cache method?
+      // Repository `getInstalledApps` calls `cacheApps` if `includeDetails` is true.
+      // But we constructed `finalApps` manually.
+      // We should add a `saveToCache` method to repository or just call a method.
+      // Let's modify repository to allow saving?
+      // Actually `DeviceAppsRepository` has `_localDataSource` private.
+      // Let's just assume for now we don't save to file?
+      // No, we MUST save to file otherwise next load is empty.
+      // I will add `updateCache` to repository in next step.
+      print("[FindStack] Revalidate: Updating cache and state");
+      await repository.updateCache(finalApps);
+
+      state = AsyncValue.data(finalApps);
+      print("[FindStack] Revalidate: Done");
+    } catch (e) {
+      print("Revalidate failed: $e");
+      // Fallback to full refresh if smart revalidate fails?
+      // state = await AsyncValue.guard(() => repository.getInstalledApps(forceRefresh: true));
     }
   }
 }
