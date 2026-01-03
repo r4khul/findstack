@@ -429,7 +429,8 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
     int otherUsage,
   ) {
     List<PieChartSectionData> sections = [];
-    final bool showBadges = displayApps.length <= 15;
+    // Allow badges for up to 25 items (covers Top 20)
+    final bool showBadges = displayApps.length <= 25;
 
     for (int i = 0; i < displayApps.length; i++) {
       final isTouched = i == _touchedIndex;
@@ -446,6 +447,11 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
         alpha: opacity.clamp(0.15, 0.9),
       );
 
+      // Dynamically size badges to prevent overcrowding
+      final double badgeSize = isTouched
+          ? 36.0
+          : (displayApps.length > 10 ? 20.0 : 28.0);
+
       sections.add(
         PieChartSectionData(
           color: color,
@@ -453,7 +459,7 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
           title: '',
           radius: radius,
           badgeWidget: showBadges
-              ? _AppIcon(app: app, size: isTouched ? 36 : 28, addBorder: true)
+              ? _AppIcon(app: app, size: badgeSize, addBorder: true)
               : null,
           badgePositionPercentageOffset: 0.98,
           borderSide: isTouched
@@ -646,18 +652,26 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
   void _navigateToApp(BuildContext context, DeviceApp app) {
     Navigator.of(context).push(
       PageRouteBuilder(
-        transitionDuration: const Duration(milliseconds: 450), // Snappier
-        reverseTransitionDuration: const Duration(milliseconds: 350),
-        pageBuilder: (context, animation, secondaryAnimation) => FadeTransition(
-          opacity: CurvedAnimation(
-            parent: animation,
-            // Start fading in earlier (0.1) for a faster feel. FastOutSlowIn for snap.
-            curve: const Interval(0.1, 1.0, curve: Curves.fastOutSlowIn),
-          ),
-          child: AppDetailsPage(app: app),
-        ),
+        transitionDuration: const Duration(milliseconds: 600),
+        reverseTransitionDuration: const Duration(milliseconds: 400),
+        pageBuilder: (context, animation, secondaryAnimation) {
+          return RepaintBoundary(
+            child: FadeTransition(
+              opacity: CurvedAnimation(
+                parent: animation,
+                // Vital Tweak: Delay the content fade-in slightly (0.15) so the Hero
+                // icon has strictly higher priority at the start.
+                // This eliminates the "harsh" overlap and reduces early frame load.
+                curve: const Interval(0.15, 1.0, curve: Curves.easeOut),
+              ),
+              child: AppDetailsPage(app: app),
+            ),
+          );
+        },
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          return FadeTransition(opacity: animation, child: child);
+          // Just return the child (which is already wrapped in Fade+Repaint).
+          // We avoid redundant transitions here to save memory/FPS.
+          return child;
         },
       ),
     );

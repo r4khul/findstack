@@ -9,6 +9,7 @@ import '../../../apps/presentation/widgets/app_count_badge.dart';
 import '../../../search/presentation/providers/tech_stack_provider.dart';
 import '../widgets/home_sliver_delegate.dart';
 import '../widgets/back_to_top_fab.dart';
+import '../widgets/app_drawer.dart';
 
 class HomePage extends ConsumerStatefulWidget {
   const HomePage({super.key});
@@ -64,6 +65,7 @@ class _HomePageState extends ConsumerState<HomePage> {
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
+      endDrawer: const AppDrawer(),
       floatingActionButton: BackToTopFab(
         isVisible: _showBackToTop,
         onPressed: _scrollToTop,
