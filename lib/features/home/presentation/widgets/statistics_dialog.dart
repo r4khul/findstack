@@ -1,5 +1,6 @@
-import 'dart:typed_data';
 import 'dart:ui';
+import 'dart:typed_data';
+
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -144,6 +145,7 @@ class _StatisticsDialogState extends ConsumerState<StatisticsDialog> {
   }
 
   Widget _buildContent(BuildContext context, List<DeviceApp> apps) {
+    final theme = Theme.of(context);
     final validApps = apps.where((a) => a.totalTimeInForeground > 0).toList();
     if (validApps.isEmpty) {
       return const Center(child: Text("No usage data available yet."));
@@ -158,18 +160,14 @@ class _StatisticsDialogState extends ConsumerState<StatisticsDialog> {
       (sum, app) => sum + app.totalTimeInForeground,
     );
 
-    // Logic for Top X vs Others
+    // Logic: Chart shows exactly what's requested (Top 5, 10, 25).
+    // "Others" is the rest of the valid apps not in the top list.
     final topApps = validApps.take(_showTopCount).toList();
-
-    // We only show chart for Top 5 always to keep it clean, but list shows Top X
-    // OR we show chart for Top X. If X=25 chart is messy.
-    // Let's cap chart slices at 8 for visibility, group rest in chart as Others.
-    final chartApps = validApps.take(7).toList();
-    final chartTopUsage = chartApps.fold<int>(
+    final topUsage = topApps.fold<int>(
       0,
       (sum, app) => sum + app.totalTimeInForeground,
     );
-    final chartOtherUsage = totalUsage - chartTopUsage;
+    final otherUsage = totalUsage - topUsage;
 
     return Column(
       children: [
@@ -196,9 +194,8 @@ class _StatisticsDialogState extends ConsumerState<StatisticsDialog> {
                         setState(() => _touchedIndex = newIndex);
 
                       // Handle touch navigation if touchUp
-                      if (event is FlTapUpEvent &&
-                          newIndex < chartApps.length) {
-                        _navigateToApp(context, chartApps[newIndex]);
+                      if (event is FlTapUpEvent && newIndex < topApps.length) {
+                        _navigateToApp(context, topApps[newIndex]);
                       }
                     },
                   ),
@@ -207,8 +204,8 @@ class _StatisticsDialogState extends ConsumerState<StatisticsDialog> {
                   centerSpaceRadius: 50,
                   sections: _generateSections(
                     context,
-                    chartApps,
-                    chartOtherUsage,
+                    topApps,
+                    otherUsage,
                     totalUsage,
                   ),
                 ),
@@ -221,24 +218,22 @@ class _StatisticsDialogState extends ConsumerState<StatisticsDialog> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      _touchedIndex != -1 && _touchedIndex < chartApps.length
-                          ? "${((chartApps[_touchedIndex].totalTimeInForeground / totalUsage) * 100).toStringAsFixed(1)}%"
+                      _touchedIndex != -1 && _touchedIndex < topApps.length
+                          ? "${((topApps[_touchedIndex].totalTimeInForeground / totalUsage) * 100).toStringAsFixed(1)}%"
                           : "${validApps.length}",
                       style: Theme.of(context).textTheme.headlineMedium
                           ?.copyWith(
                             fontWeight: FontWeight.bold,
                             height: 1,
-                            color: Theme.of(context).colorScheme.primary,
+                            color: theme.colorScheme.onSurface,
                           ),
                     ),
                     Text(
-                      _touchedIndex != -1 && _touchedIndex < chartApps.length
+                      _touchedIndex != -1 && _touchedIndex < topApps.length
                           ? "Of total usage"
                           : "Apps Used",
                       style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.onSurface.withOpacity(0.5),
+                        color: theme.colorScheme.onSurface.withOpacity(0.5),
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -249,146 +244,163 @@ class _StatisticsDialogState extends ConsumerState<StatisticsDialog> {
           ),
         ),
 
-        const SizedBox(height: 10),
+        const SizedBox(height: 16),
 
-        // Apps List
+        // Peak Modern Containerized ListView
         Expanded(
-          child: ListView.builder(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-            itemCount: topApps.length,
-            // Optimization: Use prototype item if fixed height, but dynamic here.
-            itemBuilder: (context, index) {
-              final app = topApps[index];
-              final percent = (app.totalTimeInForeground / totalUsage);
-              // Highlight corresponding chart item if less than chart cap
-              final isChartHighlighted =
-                  index < chartApps.length && index == _touchedIndex;
-
-              return GestureDetector(
-                onTap: () => _navigateToApp(context, app),
-                onTapDown: (_) {
-                  // Interactive highlight on list touch
-                  if (index < chartApps.length)
-                    setState(() => _touchedIndex = index);
-                },
-                onTapCancel: () => setState(() => _touchedIndex = -1),
-                onTapUp: (_) =>
-                    setState(() => _touchedIndex = -1), // Reset after tap
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  margin: const EdgeInsets.only(bottom: 12),
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: isChartHighlighted
-                        ? Theme.of(
-                            context,
-                          ).colorScheme.primaryContainer.withOpacity(0.2)
-                        : Theme.of(context).colorScheme.surfaceContainerHighest
-                              .withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: isChartHighlighted
-                          ? Theme.of(
-                              context,
-                            ).colorScheme.primary.withOpacity(0.5)
-                          : Colors.transparent,
-                    ),
+          child: Container(
+            margin: const EdgeInsets.symmetric(horizontal: 20),
+            padding: const EdgeInsets.all(
+              4,
+            ), // Inner padding for scrollbar space
+            decoration: BoxDecoration(
+              color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.3),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: theme.colorScheme.outline.withOpacity(0.05),
+              ),
+            ),
+            child: Theme(
+              data: theme.copyWith(
+                scrollbarTheme: ScrollbarThemeData(
+                  thumbColor: MaterialStateProperty.all(
+                    theme.colorScheme.onSurface.withOpacity(0.2),
                   ),
-                  child: Row(
-                    children: [
-                      Hero(
-                        tag: app.packageName,
-                        child: Container(
-                          width: 44,
-                          height: 44,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(12),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.05),
-                                blurRadius: 4,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
+                  radius: const Radius.circular(10),
+                  thickness: MaterialStateProperty.all(4),
+                ),
+              ),
+              child: Scrollbar(
+                thumbVisibility: true,
+                child: ListView.separated(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 12,
+                  ),
+                  itemCount: topApps.length,
+                  separatorBuilder: (context, index) =>
+                      const SizedBox(height: 8),
+                  itemBuilder: (context, index) {
+                    final app = topApps[index];
+                    final percent = (app.totalTimeInForeground / totalUsage);
+                    final isTouchHighlighted = index == _touchedIndex;
+
+                    return GestureDetector(
+                      onTap: () => _navigateToApp(context, app),
+                      onTapDown: (_) {
+                        if (index < topApps.length)
+                          setState(() => _touchedIndex = index);
+                      },
+                      onTapCancel: () => setState(() => _touchedIndex = -1),
+                      onTapUp: (_) => setState(() => _touchedIndex = -1),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: isTouchHighlighted
+                              ? theme.colorScheme.onSurface.withOpacity(0.08)
+                              : theme.colorScheme.surface,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: isTouchHighlighted
+                                ? theme.colorScheme.onSurface.withOpacity(0.1)
+                                : Colors.transparent,
                           ),
-                          padding: const EdgeInsets.all(
-                            2,
-                          ), // White border effect
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(10),
-                            child: app.icon != null
-                                ? Image.memory(
-                                    app.icon!,
-                                    fit: BoxFit.cover,
-                                    gaplessPlayback: true,
-                                  )
-                                : const Icon(Icons.android, size: 24),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              app.appName,
-                              style: Theme.of(context).textTheme.bodyMedium
-                                  ?.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 15,
+                          boxShadow: isTouchHighlighted
+                              ? [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.05),
+                                    blurRadius: 4,
+                                    offset: const Offset(0, 2),
                                   ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+                                ]
+                              : null,
+                        ),
+                        child: Row(
+                          children: [
+                            Hero(
+                              tag: app.packageName + "_stats", // Unique tag
+                              child: Container(
+                                width: 40,
+                                height: 40,
+                                decoration: BoxDecoration(
+                                  color: theme.colorScheme.surfaceContainerHigh,
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                padding: const EdgeInsets.all(1),
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(9),
+                                  child: app.icon != null
+                                      ? Image.memory(
+                                          app.icon!,
+                                          fit: BoxFit.cover,
+                                          gaplessPlayback: true,
+                                        )
+                                      : const Icon(Icons.android, size: 20),
+                                ),
+                              ),
                             ),
-                            const SizedBox(height: 6),
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(4),
-                              child: LinearProgressIndicator(
-                                value: percent,
-                                minHeight: 6,
-                                backgroundColor: Theme.of(
-                                  context,
-                                ).colorScheme.outline.withOpacity(0.1),
-                                color: _getColor(context, index),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          app.appName,
+                                          style: theme.textTheme.bodyMedium
+                                              ?.copyWith(
+                                                fontWeight: FontWeight.w600,
+                                                fontSize: 14,
+                                              ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        "${(percent * 100).toStringAsFixed(1)}%",
+                                        style: theme.textTheme.labelSmall
+                                            ?.copyWith(
+                                              color: theme.colorScheme.onSurface
+                                                  .withOpacity(0.6),
+                                              fontFeatures: [
+                                                const FontFeature.tabularFigures(),
+                                              ],
+                                            ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 6),
+                                  // Monochrome Progress Bar
+                                  ClipRRect(
+                                    borderRadius: BorderRadius.circular(4),
+                                    child: LinearProgressIndicator(
+                                      value: percent,
+                                      minHeight: 4,
+                                      backgroundColor: theme
+                                          .colorScheme
+                                          .onSurface
+                                          .withOpacity(0.05),
+                                      color: theme.colorScheme.onSurface
+                                          .withOpacity(0.8), // Monochrome
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ],
                         ),
                       ),
-                      const SizedBox(width: 16),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          Text(
-                            _formatDuration(
-                              Duration(milliseconds: app.totalTimeInForeground),
-                            ),
-                            style: Theme.of(context).textTheme.labelLarge
-                                ?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                  color: Theme.of(
-                                    context,
-                                  ).colorScheme.onSurface,
-                                ),
-                          ),
-                          Text(
-                            "${(percent * 100).toStringAsFixed(1)}%",
-                            style: Theme.of(context).textTheme.labelSmall
-                                ?.copyWith(
-                                  color: Theme.of(
-                                    context,
-                                  ).colorScheme.onSurfaceVariant,
-                                ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
+                    );
+                  },
                 ),
-              );
-            },
+              ),
+            ),
           ),
         ),
       ],
@@ -408,7 +420,13 @@ class _StatisticsDialogState extends ConsumerState<StatisticsDialog> {
     int otherUsage,
     int totalUsage,
   ) {
+    final theme = Theme.of(context);
     List<PieChartSectionData> sections = [];
+
+    // Only show badges (icons) if we are not in High Density mode (e.g. top 25)
+    // OR show them only for larger slices.
+    // For sleekness, let's show icons only for Top 10. For Top 25, it's too crowded.
+    final bool showIcons = displayApps.length <= 15;
 
     for (int i = 0; i < displayApps.length; i++) {
       final isTouched = i == _touchedIndex;
@@ -416,20 +434,29 @@ class _StatisticsDialogState extends ConsumerState<StatisticsDialog> {
       final app = displayApps[i];
       final value = app.totalTimeInForeground.toDouble();
 
+      // Monochrome Palette Generation
+      // Vary opacity based on rank to distinguish slices
+      final double opacity = 1.0 - (i / (displayApps.length + 5));
+      final Color sectionColor = theme.colorScheme.primary.withOpacity(
+        opacity.clamp(0.2, 1.0),
+      );
+
       sections.add(
         PieChartSectionData(
-          color: _getColor(context, i),
+          color: sectionColor,
           value: value,
-          title:
-              '', // Titles hidden on chart for cleaner look, shown in center/list
+          title: '',
           radius: radius,
-          badgeWidget: isTouched
-              ? _Badge(
-                  app.icon,
-                  size: 45,
-                  borderColor: Theme.of(context).colorScheme.primary,
-                )
-              : _Badge(app.icon, size: 35),
+          // Conditionally show badge
+          badgeWidget: showIcons
+              ? (isTouched
+                    ? _Badge(
+                        app.icon,
+                        size: 40,
+                        borderColor: theme.colorScheme.onSurface,
+                      )
+                    : _Badge(app.icon, size: 28))
+              : null,
           badgePositionPercentageOffset: .98,
         ),
       );
@@ -441,14 +468,14 @@ class _StatisticsDialogState extends ConsumerState<StatisticsDialog> {
 
       sections.add(
         PieChartSectionData(
-          color: Theme.of(context).colorScheme.outline.withOpacity(0.2),
+          color: theme.colorScheme.surfaceContainerHighest,
           value: otherUsage.toDouble(),
           title: '',
           radius: radius,
           badgeWidget: Icon(
             Icons.more_horiz,
-            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
-            size: 20,
+            color: theme.colorScheme.onSurface.withOpacity(0.5),
+            size: 16,
           ),
           badgePositionPercentageOffset: .98,
         ),
@@ -456,25 +483,6 @@ class _StatisticsDialogState extends ConsumerState<StatisticsDialog> {
     }
 
     return sections;
-  }
-
-  Color _getColor(BuildContext context, int index) {
-    // Use HSL for generative consistent smooth colors
-    final seedColor = Theme.of(context).colorScheme.primary;
-    final hsl = HSLColor.fromColor(seedColor);
-
-    // Rotate hue for distinct but harmonious colors
-    // Adjust lightness to keep readable
-    final double hue = (hsl.hue + (index * 45)) % 360;
-    return HSLColor.fromAHSL(1.0, hue, 0.7, 0.55).toColor();
-  }
-
-  String _formatDuration(Duration d) {
-    if (d.inHours > 0) {
-      return "${d.inHours}h ${d.inMinutes.remainder(60)}m";
-    } else {
-      return "${d.inMinutes}m";
-    }
   }
 }
 
