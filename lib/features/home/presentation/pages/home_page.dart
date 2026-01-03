@@ -10,6 +10,7 @@ import '../../../search/presentation/providers/tech_stack_provider.dart';
 import '../widgets/home_sliver_delegate.dart';
 import '../widgets/back_to_top_fab.dart';
 import '../widgets/app_drawer.dart';
+import '../widgets/permission_dialog.dart';
 
 class HomePage extends ConsumerStatefulWidget {
   const HomePage({super.key});
@@ -18,21 +19,113 @@ class HomePage extends ConsumerStatefulWidget {
   ConsumerState<HomePage> createState() => _HomePageState();
 }
 
-class _HomePageState extends ConsumerState<HomePage> {
+class _HomePageState extends ConsumerState<HomePage>
+    with WidgetsBindingObserver {
   final ScrollController _scrollController = ScrollController();
   bool _showBackToTop = false;
+  bool _isDialogShowing = false;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _scrollController.addListener(_onScroll);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _checkPermissions());
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      // Re-check permission when app resumes
+      _checkPermissions(fromResume: true);
+    }
+  }
+
+  Future<void> _checkPermissions({bool fromResume = false}) async {
+    // If just checking externally (resume), we shouldn't be blocked by "checking" flag
+    // But we still want to avoid double-invocation if not necessary.
+    // Actually, calling checkUsagePermission() is fast/harmless.
+    // The previous flag _isCheckingPermission was blocking the resume check because the dialog await kept it true.
+
+    if (!mounted) return;
+
+    try {
+      final repository = ref.read(deviceAppsRepositoryProvider);
+      final hasPermission = await repository.checkUsagePermission();
+
+      if (!mounted) return;
+
+      if (hasPermission) {
+        // Permission Granted!
+        if (_isDialogShowing) {
+          Navigator.of(context).pop(); // Dismiss the dialog
+          _isDialogShowing = false;
+        }
+
+        // If we just got permission (fromResume) OR if the list is empty/stale, trigger scan.
+        // We can just trigger full scan to be safe, apps provider handles optimization?
+        // Actually, let's only trigger if we think we haven't scanned yet.
+        // But for safety:
+        if (fromResume || !_isDialogShowing) {
+          final appsState = ref.read(installedAppsProvider);
+          final hasData = appsState.value?.isNotEmpty ?? false;
+
+          if (!hasData) {
+            ref.read(installedAppsProvider.notifier).fullScan();
+          }
+        }
+      } else {
+        // Permission Denied
+        if (!fromResume && !_isDialogShowing) {
+          // Only show dialog if this is the initial check and it's not already open
+          await _showPermissionDialog(repository);
+        } else if (fromResume && _isDialogShowing) {
+          // User came back but still didn't grant permission.
+          // Dialog is still showing. Do nothing, let them try again.
+        }
+      }
+    } catch (e) {
+      print("Error checking permissions: $e");
+    }
+  }
+
+  Future<void> _showPermissionDialog(dynamic repository) async {
+    _isDialogShowing = true;
+    await showGeneralDialog(
+      context: context,
+      barrierDismissible: false,
+      barrierLabel: "Permission",
+      transitionDuration: const Duration(milliseconds: 300),
+      pageBuilder: (_, __, ___) => const SizedBox(),
+      transitionBuilder: (context, anim1, anim2, child) {
+        return Transform.scale(
+          scale: CurvedAnimation(
+            parent: anim1,
+            curve: Curves.easeOutBack,
+          ).value,
+          child: Opacity(
+            opacity: anim1.value,
+            child: PermissionDialog(
+              isPermanent: true,
+              onGrantPressed: () async {
+                await repository.requestUsagePermission();
+                // We rely on didChangeAppLifecycleState to detect return
+              },
+            ),
+          ),
+        );
+      },
+    );
+    // Dialog dismissed (either by code or user if we allowed it)
+    _isDialogShowing = false;
   }
 
   void _onScroll() {
@@ -111,46 +204,107 @@ class _HomePageState extends ConsumerState<HomePage> {
                       collapsedHeight: minHeight,
                     ),
                   ),
-                  filteredApps.isEmpty
-                      ? SliverFillRemaining(
-                          hasScrollBody: false,
-                          child: Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(
-                                  Icons.app_blocking_outlined,
-                                  size: 64,
-                                  color: theme.disabledColor,
-                                ),
-                                const SizedBox(height: 16),
-                                Text(
-                                  "No apps found matching criteria",
-                                  style: theme.textTheme.titleMedium?.copyWith(
-                                    color: theme.disabledColor,
-                                  ),
-                                ),
-                              ],
+                  if (apps.isEmpty)
+                    SliverList(
+                      delegate: SliverChildBuilderDelegate(
+                        (context, index) => Container(
+                          margin: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 12,
+                          ),
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.surface,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: theme.colorScheme.outline.withOpacity(0.1),
                             ),
                           ),
-                        )
-                      : SliverPadding(
-                          padding: EdgeInsets.fromLTRB(
-                            20,
-                            10,
-                            20,
-                            20 + MediaQuery.of(context).padding.bottom,
-                          ),
-                          sliver: SliverList(
-                            delegate: SliverChildBuilderDelegate(
-                              (context, index) => Padding(
-                                padding: const EdgeInsets.only(bottom: 12),
-                                child: AppCard(app: filteredApps[index]),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 40,
+                                height: 40,
+                                decoration: BoxDecoration(
+                                  color: theme.colorScheme.onSurface
+                                      .withOpacity(0.05),
+                                  shape: BoxShape.circle,
+                                ),
                               ),
-                              childCount: filteredApps.length,
-                            ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Container(
+                                      width: 140,
+                                      height: 16,
+                                      decoration: BoxDecoration(
+                                        color: theme.colorScheme.onSurface
+                                            .withOpacity(0.05),
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Container(
+                                      width: 180,
+                                      height: 12,
+                                      decoration: BoxDecoration(
+                                        color: theme.colorScheme.onSurface
+                                            .withOpacity(0.05),
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
                           ),
                         ),
+                        childCount: 6,
+                      ),
+                    )
+                  else if (filteredApps.isEmpty)
+                    SliverFillRemaining(
+                      hasScrollBody: false,
+                      child: Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.app_blocking_outlined,
+                              size: 64,
+                              color: theme.disabledColor,
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              "No apps found matching criteria",
+                              style: theme.textTheme.titleMedium?.copyWith(
+                                color: theme.disabledColor,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    )
+                  else
+                    SliverPadding(
+                      padding: EdgeInsets.fromLTRB(
+                        20,
+                        10,
+                        20,
+                        20 + MediaQuery.of(context).padding.bottom,
+                      ),
+                      sliver: SliverList(
+                        delegate: SliverChildBuilderDelegate(
+                          (context, index) => Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: AppCard(app: filteredApps[index]),
+                          ),
+                          childCount: filteredApps.length,
+                        ),
+                      ),
+                    ),
                 ],
               ),
             );

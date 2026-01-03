@@ -139,7 +139,7 @@ class _SplashScreenState extends State<SplashScreen>
                 child: Column(
                   children: [
                     Text(
-                      'Unfilter',
+                      'UnFilter',
                       style: theme.textTheme.displaySmall?.copyWith(
                         fontWeight: FontWeight.w800,
                         letterSpacing: -1.0,

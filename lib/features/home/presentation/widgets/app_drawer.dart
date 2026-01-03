@@ -545,7 +545,7 @@ class _AppDrawerState extends ConsumerState<AppDrawer> {
               ],
             ),
             content: const Text(
-              "Unfilter intelligently scans the package names and native libraries of your installed applications. \n\nWe match these signatures against our local database of known frameworks (Flutter, React Native, Unity, Xamarin, etc.) to reveal the technology stack used by your favorite apps.",
+              "UnFilter intelligently scans the package names and native libraries of your installed applications. \n\nWe match these signatures against our local database of known frameworks (Flutter, React Native, Unity, Xamarin, etc.) to reveal the technology stack used by your favorite apps.",
               style: TextStyle(height: 1.5),
             ),
             actions: [
@@ -583,7 +583,7 @@ class _AppDrawerState extends ConsumerState<AppDrawer> {
               ],
             ),
             content: const Text(
-              "Unfilter operates 100% offline. \n\nYour list of installed applications and personal usage statistics never leave your device. We do not track you, and we do not collect any personal data.",
+              "UnFilter operates 100% offline. \n\nYour list of installed applications and personal usage statistics never leave your device. We do not track you, and we do not collect any personal data.",
               style: TextStyle(height: 1.5),
             ),
             actions: [
@@ -610,7 +610,7 @@ class _AppDrawerState extends ConsumerState<AppDrawer> {
         return ScaleTransition(
           scale: CurvedAnimation(parent: anim1, curve: Curves.easeOutBack),
           child: AboutDialog(
-            applicationName: "Unfilter",
+            applicationName: "UnFilter",
             applicationVersion: "1.0.0",
             applicationIcon: Container(
               padding: const EdgeInsets.all(8),
@@ -631,7 +631,7 @@ class _AppDrawerState extends ConsumerState<AppDrawer> {
             children: const [
               SizedBox(height: 24),
               Text(
-                "Unfilter helps you discover the technology stack behind your favorite apps.",
+                "UnFilter helps you discover the technology stack behind your favorite apps.",
                 textAlign: TextAlign.center,
               ),
               SizedBox(height: 16),

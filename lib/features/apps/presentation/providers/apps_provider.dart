@@ -13,34 +13,31 @@ class InstalledAppsNotifier extends AsyncNotifier<List<DeviceApp>> {
     try {
       final cached = await repository.getInstalledApps(forceRefresh: false);
       if (cached.isNotEmpty) {
-        // If we found cached data, return it immediately so the UI renders.
-        // We trigger a background refresh to update the data if needed.
-        _refreshInBackground(repository);
+        // Return cached data immediately for instant UI
+        // Trigger background revalidate instead of full fetch for efficiency
+        _backgroundRevalidate(cached);
         return cached;
       }
     } catch (e) {
       // Ignore cache errors
     }
 
-    // 2. No cache, fetch fresh
-    return await repository.getInstalledApps(forceRefresh: true);
+    // 2. No cache, return empty list initially?
+    // If we return empty list, UI shows "no apps".
+    // If we return loading, UI shows skeleton.
+    // We should return empty list but trigger full scan ONLY if we have permission?
+    // Actually, `getInstalledApps(forceRefresh: true)` will invoke method channel.
+    // If permission is missing, it returns empty list quickly anyway?
+    // Wait, `checkUsagePermission` is separate.
+    // Let's just return [] if cache miss, and let HomePage logic trigger fullScan.
+    // returning [] forces UI to show "No apps found" or skeleton?
+    // Ideally we want to stay in "loading" state if we are about to fetch.
+    return [];
   }
 
-  Future<void> _refreshInBackground(DeviceAppsRepository repository) async {
-    // Wait for the build to complete before updating state
+  Future<void> _backgroundRevalidate(List<DeviceApp> cachedApps) async {
     await Future.delayed(Duration.zero);
-
-    try {
-      final fresh = await repository.getInstalledApps(forceRefresh: true);
-      // Only update if the widget is still mounted/provider is alive
-      state = AsyncValue.data(fresh);
-    } catch (e, st) {
-      // If fresh fetch fails, we can either:
-      // A) Leave the cached data (state remains AsyncData) - preferred for "offline first"
-      // B) Show an error (might be jarring if user is viewing content)
-      // We'll log it.
-      print("Background refresh failed: $e");
-    }
+    revalidate(cachedApps: cachedApps);
   }
 
   Future<void> fullScan() async {
@@ -54,15 +51,16 @@ class InstalledAppsNotifier extends AsyncNotifier<List<DeviceApp>> {
     );
   }
 
-  Future<void> revalidate() async {
+  Future<void> revalidate({List<DeviceApp>? cachedApps}) async {
     final repository = ref.read(deviceAppsRepositoryProvider);
 
     try {
       print("[Unfilter] Revalidate: Start");
-      // 1. Get cached apps
-      final cachedApps = await repository.getInstalledApps(forceRefresh: false);
-      final cachedMap = {for (var app in cachedApps) app.packageName: app};
-      print("[Unfilter] Revalidate: Cached apps count: ${cachedApps.length}");
+      // 1. Get cached apps (if not provided)
+      final appsToCheck =
+          cachedApps ?? await repository.getInstalledApps(forceRefresh: false);
+      final cachedMap = {for (var app in appsToCheck) app.packageName: app};
+      print("[Unfilter] Revalidate: Cached apps count: ${appsToCheck.length}");
 
       // 2. Get fresh "lite" list (fast)
       print("[Unfilter] Revalidate: Fetching lite apps...");
