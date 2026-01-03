@@ -322,7 +322,7 @@ class _AppDrawerState extends ConsumerState<AppDrawer> {
             child: Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(6),
                   decoration: BoxDecoration(
                     color: theme.colorScheme.surfaceContainerHighest
                         .withOpacity(0.4),
@@ -334,7 +334,7 @@ class _AppDrawerState extends ConsumerState<AppDrawer> {
                     size: 22,
                   ),
                 ),
-                const SizedBox(width: 16),
+                const SizedBox(width: 8),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -379,7 +379,6 @@ class _AppDrawerState extends ConsumerState<AppDrawer> {
     final theme = Theme.of(context);
     final starsAsync = ref.watch(githubStarsProvider);
     final isDark = theme.brightness == Brightness.dark;
-    final isLight = theme.brightness == Brightness.light;
 
     // Optimized asset selection
     final appLogoAsset = isDark
@@ -388,13 +387,15 @@ class _AppDrawerState extends ConsumerState<AppDrawer> {
 
     return Container(
       decoration: BoxDecoration(
-        color: isLight
-            ? const Color(0xFF1B1F23)
-            : Colors.white, // Inverted feel for contrast
+        color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(28),
+        border: Border.all(
+          color: theme.colorScheme.outlineVariant.withOpacity(0.4),
+          width: 1,
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
+            color: Colors.black.withOpacity(isDark ? 0.3 : 0.05),
             blurRadius: 16,
             offset: const Offset(0, 8),
           ),
@@ -417,13 +418,13 @@ class _AppDrawerState extends ConsumerState<AppDrawer> {
                 right: -20,
                 top: -20,
                 child: Opacity(
-                  opacity: 0.1,
+                  opacity: 0.05,
                   child: SvgPicture.asset(
                     'assets/vectors/icon_github.svg',
                     height: 120,
                     width: 120,
                     colorFilter: ColorFilter.mode(
-                      isLight ? Colors.white : Colors.black,
+                      theme.colorScheme.onSurface,
                       BlendMode.srcIn,
                     ),
                   ),
@@ -439,16 +440,14 @@ class _AppDrawerState extends ConsumerState<AppDrawer> {
                         Container(
                           padding: const EdgeInsets.all(10),
                           decoration: BoxDecoration(
-                            color: isLight
-                                ? Colors.white.withOpacity(0.1)
-                                : Colors.black.withOpacity(0.05),
+                            color: theme.colorScheme.surfaceContainerHighest
+                                .withOpacity(0.4),
                             borderRadius: BorderRadius.circular(16),
                           ),
                           child: Image.asset(
                             appLogoAsset,
                             height: 32,
-                            // Invert logo color for this card since bg is inverted
-                            color: isLight ? Colors.white : Colors.black,
+                            color: theme.colorScheme.onSurface,
                           ),
                         ),
                         const SizedBox(width: 16),
@@ -460,7 +459,7 @@ class _AppDrawerState extends ConsumerState<AppDrawer> {
                                 "FindStack is Open Source",
                                 style: theme.textTheme.titleMedium?.copyWith(
                                   fontWeight: FontWeight.bold,
-                                  color: isLight ? Colors.white : Colors.black,
+                                  color: theme.colorScheme.onSurface,
                                   height: 1.2,
                                 ),
                               ),
@@ -468,9 +467,7 @@ class _AppDrawerState extends ConsumerState<AppDrawer> {
                               Text(
                                 "Join the community and contribute on GitHub",
                                 style: theme.textTheme.bodySmall?.copyWith(
-                                  color: isLight
-                                      ? Colors.white70
-                                      : Colors.black54,
+                                  color: theme.colorScheme.onSurfaceVariant,
                                   height: 1.4,
                                 ),
                               ),
@@ -481,7 +478,7 @@ class _AppDrawerState extends ConsumerState<AppDrawer> {
                     ),
                     const SizedBox(height: 24),
                     Divider(
-                      color: isLight ? Colors.white24 : Colors.black12,
+                      color: theme.colorScheme.outlineVariant.withOpacity(0.4),
                       height: 1,
                     ),
                     const SizedBox(height: 16),
@@ -490,17 +487,17 @@ class _AppDrawerState extends ConsumerState<AppDrawer> {
                       children: [
                         Row(
                           children: [
-                            Icon(
+                            const Icon(
                               Icons.star_rounded,
-                              color: const Color(0xFFFFD700),
+                              color: Color(0xFFFFD700),
                               size: 20,
                             ),
                             const SizedBox(width: 8),
                             Text(
-                              "Star us",
+                              "Give a Star",
                               style: theme.textTheme.labelMedium?.copyWith(
                                 fontWeight: FontWeight.bold,
-                                color: isLight ? Colors.white : Colors.black,
+                                color: theme.colorScheme.onSurface,
                               ),
                             ),
                           ],
@@ -511,9 +508,8 @@ class _AppDrawerState extends ConsumerState<AppDrawer> {
                             vertical: 6,
                           ),
                           decoration: BoxDecoration(
-                            color: isLight
-                                ? Colors.white.withOpacity(0.15)
-                                : Colors.black.withOpacity(0.08),
+                            color: theme.colorScheme.surfaceContainerHighest
+                                .withOpacity(0.4),
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: Row(
@@ -522,7 +518,7 @@ class _AppDrawerState extends ConsumerState<AppDrawer> {
                                 'assets/vectors/icon_github.svg',
                                 height: 14,
                                 colorFilter: ColorFilter.mode(
-                                  isLight ? Colors.white : Colors.black,
+                                  theme.colorScheme.onSurface,
                                   BlendMode.srcIn,
                                 ),
                               ),
@@ -532,9 +528,7 @@ class _AppDrawerState extends ConsumerState<AppDrawer> {
                                   "$stars",
                                   style: theme.textTheme.labelMedium?.copyWith(
                                     fontWeight: FontWeight.bold,
-                                    color: isLight
-                                        ? Colors.white
-                                        : Colors.black,
+                                    color: theme.colorScheme.onSurface,
                                   ),
                                 ),
                                 loading: () => SizedBox(
@@ -542,17 +536,13 @@ class _AppDrawerState extends ConsumerState<AppDrawer> {
                                   height: 10,
                                   child: CircularProgressIndicator(
                                     strokeWidth: 2,
-                                    color: isLight
-                                        ? Colors.white
-                                        : Colors.black,
+                                    color: theme.colorScheme.onSurface,
                                   ),
                                 ),
                                 error: (_, __) => Text(
                                   "-",
                                   style: TextStyle(
-                                    color: isLight
-                                        ? Colors.white
-                                        : Colors.black,
+                                    color: theme.colorScheme.onSurface,
                                   ),
                                 ),
                               ),
@@ -590,10 +580,7 @@ class _AppDrawerState extends ConsumerState<AppDrawer> {
             ),
             title: Row(
               children: [
-                Icon(
-                  Icons.lightbulb_outline_rounded,
-                  color: theme.colorScheme.primary,
-                ),
+                Icon(Icons.lightbulb_outline, color: theme.colorScheme.primary),
                 const SizedBox(width: 12),
                 const Text("How it works"),
               ],

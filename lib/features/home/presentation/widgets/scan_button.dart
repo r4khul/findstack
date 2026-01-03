@@ -279,6 +279,7 @@ class _ScanDialog extends StatelessWidget {
                     description,
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: theme.colorScheme.onSurfaceVariant,
+                      height: 1.4,
                     ),
                   ),
                 ],
