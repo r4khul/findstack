@@ -5,6 +5,7 @@ import '../../../apps/presentation/providers/apps_provider.dart';
 import '../../../search/presentation/providers/search_provider.dart';
 import '../../../apps/presentation/widgets/app_card.dart';
 import '../../../apps/presentation/widgets/apps_list_skeleton.dart';
+import '../../../apps/presentation/widgets/app_count_badge.dart';
 import '../../../search/presentation/providers/tech_stack_provider.dart';
 import '../widgets/home_sliver_delegate.dart';
 import '../widgets/back_to_top_fab.dart';
@@ -93,60 +94,63 @@ class _HomePageState extends ConsumerState<HomePage> {
               return matchesCategory && matchesStack;
             }).toList();
 
-            return CustomScrollView(
-              controller: _scrollController,
-              key: const ValueKey('data'),
-              physics: const BouncingScrollPhysics(),
-              slivers: [
-                SliverPersistentHeader(
-                  pinned: true,
-                  delegate: HomeSliverDelegate(
-                    appCount: apps.length,
-                    expandedHeight: maxHeight,
-                    collapsedHeight: minHeight,
+            return AppCountOverlay(
+              count: filteredApps.length,
+              child: CustomScrollView(
+                controller: _scrollController,
+                key: const ValueKey('data'),
+                physics: const BouncingScrollPhysics(),
+                slivers: [
+                  SliverPersistentHeader(
+                    pinned: true,
+                    delegate: HomeSliverDelegate(
+                      appCount: apps.length,
+                      expandedHeight: maxHeight,
+                      collapsedHeight: minHeight,
+                    ),
                   ),
-                ),
-                filteredApps.isEmpty
-                    ? SliverFillRemaining(
-                        hasScrollBody: false,
-                        child: Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.app_blocking_outlined,
-                                size: 64,
-                                color: theme.disabledColor,
-                              ),
-                              const SizedBox(height: 16),
-                              Text(
-                                "No apps found matching criteria",
-                                style: theme.textTheme.titleMedium?.copyWith(
+                  filteredApps.isEmpty
+                      ? SliverFillRemaining(
+                          hasScrollBody: false,
+                          child: Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.app_blocking_outlined,
+                                  size: 64,
                                   color: theme.disabledColor,
                                 ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      )
-                    : SliverPadding(
-                        padding: EdgeInsets.fromLTRB(
-                          20,
-                          10,
-                          20,
-                          20 + MediaQuery.of(context).padding.bottom,
-                        ),
-                        sliver: SliverList(
-                          delegate: SliverChildBuilderDelegate(
-                            (context, index) => Padding(
-                              padding: const EdgeInsets.only(bottom: 12),
-                              child: AppCard(app: filteredApps[index]),
+                                const SizedBox(height: 16),
+                                Text(
+                                  "No apps found matching criteria",
+                                  style: theme.textTheme.titleMedium?.copyWith(
+                                    color: theme.disabledColor,
+                                  ),
+                                ),
+                              ],
                             ),
-                            childCount: filteredApps.length,
+                          ),
+                        )
+                      : SliverPadding(
+                          padding: EdgeInsets.fromLTRB(
+                            20,
+                            10,
+                            20,
+                            20 + MediaQuery.of(context).padding.bottom,
+                          ),
+                          sliver: SliverList(
+                            delegate: SliverChildBuilderDelegate(
+                              (context, index) => Padding(
+                                padding: const EdgeInsets.only(bottom: 12),
+                                child: AppCard(app: filteredApps[index]),
+                              ),
+                              childCount: filteredApps.length,
+                            ),
                           ),
                         ),
-                      ),
-              ],
+                ],
+              ),
             );
           },
           loading: () => const AppsListSkeleton(key: ValueKey('loading')),
