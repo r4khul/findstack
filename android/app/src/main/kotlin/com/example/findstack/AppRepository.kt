@@ -26,38 +26,47 @@ class AppRepository(private val context: Context) {
         onProgress: (current: Int, total: Int, currentApp: String) -> Unit,
         checkScanCancelled: () -> Boolean
     ): List<Map<String, Any?>> {
-        val flags = PackageManager.GET_META_DATA or
-                PackageManager.GET_PERMISSIONS or
-                PackageManager.GET_SERVICES or
-                PackageManager.GET_RECEIVERS or
-                PackageManager.GET_PROVIDERS or
-                (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) PackageManager.GET_SIGNING_CERTIFICATES else PackageManager.GET_SIGNATURES)
+        // Optimize flags: 0 for lite mode, full needed flags for details
+        var flags = 0
+        if (includeDetails) {
+            flags = PackageManager.GET_META_DATA or
+                    PackageManager.GET_PERMISSIONS or
+                    PackageManager.GET_SERVICES or
+                    PackageManager.GET_RECEIVERS or
+                    PackageManager.GET_PROVIDERS or
+                    (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) PackageManager.GET_SIGNING_CERTIFICATES else PackageManager.GET_SIGNATURES)
+        }
 
+        // 1. Get all installed packages
         val packages = packageManager.getInstalledPackages(flags)
-        val total = packages.size
+        
+        // 2. Pre-fetch launchable packages to avoid slow getLaunchIntentForPackage in loop
+        // queryIntentActivities is one IPC call vs N calls
+        val launchIntent = android.content.Intent(android.content.Intent.ACTION_MAIN, null)
+        launchIntent.addCategory(android.content.Intent.CATEGORY_LAUNCHER)
+        val launchables = packageManager.queryIntentActivities(launchIntent, 0)
+        val launchablePackages = launchables.map { it.activityInfo.packageName }.toSet()
 
+        val total = packages.size
         val usageMap = if (includeDetails) usageManager.getUsageMap() else emptyMap()
         val appList = mutableListOf<Map<String, Any?>>()
 
-        // Filter valid apps first to avoid processing things we won't show
-        // But we need total count for progress, so we iterate all
         for ((index, pkg) in packages.withIndex()) {
             if (checkScanCancelled()) break
 
-            val appInfo = pkg.applicationInfo ?: continue
             val packageName = pkg.packageName
 
-            // Report progress every few apps to reduce bridging overhead
-            if (includeDetails && index % 5 == 0) {
+            // Report progress
+            if (includeDetails && index % 10 == 0) {
                  onProgress(index + 1, total, packageName)
             }
 
-            if (packageManager.getLaunchIntentForPackage(packageName) != null) {
+            // Fast filter using Set lookup
+            if (launchablePackages.contains(packageName)) {
                 try {
+                    // Pass includeDetails to convertPackageToMap
                     appList.add(convertPackageToMap(pkg, includeDetails, usageMap))
-                } catch (e: Exception) {
-                    // Log error but continue
-                }
+                } catch (e: Exception) { }
             }
         }
         return appList
@@ -111,6 +120,11 @@ class AppRepository(private val context: Context) {
         var iconBytes = ByteArray(0)
         var usage: android.app.usage.UsageStats? = null
         var deepData: Map<String, Any?> = emptyMap()
+        
+        var permissions = emptyList<String>()
+        var services = emptyList<String>()
+        var receivers = emptyList<String>()
+        var providers = emptyList<String>()
 
         if (includeDetails) {
             val pair = stackDetector.detectStackAndLibs(appInfo)
@@ -123,19 +137,18 @@ class AppRepository(private val context: Context) {
             try {
                 val iconDrawable = packageManager.getApplicationIcon(appInfo)
                 iconBytes = drawableToByteArray(iconDrawable)
-            } catch (e: Exception) {
-                // Default or empty icon
-            }
+            } catch (e: Exception) { }
+            
+            permissions = pkg.requestedPermissions?.toList() ?: emptyList()
+            services = pkg.services?.map { it.name } ?: emptyList()
+            receivers = pkg.receivers?.map { it.name } ?: emptyList()
+            providers = pkg.providers?.map { it.name } ?: emptyList()
         }
 
         val isSystem = (appInfo.flags and ApplicationInfo.FLAG_SYSTEM) != 0
-        val permissions = pkg.requestedPermissions?.toList() ?: emptyList()
-        val services = pkg.services?.map { it.name } ?: emptyList()
-        val receivers = pkg.receivers?.map { it.name } ?: emptyList()
-        val providers = pkg.providers?.map { it.name } ?: emptyList()
 
         val map = mutableMapOf<String, Any?>(
-            "appName" to packageManager.getApplicationLabel(appInfo).toString(),
+            "appName" to (if (includeDetails) packageManager.getApplicationLabel(appInfo).toString() else pkg.packageName),
             "packageName" to pkg.packageName,
             "version" to (pkg.versionName ?: "Unknown"),
             "icon" to iconBytes,
