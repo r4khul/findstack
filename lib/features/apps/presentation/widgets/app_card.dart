@@ -136,6 +136,8 @@ class AppCard extends StatelessWidget {
                           style: theme.textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.bold,
                           ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                         const SizedBox(height: 4),
                         Text(
@@ -144,6 +146,8 @@ class AppCard extends StatelessWidget {
                             color: theme.textTheme.bodySmall?.color
                                 ?.withOpacity(0.7),
                           ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                         const SizedBox(height: 8),
                         Row(
@@ -170,13 +174,16 @@ class AppCard extends StatelessWidget {
                                     height: 14,
                                   ),
                                   const SizedBox(width: 6),
-                                  Text(
-                                    app.stack,
-                                    style: TextStyle(
-                                      color: stackColor,
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.bold,
-                                      letterSpacing: 0.5,
+                                  Flexible(
+                                    child: Text(
+                                      app.stack,
+                                      style: TextStyle(
+                                        color: stackColor,
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                        letterSpacing: 0.5,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
                                 ],

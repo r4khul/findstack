@@ -1,3 +1,4 @@
+import 'package:findstack/core/theme/app_colors.dart';
 import 'package:flutter/material.dart';
 import '../../../apps/presentation/widgets/category_slider.dart';
 import '../../../search/presentation/pages/search_page.dart';
@@ -159,11 +160,17 @@ class HomeSliverDelegate extends SliverPersistentHeaderDelegate {
                                     size: 20,
                                   ),
                                   const SizedBox(width: 12),
-                                  Text(
-                                    "Search installed apps...",
-                                    style: theme.textTheme.bodyMedium?.copyWith(
-                                      color: theme.colorScheme.onSurfaceVariant
-                                          .withOpacity(0.8),
+                                  Expanded(
+                                    child: Text(
+                                      "Search installed apps...",
+                                      style: theme.textTheme.bodyMedium
+                                          ?.copyWith(
+                                            color: theme
+                                                .colorScheme
+                                                .onSurfaceVariant
+                                                .withOpacity(0.8),
+                                          ),
+                                      overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
                                 ],
@@ -233,13 +240,12 @@ class HomeSliverDelegate extends SliverPersistentHeaderDelegate {
                                       padding: const EdgeInsets.all(4),
                                       decoration: BoxDecoration(
                                         border: Border.all(
-                                          color: theme.colorScheme.outline
-                                              .withOpacity(0.2),
+                                          color: theme.colorScheme.onSurface,
                                         ),
                                         borderRadius: BorderRadius.circular(10),
                                       ),
                                       child: Image.asset(
-                                        'assets/icons/findstack-nobg.png',
+                                        'assets/icons/white-findstack-nobg.png',
                                         height: 20,
                                       ),
                                     ),

@@ -469,11 +469,14 @@ class AppDetailsPage extends ConsumerWidget {
                         color: theme.colorScheme.onSurface.withOpacity(0.6),
                       ),
                       const SizedBox(width: 6),
-                      Text(
-                        lib,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: theme.colorScheme.onSurface.withOpacity(0.8),
+                      Flexible(
+                        child: Text(
+                          lib,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: theme.colorScheme.onSurface.withOpacity(0.8),
+                          ),
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ],
@@ -766,11 +769,14 @@ class AppDetailsPage extends ConsumerWidget {
                         color: theme.colorScheme.primary,
                       ),
                       const SizedBox(width: 8),
-                      Text(
-                        pkg,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: theme.colorScheme.primary,
+                      Flexible(
+                        child: Text(
+                          pkg,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: theme.colorScheme.primary,
+                          ),
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ],

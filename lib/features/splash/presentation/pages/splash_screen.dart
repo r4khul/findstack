@@ -122,7 +122,7 @@ class _SplashScreenState extends State<SplashScreen>
                   ),
                   padding: const EdgeInsets.all(24),
                   child: Image.asset(
-                    'assets/icons/findstack-nobg.png',
+                    'assets/icons/white-findstack-nobg.png',
                     fit: BoxFit.contain,
                     // Optionally add color filter if needed, but 'nobg' implies original colors might be desired.
                     // If the icon is black/white, we might want to invert it for dark mode?
