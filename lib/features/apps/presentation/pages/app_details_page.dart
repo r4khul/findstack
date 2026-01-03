@@ -275,17 +275,73 @@ class AppDetailsPage extends ConsumerWidget {
     AsyncValue<List<AppUsagePoint>> historyAsync,
     bool isDark,
   ) {
+    // Calculate total duration string
+    final totalDuration = Duration(milliseconds: app.totalTimeInForeground);
+    String totalUsageStr;
+    if (totalDuration.inHours > 0) {
+      totalUsageStr =
+          "${totalDuration.inHours}h ${totalDuration.inMinutes % 60}m";
+    } else {
+      totalUsageStr = "${totalDuration.inMinutes}m";
+    }
+
+    final daysSinceInstall = DateTime.now().difference(app.installDate).inDays;
+    final installDateStr = DateFormat('MMM d, y').format(app.installDate);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildSectionHeader(theme, "Activity"),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            _buildSectionHeader(theme, "Activity"),
+            if (app.totalTimeInForeground > 0)
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.primaryContainer.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.access_time_rounded,
+                      size: 14,
+                      color: theme.colorScheme.primary,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      totalUsageStr,
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        color: theme.colorScheme.primary,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        ),
+        if (app.totalTimeInForeground > 0)
+          Padding(
+            padding: const EdgeInsets.only(top: 8, bottom: 4),
+            child: Text(
+              "Used for $totalUsageStr since installed on $installDateStr ($daysSinceInstall days ago)",
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurface.withOpacity(0.6),
+              ),
+            ),
+          ),
         const SizedBox(height: 16),
         historyAsync.when(
           data: (history) {
             final hasUsage =
                 history.isNotEmpty && history.any((h) => h.usage.inSeconds > 0);
 
-            final containerHeight = hasUsage ? 320.0 : 100.0;
+            final containerHeight = hasUsage ? 360.0 : 130.0;
 
             return Container(
               height: containerHeight,
@@ -303,19 +359,20 @@ class AppDetailsPage extends ConsumerWidget {
               child: hasUsage
                   ? UsageChart(history: history, theme: theme, isDark: isDark)
                   : Center(
-                      child: Row(
+                      child: Column(
+               
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Icon(
-                            Icons.info_outline_rounded,
-                            size: 20,
-                            color: theme.colorScheme.onSurface.withOpacity(0.5),
+                            Icons.bar_chart_rounded,
+                            size: 48,
+                            color: theme.colorScheme.onSurface.withOpacity(0.2),
                           ),
-                          const SizedBox(width: 8),
+                          const SizedBox(height: 12),
                           Text(
                             history.isEmpty
                                 ? "No recent activity"
-                                : "No usage recorded in last year",
+                                : "No adequate data to plot chart",
                             style: theme.textTheme.bodyMedium?.copyWith(
                               color: theme.colorScheme.onSurface.withOpacity(
                                 0.5,
@@ -328,7 +385,7 @@ class AppDetailsPage extends ConsumerWidget {
             );
           },
           loading: () => Container(
-            height: 320,
+            height: 340,
             decoration: BoxDecoration(
               color: isDark
                   ? Colors.white.withOpacity(0.05)
@@ -338,7 +395,7 @@ class AppDetailsPage extends ConsumerWidget {
             child: const Center(child: CircularProgressIndicator()),
           ),
           error: (_, __) => Container(
-            height: 100,
+            height: 120,
             decoration: BoxDecoration(
               color: isDark
                   ? Colors.white.withOpacity(0.05)

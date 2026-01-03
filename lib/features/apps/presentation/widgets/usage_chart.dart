@@ -25,93 +25,150 @@ class _UsageChartState extends State<UsageChart> {
   String _selectedRange = '1Y'; // 1W, 1M, 3M, 6M, 1Y
   int? _touchedIndex;
 
-  // Cache for filtered points
-  late List<AppUsagePoint> _currentPoints;
+  // Processed points for the chart (grouped/filtered)
+  late List<AppUsagePoint> _chartPoints;
+  // Maximum Y value for scaling
+  late double _maxY;
 
   @override
   void initState() {
     super.initState();
-    _updatePoints();
-  }
-
-  void _updatePoints() {
-    final full = widget.history;
-    if (full.isEmpty) {
-      _currentPoints = [];
-      return;
-    }
-
-    int count;
-    switch (_selectedRange) {
-      case '1W':
-        count = 7;
-        break;
-      case '1M':
-        count = 30;
-        break;
-      case '3M':
-        count = 90;
-        break;
-      case '6M':
-        count = 180;
-        break;
-      case '1Y':
-      default:
-        count = 365;
-        break;
-    }
-
-    // Since list is oldest->newest, we filtered from filtered from END
-    if (full.length <= count) {
-      _currentPoints = full;
-    } else {
-      _currentPoints = full.sublist(full.length - count);
-    }
+    _processData();
   }
 
   @override
   void didUpdateWidget(UsageChart oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.history != widget.history) {
-      _updatePoints();
+      _processData();
     }
+  }
+
+  void _processData() {
+    final full = widget.history;
+    if (full.isEmpty) {
+      _chartPoints = [];
+      _maxY = 100;
+      return;
+    }
+
+    // 1. Filter by Range
+    final now = DateTime.now();
+    Duration rangeDuration;
+    switch (_selectedRange) {
+      case '1W':
+        rangeDuration = const Duration(days: 7);
+        break;
+      case '1M':
+        rangeDuration = const Duration(days: 30);
+        break;
+      case '3M':
+        rangeDuration = const Duration(days: 90);
+        break;
+      case '6M':
+        rangeDuration = const Duration(days: 180);
+        break;
+      case '1Y':
+      default:
+        rangeDuration = const Duration(days: 365);
+        break;
+    }
+
+    final cutoff = now.subtract(rangeDuration);
+    final filtered = full.where((p) => p.date.isAfter(cutoff)).toList();
+
+    // 2. Data Grouping (Optimization for Performance)
+    // If we have too many points, the chart lags. We group by week for > 60 days.
+    if (filtered.length > 60) {
+      _chartPoints = _groupByWeek(filtered);
+    } else {
+      _chartPoints = filtered;
+    }
+
+    // 3. Calculate Scale
+    if (_chartPoints.isNotEmpty) {
+      final maxUsage = _chartPoints
+          .map((e) => e.usage.inMinutes.toDouble())
+          .reduce(max);
+      _maxY = maxUsage * 1.2; // 20% buffer
+      if (_maxY < 60) _maxY = 60; // Min 1 hour scale
+    } else {
+      _maxY = 60;
+    }
+  }
+
+  List<AppUsagePoint> _groupByWeek(List<AppUsagePoint> points) {
+    if (points.isEmpty) return [];
+
+    // Sort just in case
+    // points.sort((a, b) => a.date.compareTo(b.date)); // Assume already sorted
+
+    final grouped = <AppUsagePoint>[];
+    // Efficient single pass:
+    int i = 0;
+    const int groupSize = 7;
+
+    while (i < points.length) {
+      int count = 0;
+      int sumMinutes = 0;
+      DateTime? firstDate;
+
+      while (i < points.length && count < groupSize) {
+        if (firstDate == null) firstDate = points[i].date;
+        sumMinutes += points[i].usage.inMinutes;
+        count++;
+        i++;
+      }
+
+      if (count > 0 && firstDate != null) {
+        // Average daily usage for this week
+        final avg = sumMinutes ~/ count;
+        grouped.add(
+          AppUsagePoint(
+            date: firstDate,
+            usage: Duration(minutes: avg),
+          ),
+        );
+      }
+    }
+
+    return grouped;
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_currentPoints.isEmpty) return const SizedBox.shrink();
+    if (_chartPoints.isEmpty) {
+      return const Center(child: Text("No data for period"));
+    }
 
-    // Calculate focused value
+    // Calculate focused value (Header)
     AppUsagePoint focusedPoint;
     if (_touchedIndex != null &&
         _touchedIndex! >= 0 &&
-        _touchedIndex! < _currentPoints.length) {
-      focusedPoint = _currentPoints[_touchedIndex!];
+        _touchedIndex! < _chartPoints.length) {
+      focusedPoint = _chartPoints[_touchedIndex!];
     } else {
       // Default: Average of displayed period
-      final totalMins = _currentPoints.fold(
+      final totalMins = _chartPoints.fold(
         0,
         (sum, p) => sum + p.usage.inMinutes,
       );
-      final avgMins = _currentPoints.isNotEmpty
-          ? totalMins ~/ _currentPoints.length
+      final avg = _chartPoints.isNotEmpty
+          ? totalMins ~/ _chartPoints.length
           : 0;
       focusedPoint = AppUsagePoint(
-        date: DateTime.now(), // Ignored for label if not hovering
-        usage: Duration(minutes: avgMins),
+        date: DateTime.now(),
+        usage: Duration(minutes: avg),
       );
     }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // Header (Value & Date)
         _buildHeader(focusedPoint, _touchedIndex != null),
+        const SizedBox(height: 24),
+        Expanded(child: _buildChart()),
         const SizedBox(height: 16),
-        // Chart
-        Expanded(child: _buildLineChart()),
-        const SizedBox(height: 16),
-        // Time Range Selector
         _buildTimeSelector(),
       ],
     );
@@ -119,152 +176,149 @@ class _UsageChartState extends State<UsageChart> {
 
   Widget _buildHeader(AppUsagePoint point, bool isHovering) {
     final theme = widget.theme;
-
-    String label = "Average Daily Usage";
-    String dateStr = "Past $_selectedRange";
-
-    if (isHovering) {
-      label = "Usage";
-      dateStr = DateFormat('EEE, MMM d, y').format(point.date);
-    }
-
     final mins = point.usage.inMinutes;
+
     String timeStr;
     if (mins >= 60) {
-      timeStr = "${mins ~/ 60}h ${mins % 60}m";
+      timeStr = "${(mins / 60).toStringAsFixed(1)}h";
     } else {
       timeStr = "${mins}m";
     }
 
+    String label = isHovering ? "Usage on this day" : "Daily Average";
+    if (_selectedRange == '6M' || _selectedRange == '1Y') {
+      if (isHovering) label = "Avg Usage (Week)";
+    }
+
+    String dateStr = isHovering
+        ? DateFormat('MMM d').format(point.date)
+        : "Past $_selectedRange";
+
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: CrossAxisAlignment.end,
       children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              timeStr,
-              style: theme.textTheme.headlineMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: theme.colorScheme.onSurface,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Row(
-              children: [
-                if (isHovering)
-                  Container(
-                    width: 6,
-                    height: 6,
-                    margin: const EdgeInsets.only(right: 6),
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: theme.colorScheme.primary,
-                    ),
-                  ),
-                Text(
-                  "$label • $dateStr",
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurface.withOpacity(0.6),
-                    fontWeight: FontWeight.w500,
-                  ),
+        Text(
+          timeStr,
+          style: theme.textTheme.displaySmall?.copyWith(
+            fontWeight: FontWeight.w800,
+            fontSize: 32,
+            color: theme.colorScheme.onSurface,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Padding(
+          padding: const EdgeInsets.only(bottom: 6),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                label,
+                style: theme.textTheme.labelSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: theme.colorScheme.primary,
+                  letterSpacing: 0.5,
                 ),
-              ],
-            ),
-          ],
+              ),
+              Text(
+                dateStr,
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: theme.colorScheme.onSurface.withOpacity(0.5),
+                ),
+              ),
+            ],
+          ),
         ),
       ],
     );
   }
 
-  Widget _buildLineChart() {
+  Widget _buildChart() {
     final theme = widget.theme;
-    final history = _currentPoints;
 
-    final maxY =
-        history
-            .map((e) => e.usage.inMinutes.toDouble())
-            .reduce((a, b) => max(a, b)) *
-        1.2;
-    final effectiveMaxY = maxY > 10 ? maxY : 60.0;
+    // Create rich gradient
+    final gradientColors = [
+      theme.colorScheme.primary.withOpacity(0.4),
+      theme.colorScheme.primary.withOpacity(0.0),
+    ];
+
+    final lineGradient = LinearGradient(
+      colors: [theme.colorScheme.primary, theme.colorScheme.tertiary],
+      begin: Alignment.centerLeft,
+      end: Alignment.centerRight,
+    );
 
     return LineChart(
       LineChartData(
         gridData: FlGridData(show: false),
         titlesData: FlTitlesData(show: false),
         borderData: FlBorderData(show: false),
+
         minX: 0,
-        maxX: history.length.toDouble() - 1,
+        maxX: _chartPoints.length.toDouble() - 1,
         minY: 0,
-        maxY: effectiveMaxY,
+        maxY: _maxY,
+
         lineTouchData: LineTouchData(
-          enabled: true,
-          getTouchedSpotIndicator:
-              (LineChartBarData barData, List<int> spotIndexes) {
-                return spotIndexes.map((index) {
-                  return TouchedSpotIndicatorData(
-                    FlLine(
-                      color: theme.colorScheme.onSurface.withOpacity(0.2),
-                      strokeWidth: 2,
-                      dashArray: [5, 5],
-                    ),
-                    FlDotData(
-                      show: true,
-                      getDotPainter: (spot, percent, bar, index) =>
-                          FlDotCirclePainter(
-                            radius: 4,
-                            color: theme.colorScheme.surface,
-                            strokeWidth: 2,
-                            strokeColor: theme.colorScheme.primary,
-                          ),
-                    ),
-                  );
-                }).toList();
-              },
           touchTooltipData: LineTouchTooltipData(
-            getTooltipColor: (_) => Colors.transparent, // Disable tooltip bg
-            getTooltipItems: (spots) =>
-                spots.map((_) => null).toList(), // Disable tooltip text
+            getTooltipColor: (_) => Colors.transparent,
+            getTooltipItems: (spots) => spots.map((_) => null).toList(),
           ),
-          touchCallback: (FlTouchEvent event, LineTouchResponse? response) {
-            if (response == null || response.lineBarSpots == null) {
-              if (event is FlPanEndEvent || event is FlTapUpEvent) {
-                setState(() => _touchedIndex = null);
-              }
-              return;
+          touchCallback: (event, response) {
+            if (response != null &&
+                response.lineBarSpots != null &&
+                event is! FlPanEndEvent &&
+                event is! FlTapUpEvent) {
+              setState(() {
+                _touchedIndex = response.lineBarSpots!.first.spotIndex;
+              });
+            } else {
+              setState(() {
+                _touchedIndex = null;
+              });
             }
-            if (event is FlPanEndEvent || event is FlTapUpEvent) {
-              setState(() => _touchedIndex = null);
-              return;
-            }
-            final spotIndex = response.lineBarSpots!.first.spotIndex;
-            setState(() {
-              _touchedIndex = spotIndex;
-            });
           },
-          handleBuiltInTouches: true,
+          getTouchedSpotIndicator: (barData, spotIndexes) {
+            return spotIndexes.map((index) {
+              return TouchedSpotIndicatorData(
+                FlLine(
+                  color: theme.colorScheme.outline.withOpacity(0.2),
+                  strokeWidth: 1,
+                ),
+                FlDotData(
+                  show: true,
+                  getDotPainter: (spot, percent, bar, index) =>
+                      FlDotCirclePainter(
+                        radius: 6,
+                        color: theme.colorScheme.surface,
+                        strokeWidth: 3,
+                        strokeColor: theme.colorScheme.primary,
+                      ),
+                ),
+              );
+            }).toList();
+          },
         ),
+
         lineBarsData: [
           LineChartBarData(
-            spots: history.asMap().entries.map((e) {
+            spots: _chartPoints.asMap().entries.map((e) {
               return FlSpot(
                 e.key.toDouble(),
                 e.value.usage.inMinutes.toDouble(),
               );
             }).toList(),
             isCurved: true,
-            curveSmoothness: 0.1,
-            color: theme.colorScheme.primary,
-            barWidth: 2.5,
+            curveSmoothness: 0.35,
+            preventCurveOverShooting: true,
+            gradient: lineGradient,
+            barWidth: 3,
             isStrokeCapRound: true,
-            dotData: const FlDotData(show: false),
+            dotData: FlDotData(show: false),
             belowBarData: BarAreaData(
               show: true,
               gradient: LinearGradient(
-                colors: [
-                  theme.colorScheme.primary.withOpacity(0.15),
-                  theme.colorScheme.primary.withOpacity(0.0),
-                ],
+                colors: gradientColors,
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
               ),
@@ -272,97 +326,55 @@ class _UsageChartState extends State<UsageChart> {
           ),
         ],
       ),
-      duration: Duration.zero,
+      duration: const Duration(milliseconds: 300), // Smooth animation
+      curve: Curves.easeOutCubic,
     );
   }
 
   Widget _buildTimeSelector() {
     final ranges = ['1W', '1M', '3M', '6M', '1Y'];
-
-    return Container(
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: widget.isDark
-            ? Colors.white.withOpacity(0.05)
-            : Colors.grey.shade100,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: ranges.map((r) => _buildRangeChip(r)).toList(),
-      ),
-    );
-  }
-
-  Widget _buildRangeChip(String range) {
-    final isSelected = _selectedRange == range;
-    // theme is used via widget.theme in usage below if needed, but it's already in scope via widget.theme.
-    // However, the original code used `theme` variable. Let's see.
-    // Line 300: final theme = widget.theme;
-    // Line 316: color: isSelected ? theme.colorScheme.surface ...
-    // Ah, wait. The lint error said line 266?
-    // Let's check line 266 in previous view_file output.
-    // The previous view_file output for usage_chart.dart (Step 207) showed line 266 inside _buildLineChart? No.
-    // Let's re-read the lint error carefully.
-    // "The value of the local variable 'theme' isn't used. ... at line 266"
-    // Line 266 corresponds to ... wait "theme" variable.
-    // Let's look at Step 207 output around line 266.
-    // 257:             color: theme.colorScheme.primary,
-    // ...
-    // 279:   Widget _buildTimeSelector() {
-    // 280:     final theme = widget.theme;   <-- This is likely the one if it's not used.
-    // 281:     final ranges = ['1W', '1M', '3M', '6M', '1Y'];
-    // 282:
-    // 283:     return Container(
-    // 284:       padding: const EdgeInsets.all(4),
-    // 285:       decoration: BoxDecoration(
-    // 286:         color: widget.isDark
-    // ...
-    // It seems `theme` is NOT used in `_buildTimeSelector`. It uses `widget.isDark`.
-    // It does NOT use `theme` colorScheme here.
-    // Yes, line 280 (in Step 207 view) is `final theme = widget.theme;`.
-    // And it is not used in that method.
-
     final theme = widget.theme;
 
-    return Expanded(
-      child: GestureDetector(
-        onTap: () {
-          setState(() {
-            _selectedRange = range;
-            _touchedIndex = null;
-            _updatePoints();
-          });
-          HapticFeedback.selectionClick();
-        },
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          decoration: BoxDecoration(
-            color: isSelected ? theme.colorScheme.surface : Colors.transparent,
-            borderRadius: BorderRadius.circular(8),
-            boxShadow: isSelected
-                ? [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
-                      blurRadius: 4,
-                      offset: const Offset(0, 2),
-                    ),
-                  ]
-                : [],
-          ),
-          child: Text(
-            range,
-            textAlign: TextAlign.center,
-            style: theme.textTheme.labelSmall?.copyWith(
-              fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: ranges.map((r) {
+        final isSelected = _selectedRange == r;
+        return GestureDetector(
+          onTap: () {
+            setState(() {
+              _selectedRange = r;
+              _processData();
+              _touchedIndex = null;
+            });
+            HapticFeedback.selectionClick();
+          },
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
               color: isSelected
-                  ? theme.colorScheme.primary
-                  : theme.colorScheme.onSurface.withOpacity(0.5),
+                  ? theme.colorScheme.primary.withOpacity(0.1)
+                  : Colors.transparent,
+              borderRadius: BorderRadius.circular(12),
+              border: isSelected
+                  ? Border.all(
+                      color: theme.colorScheme.primary.withOpacity(0.2),
+                      width: 1,
+                    )
+                  : Border.all(color: Colors.transparent),
+            ),
+            child: Text(
+              r,
+              style: theme.textTheme.labelSmall?.copyWith(
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                color: isSelected
+                    ? theme.colorScheme.primary
+                    : theme.colorScheme.onSurface.withOpacity(0.5),
+              ),
             ),
           ),
-        ),
-      ),
+        );
+      }).toList(),
     );
   }
 }
