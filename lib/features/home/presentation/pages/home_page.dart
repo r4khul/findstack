@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
+import 'package:skeletonizer/skeletonizer.dart';
+import '../../../apps/domain/entities/device_app.dart';
 import '../../../apps/presentation/providers/apps_provider.dart';
 import '../../../search/presentation/providers/search_provider.dart';
 import '../../../apps/presentation/widgets/app_card.dart';
-import '../../../apps/presentation/widgets/apps_list_skeleton.dart';
 import '../../../apps/presentation/widgets/app_count_badge.dart';
 import '../../../search/presentation/providers/tech_stack_provider.dart';
 import '../widgets/home_sliver_delegate.dart';
@@ -144,6 +145,27 @@ class _HomePageState extends ConsumerState<HomePage>
     );
   }
 
+  static final List<DeviceApp> _dummyApps = List.generate(
+    10,
+    (index) => DeviceApp(
+      appName: 'Application Name',
+      packageName: 'com.example.application',
+      stack: 'Flutter',
+      nativeLibraries: const [],
+      permissions: const [],
+      services: const [],
+      receivers: const [],
+      providers: const [],
+      installDate: DateTime.now(),
+      updateDate: DateTime.now(),
+      minSdkVersion: 21,
+      targetSdkVersion: 33,
+      uid: 1000,
+      versionCode: 1,
+      category: AppCategory.productivity,
+    ),
+  );
+
   @override
   Widget build(BuildContext context) {
     final appsAsync = ref.watch(installedAppsProvider);
@@ -156,21 +178,16 @@ class _HomePageState extends ConsumerState<HomePage>
     final minHeight = 170.0 + topPadding;
     final maxHeight = 260.0 + topPadding;
 
-    return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor,
-      endDrawer: const AppDrawer(),
-      floatingActionButton: BackToTopFab(
-        isVisible: _showBackToTop,
-        onPressed: _scrollToTop,
-      ),
-      body: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 300),
-        child: appsAsync.when(
-          data: (apps) {
-            final category = ref.watch(categoryFilterProvider);
-            final techStack = ref.watch(techStackFilterProvider);
+    // Helper to build the content
+    Widget buildContent(List<DeviceApp> apps, {bool isLoading = false}) {
+      final category = ref.watch(categoryFilterProvider);
+      final techStack = ref.watch(techStackFilterProvider);
 
-            final filteredApps = apps.where((app) {
+      // If loading, we use the full list (dummy) as is.
+      // If not loading, we filter.
+      final filteredApps = isLoading
+          ? apps
+          : apps.where((app) {
               final matchesCategory =
                   category == null || app.category == category;
               bool matchesStack = true;
@@ -189,127 +206,104 @@ class _HomePageState extends ConsumerState<HomePage>
               return matchesCategory && matchesStack;
             }).toList();
 
-            return AppCountOverlay(
-              count: filteredApps.length,
-              child: CustomScrollView(
-                controller: _scrollController,
-                key: const ValueKey('data'),
-                physics: const BouncingScrollPhysics(),
-                slivers: [
-                  SliverPersistentHeader(
-                    pinned: true,
-                    delegate: HomeSliverDelegate(
-                      appCount: apps.length,
-                      expandedHeight: maxHeight,
-                      collapsedHeight: minHeight,
+      final isDark = theme.brightness == Brightness.dark;
+
+      return Skeletonizer(
+        enabled: isLoading,
+        // Use opaque colors for a cleaner, premium look
+        effect: ShimmerEffect(
+          baseColor: isDark ? const Color(0xFF303030) : const Color(0xFFE0E0E0),
+          highlightColor: isDark
+              ? const Color(0xFF424242)
+              : const Color(0xFFFAFAFA),
+          duration: const Duration(milliseconds: 1500),
+        ),
+        textBoneBorderRadius: TextBoneBorderRadius(BorderRadius.circular(4)),
+        justifyMultiLineText: true,
+        containersColor: theme.colorScheme.surface,
+        child: AppCountOverlay(
+          count: filteredApps.length,
+          child: CustomScrollView(
+            controller: _scrollController,
+            key: const ValueKey('data'),
+            physics: isLoading
+                ? const NeverScrollableScrollPhysics()
+                : const BouncingScrollPhysics(),
+            slivers: [
+              SliverPersistentHeader(
+                pinned: true,
+                delegate: HomeSliverDelegate(
+                  appCount: apps.length,
+                  expandedHeight: maxHeight,
+                  collapsedHeight: minHeight,
+                ),
+              ),
+              if (!isLoading && filteredApps.isEmpty)
+                SliverFillRemaining(
+                  hasScrollBody: false,
+                  child: Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.app_blocking_outlined,
+                          size: 64,
+                          color: theme.disabledColor,
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          "No apps found matching criteria",
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            color: theme.disabledColor,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  if (apps.isEmpty)
-                    SliverList(
-                      delegate: SliverChildBuilderDelegate(
-                        (context, index) => Container(
-                          margin: const EdgeInsets.fromLTRB(20, 0, 20, 12),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 12,
-                          ),
-                          decoration: BoxDecoration(
-                            color: theme.colorScheme.surface,
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: theme.colorScheme.outline.withOpacity(0.1),
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              Container(
-                                width: 40,
-                                height: 40,
-                                decoration: BoxDecoration(
-                                  color: theme.colorScheme.onSurface
-                                      .withOpacity(0.05),
-                                  shape: BoxShape.circle,
-                                ),
-                              ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Container(
-                                      width: 140,
-                                      height: 16,
-                                      decoration: BoxDecoration(
-                                        color: theme.colorScheme.onSurface
-                                            .withOpacity(0.05),
-                                        borderRadius: BorderRadius.circular(4),
-                                      ),
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Container(
-                                      width: 180,
-                                      height: 12,
-                                      decoration: BoxDecoration(
-                                        color: theme.colorScheme.onSurface
-                                            .withOpacity(0.05),
-                                        borderRadius: BorderRadius.circular(4),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        childCount: 6,
+                )
+              else
+                SliverPadding(
+                  padding: EdgeInsets.fromLTRB(
+                    20,
+                    10,
+                    20,
+                    20 + MediaQuery.of(context).padding.bottom,
+                  ),
+                  sliver: SliverList(
+                    delegate: SliverChildBuilderDelegate(
+                      (context, index) => Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: AppCard(app: filteredApps[index]),
                       ),
-                    )
-                  else if (filteredApps.isEmpty)
-                    SliverFillRemaining(
-                      hasScrollBody: false,
-                      child: Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.app_blocking_outlined,
-                              size: 64,
-                              color: theme.disabledColor,
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              "No apps found matching criteria",
-                              style: theme.textTheme.titleMedium?.copyWith(
-                                color: theme.disabledColor,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    )
-                  else
-                    SliverPadding(
-                      padding: EdgeInsets.fromLTRB(
-                        20,
-                        10,
-                        20,
-                        20 + MediaQuery.of(context).padding.bottom,
-                      ),
-                      sliver: SliverList(
-                        delegate: SliverChildBuilderDelegate(
-                          (context, index) => Padding(
-                            padding: const EdgeInsets.only(bottom: 12),
-                            child: AppCard(app: filteredApps[index]),
-                          ),
-                          childCount: filteredApps.length,
-                        ),
-                      ),
+                      childCount: filteredApps.length,
                     ),
-                ],
-              ),
-            );
+                  ),
+                ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Scaffold(
+      backgroundColor: theme.scaffoldBackgroundColor,
+      endDrawer: const AppDrawer(),
+      floatingActionButton: BackToTopFab(
+        isVisible: _showBackToTop,
+        onPressed: _scrollToTop,
+      ),
+      body: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 300),
+        child: appsAsync.when(
+          data: (apps) {
+            // If apps is empty, we treat it as loading (initial scan state)
+            // This prevents "0 apps" flash.
+            if (apps.isEmpty) {
+              return buildContent(_dummyApps, isLoading: true);
+            }
+            return buildContent(apps, isLoading: false);
           },
-          loading: () => const AppsListSkeleton(key: ValueKey('loading')),
+          loading: () => buildContent(_dummyApps, isLoading: true),
           error: (err, stack) => Center(
             key: const ValueKey('error'),
             child: Padding(
