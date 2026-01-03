@@ -338,12 +338,71 @@ class AppDetailsPage extends ConsumerWidget {
         const SizedBox(height: 16),
         historyAsync.when(
           data: (history) {
-            final hasUsage =
-                app.totalTimeInForeground > 0 ||
-                (history.isNotEmpty &&
-                    history.any((h) => h.usage.inSeconds > 0));
+            final hasGranular =
+                history.isNotEmpty && history.any((h) => h.usage.inSeconds > 0);
+            final hasTotal = app.totalTimeInForeground > 0;
 
-            final containerHeight = hasUsage ? 360.0 : 130.0;
+            final double containerHeight;
+            if (hasGranular) {
+              containerHeight = 360.0;
+            } else if (hasTotal) {
+              containerHeight = 180.0;
+            } else {
+              containerHeight = 130.0;
+            }
+
+            Widget content;
+            if (hasGranular) {
+              content = UsageChart(
+                history: history,
+                theme: theme,
+                isDark: isDark,
+              );
+            } else if (hasTotal) {
+              content = Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.insights_rounded,
+                      size: 32,
+                      color: theme.colorScheme.onSurface.withOpacity(0.3),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      "Adequate data not found to plot chart",
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: theme.colorScheme.onSurface.withOpacity(0.5),
+                        fontWeight: FontWeight.w500,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              );
+            } else {
+              content = Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.bar_chart_rounded,
+                      size: 48,
+                      color: theme.colorScheme.onSurface.withOpacity(0.2),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      history.isEmpty
+                          ? "No recent activity"
+                          : "No usage recorded in last year",
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: theme.colorScheme.onSurface.withOpacity(0.5),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }
 
             return Container(
               height: containerHeight,
@@ -358,31 +417,7 @@ class AppDetailsPage extends ConsumerWidget {
                   color: theme.colorScheme.outline.withOpacity(0.1),
                 ),
               ),
-              child: hasUsage
-                  ? UsageChart(history: history, theme: theme, isDark: isDark)
-                  : Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.bar_chart_rounded,
-                            size: 48,
-                            color: theme.colorScheme.onSurface.withOpacity(0.2),
-                          ),
-                          const SizedBox(height: 12),
-                          Text(
-                            history.isEmpty
-                                ? "No recent activity"
-                                : "No adequate data to plot chart",
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                              color: theme.colorScheme.onSurface.withOpacity(
-                                0.5,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+              child: content,
             );
           },
           loading: () => Container(
