@@ -339,7 +339,9 @@ class AppDetailsPage extends ConsumerWidget {
         historyAsync.when(
           data: (history) {
             final hasUsage =
-                history.isNotEmpty && history.any((h) => h.usage.inSeconds > 0);
+                app.totalTimeInForeground > 0 ||
+                (history.isNotEmpty &&
+                    history.any((h) => h.usage.inSeconds > 0));
 
             final containerHeight = hasUsage ? 360.0 : 130.0;
 
@@ -360,7 +362,6 @@ class AppDetailsPage extends ConsumerWidget {
                   ? UsageChart(history: history, theme: theme, isDark: isDark)
                   : Center(
                       child: Column(
-               
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Icon(
