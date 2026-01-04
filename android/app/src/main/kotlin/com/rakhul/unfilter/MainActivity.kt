@@ -20,13 +20,17 @@ class MainActivity : FlutterActivity() {
     @Volatile private var currentScanId = 0L
 
     private lateinit var appRepository: AppRepository
+
     private lateinit var usageManager: UsageManager
+    private lateinit var processManager: ProcessManager
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         
         appRepository = AppRepository(this)
+
         usageManager = UsageManager(this)
+        processManager = ProcessManager()
         
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL).setMethodCallHandler { call, result ->
             when (call.method) {
@@ -102,7 +106,18 @@ class MainActivity : FlutterActivity() {
                 }
                 "requestUsagePermission" -> {
                     startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
+
                     result.success(true)
+                }
+                "getRunningProcesses" -> {
+                    executor.execute {
+                        try {
+                            val processes = processManager.getRunningProcesses()
+                            handler.post { result.success(processes) }
+                        } catch (e: Exception) {
+                            handler.post { result.error("ERROR", e.message, null) }
+                        }
+                    }
                 }
                 else -> result.notImplemented()
             }

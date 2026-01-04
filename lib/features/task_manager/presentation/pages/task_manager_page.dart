@@ -10,6 +10,8 @@ import '../../../apps/presentation/providers/apps_provider.dart';
 import '../../../apps/domain/entities/device_app.dart';
 import '../../../home/presentation/widgets/premium_sliver_app_bar.dart';
 import '../../../apps/presentation/pages/app_details_page.dart';
+import '../providers/process_provider.dart';
+import '../../domain/entities/android_process.dart';
 
 class TaskManagerPage extends ConsumerStatefulWidget {
   const TaskManagerPage({super.key});
@@ -58,14 +60,12 @@ class _TaskManagerPageState extends ConsumerState<TaskManagerPage> {
 
   Future<void> _refreshRam() async {
     try {
-      // system_info2 mostly works on desktop/android
-      // On some Android versions, it might fail or return 0. Handle gracefully.
       const int mb = 1024 * 1024;
       _totalRam = SysInfo.getTotalPhysicalMemory() ~/ mb;
       _freeRam = SysInfo.getFreePhysicalMemory() ~/ mb;
-      setState(() {});
+      if (mounted) setState(() {});
     } catch (e) {
-      // Fallback or ignore
+      // Fallback
     }
   }
 
@@ -102,8 +102,6 @@ class _TaskManagerPageState extends ConsumerState<TaskManagerPage> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final appsAsync = ref.watch(installedAppsProvider);
-
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       body: CustomScrollView(
@@ -122,79 +120,136 @@ class _TaskManagerPageState extends ConsumerState<TaskManagerPage> {
             ),
           ),
 
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-              child: Row(
-                children: [
-                  Text(
-                    "RECENT PROCESSES",
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 2.0,
-                      color: theme.colorScheme.onSurface.withOpacity(0.4),
+          // Unified List Logic
+          Consumer(
+            builder: (context, ref, child) {
+              final appsState = ref.watch(installedAppsProvider);
+              final processesState = ref.watch(activeProcessesProvider);
+
+              // 1. Get Shell Processes (Kernel layer)
+              final shellProcesses = processesState.asData?.value ?? [];
+
+              // 2. Get User Apps (Application layer)
+              final userApps = appsState.asData?.value ?? [];
+
+              final List<Widget> listItems = [];
+
+              // HEADER: KERNEL / SYSTEM
+              if (shellProcesses.isNotEmpty) {
+                listItems.add(
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 24, 20, 8),
+                    child: Row(
+                      children: [
+                        Text(
+                          "KERNEL / SYSTEM",
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 2.0,
+                            color: theme.colorScheme.onSurface.withOpacity(0.4),
+                          ),
+                        ),
+                        const Spacer(),
+                        _LiveIndicator(color: theme.colorScheme.error),
+                      ],
                     ),
                   ),
-                  const Spacer(),
-                  // Blinking indicator for "Live" feel
-                  _LiveIndicator(color: theme.colorScheme.primary),
-                ],
-              ),
-            ),
-          ),
+                );
 
-          // Process List
-          appsAsync.when(
-            data: (apps) {
-              // Sort by recently used
-              final activeApps = apps
-                  .where((app) => app.lastTimeUsed > 0)
-                  .toList();
-              activeApps.sort(
-                (a, b) => b.lastTimeUsed.compareTo(a.lastTimeUsed),
-              );
+                for (var proc in shellProcesses) {
+                  listItems.add(_buildShellProcessItem(context, theme, proc));
+                }
+              }
 
-              // If no usage stats, fall back to just all apps (unlikely if usage stats working)
-              final displayApps = activeApps.isEmpty ? apps : activeApps;
+              // HEADER: USER APPS
+              if (userApps.isNotEmpty) {
+                // Filter: Active in last 24h
+                final activeApps = userApps.where((app) {
+                  final lastUsed = DateTime.fromMillisecondsSinceEpoch(
+                    app.lastTimeUsed,
+                  );
+                  final diff = DateTime.now().difference(lastUsed);
+                  return diff.inHours < 24;
+                }).toList();
 
-              if (displayApps.isEmpty) {
+                // Sort by most recent
+                activeApps.sort(
+                  (a, b) => b.lastTimeUsed.compareTo(a.lastTimeUsed),
+                );
+
+                if (activeApps.isNotEmpty) {
+                  listItems.add(
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 32, 20, 8),
+                      child: Row(
+                        children: [
+                          Text(
+                            "USER SPACE (ACTIVE)",
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 2.0,
+                              color: theme.colorScheme.onSurface.withOpacity(
+                                0.4,
+                              ),
+                            ),
+                          ),
+                          const Spacer(),
+                          if (shellProcesses.length < 5)
+                            Text(
+                              "SANDBOXED",
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                fontSize: 9,
+                                fontWeight: FontWeight.bold,
+                                color: theme.colorScheme.onSurfaceVariant
+                                    .withOpacity(0.5),
+                              ),
+                            )
+                          else
+                            _LiveIndicator(color: theme.colorScheme.primary),
+                        ],
+                      ),
+                    ),
+                  );
+
+                  for (var app in activeApps) {
+                    // Try to find matching shell process for potentially more info
+                    AndroidProcess? matchingProc;
+                    try {
+                      matchingProc = shellProcesses.firstWhere(
+                        (p) =>
+                            p.name.contains(app.packageName) ||
+                            app.packageName.contains(p.name),
+                      );
+                    } catch (_) {}
+
+                    listItems.add(
+                      _buildUsageBasedItem(
+                        context,
+                        theme,
+                        app,
+                        matchingShell: matchingProc,
+                      ),
+                    );
+                  }
+                }
+              }
+
+              if (listItems.isEmpty) {
+                if (appsState.isLoading || processesState.isLoading) {
+                  return _buildSkeletonList();
+                }
                 return const SliverFillRemaining(
-                  child: Center(child: Text("No active processes found")),
+                  child: Center(child: Text("No process data available")),
                 );
               }
 
               return SliverList(
-                delegate: SliverChildBuilderDelegate((context, index) {
-                  final app = displayApps[index];
-                  return _buildProcessItem(context, theme, app);
-                }, childCount: displayApps.length),
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) => listItems[index],
+                  childCount: listItems.length,
+                ),
               );
             },
-            loading: () => SliverToBoxAdapter(
-              child: Skeletonizer(
-                enabled: true,
-                child: Column(
-                  children: List.generate(
-                    5,
-                    (index) => Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 8,
-                      ),
-                      child: Container(
-                        height: 70,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            error: (err, stack) =>
-                SliverFillRemaining(child: Center(child: Text("Error: $err"))),
           ),
 
           const SliverPadding(padding: EdgeInsets.only(bottom: 32)),
@@ -203,8 +258,30 @@ class _TaskManagerPageState extends ConsumerState<TaskManagerPage> {
     );
   }
 
+  Widget _buildSkeletonList() {
+    return SliverToBoxAdapter(
+      child: Skeletonizer(
+        enabled: true,
+        child: Column(
+          children: List.generate(
+            5,
+            (index) => Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Container(
+                height: 70,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildSystemStatsCard(ThemeData theme) {
-    // Calculate RAM usage
     final int usedRam = _totalRam - _freeRam;
     final double ramPercent = _totalRam > 0 ? usedRam / _totalRam : 0.0;
 
@@ -256,7 +333,6 @@ class _TaskManagerPageState extends ConsumerState<TaskManagerPage> {
           ),
           const SizedBox(height: 24),
 
-          // RAM Usage
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -287,7 +363,6 @@ class _TaskManagerPageState extends ConsumerState<TaskManagerPage> {
 
           const SizedBox(height: 16),
 
-          // Battery Usage
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -335,12 +410,130 @@ class _TaskManagerPageState extends ConsumerState<TaskManagerPage> {
     );
   }
 
-  Widget _buildProcessItem(
+  // Uses shell data (Pro mode)
+  Widget _buildShellProcessItem(
     BuildContext context,
     ThemeData theme,
-    DeviceApp app,
+    AndroidProcess process,
   ) {
-    // Format timestamp
+    final bool isRoot = process.user == 'root';
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surface,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: theme.colorScheme.outlineVariant.withOpacity(0.1),
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: isRoot
+                    ? theme.colorScheme.error.withOpacity(0.1)
+                    : theme.colorScheme.surfaceContainerHighest.withOpacity(
+                        0.3,
+                      ),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                process.pid,
+                style: theme.textTheme.labelSmall?.copyWith(
+                  fontFamily: 'monospace',
+                  fontWeight: FontWeight.bold,
+                  color: isRoot
+                      ? theme.colorScheme.error
+                      : theme.colorScheme.primary,
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    process.name.length > 30
+                        ? "...${process.name.substring(process.name.length - 28)}"
+                        : process.name,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 2),
+                  Row(
+                    children: [
+                      Text(
+                        process.user,
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          fontSize: 10,
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        width: 1,
+                        height: 10,
+                        color: theme.colorScheme.outlineVariant,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        "RSS: ${process.res}", // Already formatted usually? ps returns integer usually in kb
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          fontSize: 10,
+                          fontFamily: 'monospace',
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  "${process.cpu}%",
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    fontFamily: 'monospace',
+                    color: process.cpu != "0.0" && process.cpu != "0"
+                        ? theme.colorScheme.primary
+                        : theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                Text(
+                  "CPU",
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    fontSize: 8,
+                    color: theme.colorScheme.onSurfaceVariant.withOpacity(0.5),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Fallback using usage stats
+  Widget _buildUsageBasedItem(
+    BuildContext context,
+    ThemeData theme,
+    DeviceApp app, {
+    AndroidProcess? matchingShell,
+  }) {
+    // ... Copy of previous logic ...
     final lastUsed = DateTime.fromMillisecondsSinceEpoch(app.lastTimeUsed);
     final diff = DateTime.now().difference(lastUsed);
 
@@ -361,7 +554,6 @@ class _TaskManagerPageState extends ConsumerState<TaskManagerPage> {
         color: Colors.transparent,
         child: InkWell(
           onTap: () {
-            // Navigate to app details
             Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => AppDetailsPage(app: app)),
@@ -411,35 +603,54 @@ class _TaskManagerPageState extends ConsumerState<TaskManagerPage> {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    Text(
-                      timeAgo,
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: diff.inMinutes < 5
-                            ? theme.colorScheme.primary
-                            : theme.colorScheme.onSurfaceVariant,
-                        fontWeight: diff.inMinutes < 5
-                            ? FontWeight.bold
-                            : FontWeight.normal,
+                    if (matchingShell != null) ...[
+                      Text(
+                        "${matchingShell.cpu}% CPU",
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: theme.colorScheme.primary,
+                          fontFamily: 'monospace',
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 4),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: theme.colorScheme.surfaceContainerHighest,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        "RUNNING", // Mimic "Running" state
+                      Text(
+                        "RSS: ${matchingShell.res}",
                         style: theme.textTheme.labelSmall?.copyWith(
                           fontSize: 9,
                           color: theme.colorScheme.onSurfaceVariant,
+                          fontFamily: 'monospace',
                         ),
                       ),
-                    ),
+                    ] else ...[
+                      Text(
+                        timeAgo,
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: diff.inMinutes < 5
+                              ? theme.colorScheme.primary
+                              : theme.colorScheme.onSurfaceVariant,
+                          fontWeight: diff.inMinutes < 5
+                              ? FontWeight.bold
+                              : FontWeight.normal,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.surfaceContainerHighest,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          "CACHED",
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            fontSize: 9,
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ],
