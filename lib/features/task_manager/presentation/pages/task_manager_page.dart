@@ -282,11 +282,22 @@ class _TaskManagerPageState extends ConsumerState<TaskManagerPage> {
   }
 
   Widget _buildSystemStatsCard(ThemeData theme) {
+    // Watch System Details
+    final systemDetailsValues = ref.watch(systemDetailsProvider).asData?.value;
+
+    // Calculate RAM usage (Basic)
     final int usedRam = _totalRam - _freeRam;
     final double ramPercent = _totalRam > 0 ? usedRam / _totalRam : 0.0;
 
+    // Advanced Memory from /proc/meminfo
+    final int cachedKb = systemDetailsValues?.cachedRealKb ?? 0;
+    final int cachedMb = cachedKb ~/ 1024;
+
+    final String gpuUsage = systemDetailsValues?.gpuUsage ?? "N/A";
+    final double cpuTemp = systemDetailsValues?.cpuTemp ?? 0.0;
+    final String kernelVer = systemDetailsValues?.kernel ?? "Loading...";
+
     return Container(
-      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(32),
@@ -302,111 +313,225 @@ class _TaskManagerPageState extends ConsumerState<TaskManagerPage> {
         ],
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    _deviceModel,
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
+          // Main Card Content
+          Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            _deviceModel,
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          Text(
+                            "Kernel: ${kernelVer.length > 20 ? kernelVer.substring(0, 20) + "..." : kernelVer}",
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                              fontFamily: 'monospace',
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                    Icon(
+                      Icons.developer_board,
+                      size: 32,
+                      color: theme.colorScheme.primary.withOpacity(0.8),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+
+                // RAM Usage
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text("Memory Usage", style: theme.textTheme.labelMedium),
+                    Text(
+                      "${usedRam}MB / ${_totalRam}MB",
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        fontFamily: 'monospace',
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: LinearProgressIndicator(
+                    value: ramPercent,
+                    minHeight: 6,
+                    backgroundColor: theme.colorScheme.surfaceContainerHighest,
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      ramPercent > 0.85
+                          ? theme.colorScheme.error
+                          : theme.colorScheme.primary,
                     ),
                   ),
-                  Text(
-                    _androidVersion,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
+                ),
+
+                // Cached RAM Indicator
+                if (cachedMb > 0) ...[
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Container(
+                        width: 6,
+                        height: 6,
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.tertiary,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        "Cached Processes: ${cachedMb}MB",
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          fontSize: 10,
+                          color: theme.colorScheme.tertiary,
+                        ),
+                      ),
+                    ],
                   ),
                 ],
-              ),
-              Icon(
-                Icons.memory_rounded,
-                size: 32,
-                color: theme.colorScheme.primary.withOpacity(0.8),
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
 
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text("Memory Usage", style: theme.textTheme.labelMedium),
-              Text(
-                "${usedRam}MB / ${_totalRam}MB",
-                style: theme.textTheme.labelSmall?.copyWith(
-                  fontFamily: 'monospace',
-                  fontWeight: FontWeight.w600,
+                const SizedBox(height: 16),
+
+                // Battery Usage
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text("Battery Power", style: theme.textTheme.labelMedium),
+                    Row(
+                      children: [
+                        if (_batteryState == BatteryState.charging)
+                          Padding(
+                            padding: const EdgeInsets.only(right: 4),
+                            child: Icon(
+                              Icons.bolt,
+                              size: 14,
+                              color: theme.colorScheme.primary,
+                            ),
+                          ),
+                        Text(
+                          "$_batteryLevel%",
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            fontFamily: 'monospace',
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(4),
-            child: LinearProgressIndicator(
-              value: ramPercent,
-              minHeight: 6,
-              backgroundColor: theme.colorScheme.surfaceContainerHighest,
-              valueColor: AlwaysStoppedAnimation<Color>(
-                ramPercent > 0.85
-                    ? theme.colorScheme.error
-                    : theme.colorScheme.primary,
-              ),
+                const SizedBox(height: 8),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: LinearProgressIndicator(
+                    value: _batteryLevel / 100,
+                    minHeight: 6,
+                    backgroundColor: theme.colorScheme.surfaceContainerHighest,
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      _batteryLevel < 20
+                          ? theme.colorScheme.error
+                          : _batteryState == BatteryState.charging
+                          ? Colors.green
+                          : theme.colorScheme.primary,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
 
-          const SizedBox(height: 16),
-
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text("Battery Power", style: theme.textTheme.labelMedium),
-              Row(
-                children: [
-                  if (_batteryState == BatteryState.charging)
-                    Padding(
-                      padding: const EdgeInsets.only(right: 4),
-                      child: Icon(
-                        Icons.bolt,
-                        size: 14,
-                        color: theme.colorScheme.primary,
-                      ),
-                    ),
-                  Text(
-                    "$_batteryLevel%",
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      fontFamily: 'monospace',
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-            ],
+          Divider(
+            height: 1,
+            color: theme.colorScheme.outlineVariant.withOpacity(0.2),
           ),
-          const SizedBox(height: 8),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(4),
-            child: LinearProgressIndicator(
-              value: _batteryLevel / 100,
-              minHeight: 6,
-              backgroundColor: theme.colorScheme.surfaceContainerHighest,
-              valueColor: AlwaysStoppedAnimation<Color>(
-                _batteryLevel < 20
-                    ? theme.colorScheme.error
-                    : _batteryState == BatteryState.charging
-                    ? Colors.green
-                    : theme.colorScheme.primary,
-              ),
+
+          // Bottom Stats Grid
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _buildMiniStat(
+                  theme,
+                  "GPU CORE",
+                  gpuUsage.contains('N/A') ? "LOCKED" : gpuUsage,
+                  isError: gpuUsage.contains('N/A'),
+                ),
+                Container(
+                  width: 1,
+                  height: 30,
+                  color: theme.colorScheme.outlineVariant.withOpacity(0.2),
+                ),
+                _buildMiniStat(
+                  theme,
+                  "THERMAL",
+                  "${cpuTemp.toStringAsFixed(1)}°C",
+                ),
+                Container(
+                  width: 1,
+                  height: 30,
+                  color: theme.colorScheme.outlineVariant.withOpacity(0.2),
+                ),
+                // Show Android version here to resolve unused variable warning
+                _buildMiniStat(
+                  theme,
+                  "ANDROID",
+                  _androidVersion.replaceAll("Android ", ""),
+                ),
+              ],
             ),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildMiniStat(
+    ThemeData theme,
+    String label,
+    String value, {
+    bool isError = false,
+  }) {
+    return Column(
+      children: [
+        Text(
+          label,
+          style: theme.textTheme.labelSmall?.copyWith(
+            fontSize: 9,
+            color: theme.colorScheme.onSurfaceVariant.withOpacity(0.7),
+            letterSpacing: 1.0,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: theme.textTheme.labelMedium?.copyWith(
+            fontFamily: 'monospace',
+            fontWeight: FontWeight.bold,
+            color: isError
+                ? theme.colorScheme.error
+                : theme.colorScheme.onSurface,
+          ),
+        ),
+      ],
     );
   }
 

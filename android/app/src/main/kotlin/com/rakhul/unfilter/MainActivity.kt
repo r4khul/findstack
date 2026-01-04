@@ -23,6 +23,7 @@ class MainActivity : FlutterActivity() {
 
     private lateinit var usageManager: UsageManager
     private lateinit var processManager: ProcessManager
+    private lateinit var systemReader: SystemDetailReader
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -31,6 +32,7 @@ class MainActivity : FlutterActivity() {
 
         usageManager = UsageManager(this)
         processManager = ProcessManager()
+        systemReader = SystemDetailReader()
         
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL).setMethodCallHandler { call, result ->
             when (call.method) {
@@ -118,6 +120,26 @@ class MainActivity : FlutterActivity() {
                             handler.post { result.error("ERROR", e.message, null) }
                         }
                     }
+                }
+                "getSystemDetails" -> {
+                     executor.execute {
+                        try {
+                            val memInfo = systemReader.getMemInfo()
+                            val cpuTemp = systemReader.getCpuTemp()
+                            val gpuUsage = systemReader.getGpuUsage()
+                            val kernel = systemReader.getKernelVersion()
+                            
+                            val response = mapOf(
+                                "memInfo" to memInfo,
+                                "cpuTemp" to cpuTemp,
+                                "gpuUsage" to gpuUsage,
+                                "kernel" to kernel
+                            )
+                            handler.post { result.success(response) }
+                        } catch (e: Exception) {
+                            handler.post { result.error("ERROR", e.message, null) }
+                        }
+                     }
                 }
                 else -> result.notImplemented()
             }
