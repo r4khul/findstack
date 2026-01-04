@@ -150,6 +150,7 @@ class _HomePageState extends ConsumerState<HomePage>
   }
 
   void _onScroll() {
+    if (!mounted) return;
     if (_scrollController.offset > 300 && !_showBackToTop) {
       setState(() => _showBackToTop = true);
     } else if (_scrollController.offset <= 300 && _showBackToTop) {

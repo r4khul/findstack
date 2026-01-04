@@ -75,7 +75,11 @@ class _StatisticsDialogState extends ConsumerState<StatisticsDialog> {
   Widget _buildFilterAction(ThemeData theme) {
     return PopupMenuButton<int>(
       initialValue: _showTopCount,
-      onSelected: (value) => setState(() => _showTopCount = value),
+      onSelected: (value) {
+        if (mounted) {
+          setState(() => _showTopCount = value);
+        }
+      },
       itemBuilder: (context) => [
         const PopupMenuItem(value: 5, child: Text("Top 5")),
         const PopupMenuItem(value: 10, child: Text("Top 10")),
@@ -169,14 +173,18 @@ class _StatisticsDialogState extends ConsumerState<StatisticsDialog> {
                           pieTouchResponse == null ||
                           pieTouchResponse.touchedSection == null) {
                         if (event is FlTapUpEvent && _touchedIndex != -1) {
-                          setState(() => _touchedIndex = -1);
+                          if (mounted) {
+                            setState(() => _touchedIndex = -1);
+                          }
                         }
                         return;
                       }
                       final newIndex =
                           pieTouchResponse.touchedSection!.touchedSectionIndex;
                       if (_touchedIndex != newIndex) {
-                        setState(() => _touchedIndex = newIndex);
+                        if (mounted) {
+                          setState(() => _touchedIndex = newIndex);
+                        }
                       }
                     },
                   ),
@@ -259,8 +267,16 @@ class _StatisticsDialogState extends ConsumerState<StatisticsDialog> {
 
                   return GestureDetector(
                     onTap: () => _navigateToApp(context, app),
-                    onTapDown: (_) => setState(() => _touchedIndex = index),
-                    onTapCancel: () => setState(() => _touchedIndex = -1),
+                    onTapDown: (_) {
+                      if (mounted) {
+                        setState(() => _touchedIndex = index);
+                      }
+                    },
+                    onTapCancel: () {
+                      if (mounted) {
+                        setState(() => _touchedIndex = -1);
+                      }
+                    },
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 200),
                       padding: const EdgeInsets.all(12),

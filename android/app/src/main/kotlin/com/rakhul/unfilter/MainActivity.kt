@@ -24,6 +24,7 @@ class MainActivity : FlutterActivity() {
     private lateinit var usageManager: UsageManager
     private lateinit var processManager: ProcessManager
     private lateinit var systemReader: SystemDetailReader
+    private lateinit var storageAnalyzer: StorageAnalyzer
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -33,6 +34,7 @@ class MainActivity : FlutterActivity() {
         usageManager = UsageManager(this)
         processManager = ProcessManager()
         systemReader = SystemDetailReader()
+        storageAnalyzer = StorageAnalyzer(this)
         
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL).setMethodCallHandler { call, result ->
             when (call.method) {
@@ -140,6 +142,38 @@ class MainActivity : FlutterActivity() {
                             handler.post { result.error("ERROR", e.message, null) }
                         }
                      }
+                 }
+                "getStorageBreakdown" -> {
+                    val packageName = call.argument<String>("packageName")
+                    val detailed = call.argument<Boolean>("detailed") ?: false
+                    
+                    if (packageName != null) {
+                        storageAnalyzer.analyze(
+                            packageName = packageName,
+                            detailed = detailed,
+                            onResult = { breakdown ->
+                                handler.post { result.success(breakdown.toMap()) }
+                            },
+                            onError = { error ->
+                                handler.post { result.error("STORAGE_ERROR", error, null) }
+                            }
+                        )
+                    } else {
+                        result.error("INVALID_ARGUMENT", "Package name is required", null)
+                    }
+                }
+                "cancelStorageAnalysis" -> {
+                    val packageName = call.argument<String>("packageName")
+                    if (packageName != null) {
+                        storageAnalyzer.cancelAnalysis(packageName)
+                    } else {
+                        storageAnalyzer.cancelAll()
+                    }
+                    result.success(null)
+                }
+                "clearStorageCache" -> {
+                    storageAnalyzer.clearCache()
+                    result.success(null)
                 }
                 else -> result.notImplemented()
             }
@@ -160,6 +194,7 @@ class MainActivity : FlutterActivity() {
         super.cleanUpFlutterEngine(flutterEngine)
         try {
             appRepository.shutdown()
+            storageAnalyzer.shutdown()
         } catch (e: Exception) {
             // Ignore
         }

@@ -1,10 +1,12 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/navigation/navigation.dart';
 import '../../../home/presentation/widgets/premium_sliver_app_bar.dart';
 import '../../../apps/domain/entities/device_app.dart';
 import '../../../apps/presentation/providers/apps_provider.dart';
+import '../widgets/storage_breakdown_dialog.dart';
 
 class StorageInsightsPage extends ConsumerStatefulWidget {
   const StorageInsightsPage({super.key});
@@ -87,6 +89,15 @@ class _StorageInsightsPageState extends ConsumerState<StorageInsightsPage> {
 
               const SliverToBoxAdapter(child: SizedBox(height: 20)),
 
+              // Search Bar
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: _buildSearchBar(theme),
+                ),
+              ),
+
+              const SliverToBoxAdapter(child: SizedBox(height: 24)),
               // Global Stats Card
               SliverToBoxAdapter(
                 child: Padding(
@@ -130,15 +141,6 @@ class _StorageInsightsPageState extends ConsumerState<StorageInsightsPage> {
 
               const SliverToBoxAdapter(child: SizedBox(height: 24)),
 
-              // Search Bar (Moved Below Chart)
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: _buildSearchBar(theme),
-                ),
-              ),
-
-              const SliverToBoxAdapter(child: SizedBox(height: 24)),
 
               // List
               SliverPadding(

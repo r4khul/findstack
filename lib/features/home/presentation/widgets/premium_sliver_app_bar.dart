@@ -38,6 +38,9 @@ class _PremiumSliverAppBarState extends State<PremiumSliverAppBar> {
   }
 
   void _showOverlay() {
+    // Don't create overlay if widget is already disposed
+    if (!mounted) return;
+
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
@@ -125,6 +128,12 @@ class _PremiumSliverAppBarState extends State<PremiumSliverAppBar> {
         );
       },
     );
+
+    // Double-check we're still mounted before inserting overlay
+    if (!mounted) {
+      _overlayEntry = null;
+      return;
+    }
 
     Overlay.of(context).insert(_overlayEntry!);
     _isMenuOpen = true;
