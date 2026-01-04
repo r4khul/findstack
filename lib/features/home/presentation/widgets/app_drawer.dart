@@ -8,6 +8,9 @@ import '../../../../core/providers/theme_provider.dart';
 import '../providers/github_stars_provider.dart';
 import '../../../analytics/presentation/pages/analytics_page.dart';
 import '../../../../core/widgets/theme_transition_wrapper.dart';
+import '../pages/info/how_it_works_page.dart';
+import '../pages/info/privacy_page.dart';
+import '../pages/info/about_page.dart';
 
 class AppDrawer extends ConsumerStatefulWidget {
   const AppDrawer({super.key});
@@ -78,21 +81,45 @@ class _AppDrawerState extends ConsumerState<AppDrawer> {
                       title: "How it works",
                       subtitle: "Tech detection explained",
                       icon: Icons.lightbulb_outline,
-                      onTap: () => _showHowItWorksDialog(context),
+                      onTap: () {
+                        Navigator.pop(context);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const HowItWorksPage(),
+                          ),
+                        );
+                      },
                     ),
                     _buildNavTile(
                       context,
                       title: "Privacy & Security",
                       subtitle: "Offline and secure",
                       icon: Icons.shield_outlined,
-                      onTap: () => _showPrivacyDialog(context),
+                      onTap: () {
+                        Navigator.pop(context);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const PrivacyPage(),
+                          ),
+                        );
+                      },
                     ),
                     _buildNavTile(
                       context,
                       title: "About",
                       subtitle: "Version 1.0.0",
                       icon: Icons.info_outline,
-                      onTap: () => _showAboutDialog(context),
+                      onTap: () {
+                        Navigator.pop(context);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const AboutPage(),
+                          ),
+                        );
+                      },
                     ),
 
                     const SizedBox(height: 32),
@@ -517,128 +544,6 @@ class _AppDrawerState extends ConsumerState<AppDrawer> {
           ),
         ),
       ),
-    );
-  }
-
-  // --- Dialogs ---
-
-  void _showHowItWorksDialog(BuildContext context) {
-    final theme = Theme.of(context);
-    showGeneralDialog(
-      context: context,
-      barrierDismissible: true,
-      barrierLabel: "Dismiss",
-      transitionDuration: const Duration(milliseconds: 250),
-      pageBuilder: (context, anim1, anim2) => Container(),
-      transitionBuilder: (context, anim1, anim2, child) {
-        return ScaleTransition(
-          scale: CurvedAnimation(parent: anim1, curve: Curves.easeOutBack),
-          child: AlertDialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(24),
-            ),
-            title: Row(
-              children: [
-                Icon(Icons.lightbulb_outline, color: theme.colorScheme.primary),
-                const SizedBox(width: 12),
-                const Text("How it works"),
-              ],
-            ),
-            content: const Text(
-              "UnFilter intelligently scans the package names and native libraries of your installed applications. \n\nWe match these signatures against our local database of known frameworks (Flutter, React Native, Unity, Xamarin, etc.) to reveal the technology stack used by your favorite apps.",
-              style: TextStyle(height: 1.5),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text("Got it"),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  void _showPrivacyDialog(BuildContext context) {
-    final theme = Theme.of(context);
-    showGeneralDialog(
-      context: context,
-      barrierDismissible: true,
-      barrierLabel: "Dismiss",
-      transitionDuration: const Duration(milliseconds: 250),
-      pageBuilder: (context, anim1, anim2) => Container(),
-      transitionBuilder: (context, anim1, anim2, child) {
-        return ScaleTransition(
-          scale: CurvedAnimation(parent: anim1, curve: Curves.easeOutBack),
-          child: AlertDialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(24),
-            ),
-            title: Row(
-              children: [
-                Icon(Icons.security_rounded, color: theme.colorScheme.primary),
-                const SizedBox(width: 12),
-                const Text("Privacy First"),
-              ],
-            ),
-            content: const Text(
-              "UnFilter operates 100% offline. \n\nYour list of installed applications and personal usage statistics never leave your device. We do not track you, and we do not collect any personal data.",
-              style: TextStyle(height: 1.5),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text("Close"),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  void _showAboutDialog(BuildContext context) {
-    final theme = Theme.of(context);
-    showGeneralDialog(
-      context: context,
-      barrierDismissible: true,
-      barrierLabel: "Dismiss",
-      transitionDuration: const Duration(milliseconds: 250),
-      pageBuilder: (context, anim1, anim2) => Container(),
-      transitionBuilder: (context, anim1, anim2, child) {
-        return ScaleTransition(
-          scale: CurvedAnimation(parent: anim1, curve: Curves.easeOutBack),
-          child: AboutDialog(
-            applicationName: "UnFilter",
-            applicationVersion: "1.0.0",
-            applicationIcon: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: theme.colorScheme.surface,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: theme.colorScheme.outlineVariant),
-              ),
-              child: Image.asset(
-                theme.brightness == Brightness.dark
-                    ? 'assets/icons/white-unfilter-nobg.png'
-                    : 'assets/icons/black-unfilter-nobg.png',
-                width: 40,
-                height: 40,
-              ),
-            ),
-            applicationLegalese: "© 2026 Rakhul",
-            children: const [
-              SizedBox(height: 24),
-              Text(
-                "UnFilter helps you discover the technology stack behind your favorite apps.",
-                textAlign: TextAlign.center,
-              ),
-              SizedBox(height: 16),
-            ],
-          ),
-        );
-      },
     );
   }
 }
