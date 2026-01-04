@@ -79,6 +79,7 @@ class GithubCtaCard extends StatelessWidget {
                     ],
                   ),
                 ),
+                const SizedBox(width: 6),
                 Icon(
                   Icons.arrow_forward_rounded,
                   color: theme.colorScheme.primary,

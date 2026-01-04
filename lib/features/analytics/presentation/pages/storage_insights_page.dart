@@ -87,7 +87,7 @@ class _StorageInsightsPageState extends ConsumerState<StorageInsightsPage> {
             slivers: [
               const PremiumSliverAppBar(title: "Storage Insights"),
 
-              const SliverToBoxAdapter(child: SizedBox(height: 20)),
+              const SliverToBoxAdapter(child: SizedBox(height: 10)),
 
               // Search Bar
               SliverToBoxAdapter(

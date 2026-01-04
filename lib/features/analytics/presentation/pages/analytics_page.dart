@@ -18,6 +18,8 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage>
     with WidgetsBindingObserver {
   int _touchedIndex = -1;
   int _showTopCount = 5;
+  String _searchQuery = "";
+  final TextEditingController _searchController = TextEditingController();
 
   @override
   void initState() {
@@ -28,6 +30,7 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _searchController.dispose();
     super.dispose();
   }
 
@@ -48,14 +51,24 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage>
       backgroundColor: theme.scaffoldBackgroundColor,
       body: appsAsync.when(
         data: (apps) {
-          final validApps = apps
+          // 1. Filter by Usage > 0
+          var validApps = apps
               .where((a) => a.totalTimeInForeground > 0)
               .toList();
+
+          // 2. Filter by Search Query
+          if (_searchQuery.isNotEmpty) {
+            final query = _searchQuery.toLowerCase();
+            validApps = validApps.where((app) {
+              return app.appName.toLowerCase().contains(query) ||
+                  app.packageName.toLowerCase().contains(query);
+            }).toList();
+          }
 
           final permissionAsync = ref.watch(usagePermissionProvider);
           final hasPermission = permissionAsync.value ?? false;
 
-          if (validApps.isEmpty) {
+          if (validApps.isEmpty && _searchQuery.isEmpty) {
             return CustomScrollView(
               slivers: [
                 const PremiumSliverAppBar(title: "Usage Statistics"),
@@ -244,6 +257,10 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage>
             );
           }
 
+          if (validApps.isEmpty && _searchQuery.isNotEmpty) {
+            return _buildEmptyState(theme, "No apps match your search");
+          }
+
           validApps.sort(
             (a, b) =>
                 b.totalTimeInForeground.compareTo(a.totalTimeInForeground),
@@ -265,7 +282,17 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage>
             slivers: [
               const PremiumSliverAppBar(title: "Usage Statistics"),
 
-              const SliverToBoxAdapter(child: SizedBox(height: 20)),
+              const SliverToBoxAdapter(child: SizedBox(height: 10)),
+
+              // Search Bar
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: _buildSearchBar(theme),
+                ),
+              ),
+
+              const SliverToBoxAdapter(child: SizedBox(height: 24)),
 
               // Roast Section
               SliverToBoxAdapter(
@@ -318,7 +345,9 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage>
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 16),
                         child: Text(
-                          "TOP CONTRIBUTORS",
+                          _searchQuery.isEmpty
+                              ? "TOP CONTRIBUTORS"
+                              : "SEARCH RESULTS",
                           style: theme.textTheme.labelSmall?.copyWith(
                             fontWeight: FontWeight.bold,
                             letterSpacing: 2.0,
@@ -835,6 +864,108 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage>
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyState(ThemeData theme, String message) {
+    return CustomScrollView(
+      slivers: [
+        const PremiumSliverAppBar(title: "Usage Statistics"),
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+            child: _buildSearchBar(theme),
+          ),
+        ),
+        SliverFillRemaining(
+          child: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.search_off_rounded,
+                  size: 64,
+                  color: theme.colorScheme.outline,
+                ),
+                const SizedBox(height: 16),
+                Text(message, style: theme.textTheme.titleMedium),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSearchBar(ThemeData theme) {
+    return Container(
+      height: 50,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        color: theme.brightness == Brightness.dark
+            ? theme.colorScheme.surface
+            : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: theme.colorScheme.outline.withOpacity(0.2),
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 15,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.search,
+            size: 20,
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: TextField(
+              controller: _searchController,
+              textAlignVertical: TextAlignVertical.center,
+              decoration: InputDecoration(
+                hintText: "Search usage stats...",
+                border: InputBorder.none,
+                focusedBorder: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                errorBorder: InputBorder.none,
+                disabledBorder: InputBorder.none,
+                fillColor: theme.colorScheme.surface,
+                hintStyle: theme.textTheme.bodyLarge?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant.withOpacity(0.6),
+                ),
+                contentPadding: EdgeInsets.zero,
+                isDense: true,
+              ),
+              style: theme.textTheme.bodyLarge?.copyWith(fontSize: 16),
+              onChanged: (val) {
+                setState(() {
+                  _searchQuery = val;
+                });
+              },
+            ),
+          ),
+          if (_searchQuery.isNotEmpty)
+            GestureDetector(
+              onTap: () {
+                _searchController.clear();
+                setState(() => _searchQuery = "");
+              },
+              child: Icon(
+                Icons.close,
+                size: 20,
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+        ],
       ),
     );
   }
