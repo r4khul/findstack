@@ -10,6 +10,7 @@ import '../../features/home/presentation/pages/info/how_it_works_page.dart';
 import '../../features/home/presentation/pages/info/privacy_page.dart';
 import '../../features/apps/presentation/pages/app_details_page.dart';
 import '../../features/apps/domain/entities/device_app.dart';
+import '../../features/analytics/presentation/pages/storage_insights_page.dart';
 import 'navigation.dart';
 
 /// Centralized route names for type-safe navigation.
@@ -24,6 +25,7 @@ abstract class AppRoutes {
   static const String howItWorks = '/how-it-works';
   static const String privacy = '/privacy';
   static const String appDetails = '/app-details';
+  static const String storageInsights = '/storage-insights';
 }
 
 /// Centralized route factory.
@@ -96,6 +98,13 @@ class AppRouteFactory {
           tapPosition: TapTracker.lastTapPosition,
         );
 
+      case AppRoutes.storageInsights:
+        return BubbleRevealPageRoute(
+          page: const StorageInsightsPage(),
+          settings: settings,
+          tapPosition: TapTracker.lastTapPosition,
+        );
+
       case AppRoutes.appDetails:
         final app = settings.arguments as DeviceApp;
         return BubbleRevealPageRoute(
@@ -155,6 +164,11 @@ class AppRouteFactory {
   /// Push to privacy page.
   static Future<void> toPrivacy(BuildContext context) {
     return PremiumNavigation.push(context, const PrivacyPage());
+  }
+
+  /// Push to storage insights page.
+  static Future<void> toStorageInsights(BuildContext context) {
+    return PremiumNavigation.push(context, const StorageInsightsPage());
   }
 
   /// Push to app details page with premium reveal.

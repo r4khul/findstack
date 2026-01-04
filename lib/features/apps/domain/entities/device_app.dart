@@ -38,9 +38,14 @@ class DeviceApp extends Equatable {
 
   final AppCategory category; // New field
 
-  final int size;
+  final int size; // Total size
   final String apkPath;
   final String dataDir;
+
+  // Storage breakdown (Unfiltered Truth)
+  final int appSize; // Code/APK
+  final int dataSize; // User Data
+  final int cacheSize; // Cache
 
   // Deep Analysis Fields
   final String installerStore;
@@ -75,6 +80,9 @@ class DeviceApp extends Equatable {
     this.lastTimeUsed = 0,
     this.category = AppCategory.unknown,
     this.size = 0,
+    this.appSize = 0,
+    this.dataSize = 0,
+    this.cacheSize = 0,
     this.apkPath = '',
     this.dataDir = '',
     this.installerStore = 'Unknown',
@@ -135,6 +143,9 @@ class DeviceApp extends Equatable {
       lastTimeUsed: map['lastTimeUsed'] as int? ?? 0,
       category: _parseCategory(map['category'] as String?),
       size: map['size'] as int? ?? 0,
+      appSize: map['appSize'] as int? ?? 0,
+      dataSize: map['dataSize'] as int? ?? 0,
+      cacheSize: map['cacheSize'] as int? ?? 0,
       apkPath: map['apkPath'] as String? ?? '',
       dataDir: map['dataDir'] as String? ?? '',
       installerStore: map['installerStore'] as String? ?? 'Unknown',
@@ -197,6 +208,9 @@ class DeviceApp extends Equatable {
       'lastTimeUsed': lastTimeUsed,
       'category': category.name,
       'size': size,
+      'appSize': appSize,
+      'dataSize': dataSize,
+      'cacheSize': cacheSize,
       'apkPath': apkPath,
       'dataDir': dataDir,
       'installerStore': installerStore,
@@ -227,6 +241,9 @@ class DeviceApp extends Equatable {
     category,
     icon,
     size,
+    appSize,
+    dataSize,
+    cacheSize,
     apkPath,
     dataDir,
     installerStore,

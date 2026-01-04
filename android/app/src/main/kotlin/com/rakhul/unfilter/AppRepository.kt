@@ -205,6 +205,36 @@ class AppRepository(private val context: Context) {
 
         val isSystem = (appInfo.flags and ApplicationInfo.FLAG_SYSTEM) != 0
 
+        // FETCH REAL STORAGE STATS (THE UNFILTERED TRUTH)
+        var appSize = 0L
+        var dataSize = 0L
+        var cacheSize = 0L
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            try {
+                // Requires Usage Stats permission, usually granted if we are fetching usage stats
+                val storageStatsManager = context.getSystemService(Context.STORAGE_STATS_SERVICE) as android.app.usage.StorageStatsManager
+                // UUID_DEFAULT is the internal storage uuid
+                val uuid = android.os.storage.StorageManager.UUID_DEFAULT
+                val stats = storageStatsManager.queryStatsForPackage(
+                    uuid, 
+                    pkg.packageName, 
+                    android.os.Process.myUserHandle()
+                )
+                
+                appSize = stats.appBytes
+                dataSize = stats.dataBytes
+                cacheSize = stats.cacheBytes
+            } catch (e: Exception) {
+                // Fallback
+                if (appInfo.sourceDir != null) appSize = File(appInfo.sourceDir).length()
+            }
+        } else {
+             if (appInfo.sourceDir != null) appSize = File(appInfo.sourceDir).length()
+        }
+
+        val totalSize = appSize + dataSize + cacheSize
+
         val map = mutableMapOf<String, Any?>(
             "appName" to (if (includeDetails) packageManager.getApplicationLabel(appInfo).toString() else pkg.packageName),
             "packageName" to pkg.packageName,
@@ -239,7 +269,11 @@ class AppRepository(private val context: Context) {
                     else -> "tools"
                 }
             } else "unknown"),
-            "size" to (if (appInfo.sourceDir != null && File(appInfo.sourceDir).exists()) File(appInfo.sourceDir).length() else 0L),
+             // The "size" field is now the total (App + Data + Cache)
+            "size" to totalSize,
+            "appSize" to appSize,
+            "dataSize" to dataSize,
+            "cacheSize" to cacheSize,
             "apkPath" to (appInfo.sourceDir ?: ""),
             "dataDir" to (appInfo.dataDir ?: "")
         )

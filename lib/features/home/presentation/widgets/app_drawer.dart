@@ -66,6 +66,16 @@ class _AppDrawerState extends ConsumerState<AppDrawer> {
                     ),
                     _buildNavTile(
                       context,
+                      title: "Storage Insights",
+                      subtitle: "Unfiltered space breakdown",
+                      icon: Icons.sd_storage_rounded,
+                      onTap: () {
+                        Navigator.pop(context);
+                        AppRouteFactory.toStorageInsights(context);
+                      },
+                    ),
+                    _buildNavTile(
+                      context,
                       title: "Task Manager",
                       subtitle: "Monitor system resources",
                       icon: Icons.memory_rounded,
@@ -181,8 +191,6 @@ class _AppDrawerState extends ConsumerState<AppDrawer> {
       ),
     );
   }
-
-  // --- Theme Switcher ---
 
   // --- Theme Switcher ---
 
