@@ -661,7 +661,7 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage>
       final radius = isTouched ? 60.0 : 50.0;
       sections.add(
         PieChartSectionData(
-          color: theme.colorScheme.surfaceContainerHighest,
+          color: theme.colorScheme.onSurface.withValues(alpha: 0.1),
           value: otherUsage.toDouble(),
           title: '',
           radius: radius,
@@ -699,12 +699,12 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage>
           decoration: BoxDecoration(
             color: isTouched
                 ? theme.colorScheme.surfaceContainerHighest
-                : theme.colorScheme.surface,
+                : theme.colorScheme.surfaceContainerLow,
             borderRadius: BorderRadius.circular(24),
             border: Border.all(
               color: isTouched
                   ? theme.colorScheme.primary.withValues(alpha: 0.1)
-                  : theme.colorScheme.outline.withValues(alpha: 0.05),
+                  : theme.colorScheme.outline.withValues(alpha: 0.2),
             ),
             boxShadow: isTouched
                 ? [

@@ -236,9 +236,9 @@ class _StorageInsightsPageState extends ConsumerState<StorageInsightsPage> {
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 15,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
@@ -261,6 +261,7 @@ class _StorageInsightsPageState extends ConsumerState<StorageInsightsPage> {
                 enabledBorder: InputBorder.none,
                 errorBorder: InputBorder.none,
                 disabledBorder: InputBorder.none,
+                fillColor: theme.colorScheme.surface,
                 hintStyle: theme.textTheme.bodyLarge?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant.withOpacity(0.6),
                 ),
@@ -521,7 +522,7 @@ class _StorageInsightsPageState extends ConsumerState<StorageInsightsPage> {
     int otherSize,
   ) {
     List<PieChartSectionData> sections = [];
-    final bool showBadges = apps.length <= 10;
+    final bool showBadges = apps.length <= 25;
 
     for (int i = 0; i < apps.length; i++) {
       final isTouched = i == _touchedIndex;
@@ -556,7 +557,7 @@ class _StorageInsightsPageState extends ConsumerState<StorageInsightsPage> {
       final isTouched = apps.length == _touchedIndex;
       sections.add(
         PieChartSectionData(
-          color: theme.colorScheme.surfaceContainerHighest,
+          color: theme.colorScheme.onSurface.withValues(alpha: 0.1),
           value: otherSize.toDouble(),
           title: '',
           radius: isTouched ? 60.0 : 50.0,
@@ -596,12 +597,12 @@ class _StorageInsightsPageState extends ConsumerState<StorageInsightsPage> {
         decoration: BoxDecoration(
           color: isTouched
               ? theme.colorScheme.surfaceContainerHighest
-              : theme.colorScheme.surface,
+              : theme.colorScheme.surfaceContainerLow,
           borderRadius: BorderRadius.circular(24),
           border: Border.all(
             color: isTouched
                 ? theme.colorScheme.primary.withValues(alpha: 0.1)
-                : theme.colorScheme.outline.withValues(alpha: 0.05),
+                : theme.colorScheme.outline.withValues(alpha: 0.2),
           ),
         ),
         child: Column(
