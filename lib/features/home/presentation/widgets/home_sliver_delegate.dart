@@ -2,8 +2,8 @@ import 'settings_menu.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 
 import 'package:flutter/material.dart';
+import '../../../../core/navigation/navigation.dart';
 import '../../../apps/presentation/widgets/category_slider.dart';
-import '../../../search/presentation/pages/search_page.dart';
 import '../../../search/presentation/widgets/tech_stack_filter.dart';
 import 'scan_button.dart';
 
@@ -116,41 +116,8 @@ class HomeSliverDelegate extends SliverPersistentHeaderDelegate {
                         Expanded(
                           child: GestureDetector(
                             onTap: () {
-                              Navigator.of(context).push(
-                                PageRouteBuilder(
-                                  pageBuilder:
-                                      (
-                                        context,
-                                        animation,
-                                        secondaryAnimation,
-                                      ) => const SearchPage(),
-                                  transitionsBuilder:
-                                      (
-                                        context,
-                                        animation,
-                                        secondaryAnimation,
-                                        child,
-                                      ) {
-                                        const begin = Offset(0.0, 0.1);
-                                        const end = Offset.zero;
-                                        const curve = Curves.easeOutCubic;
-                                        var tween = Tween(
-                                          begin: begin,
-                                          end: end,
-                                        ).chain(CurveTween(curve: curve));
-                                        return FadeTransition(
-                                          opacity: animation,
-                                          child: SlideTransition(
-                                            position: animation.drive(tween),
-                                            child: child,
-                                          ),
-                                        );
-                                      },
-                                  transitionDuration: const Duration(
-                                    milliseconds: 300,
-                                  ),
-                                ),
-                              );
+                              // Use centralized navigation for consistent premium transitions
+                              AppRouteFactory.toSearch(context);
                             },
                             child: Container(
                               height: 50,

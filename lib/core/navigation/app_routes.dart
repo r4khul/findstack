@@ -1,0 +1,164 @@
+import 'package:flutter/material.dart';
+import '../../features/home/presentation/pages/home_page.dart';
+import '../../features/splash/presentation/pages/splash_screen.dart';
+import '../../features/search/presentation/pages/search_page.dart';
+import '../../features/scan/presentation/pages/scan_page.dart';
+import '../../features/analytics/presentation/pages/analytics_page.dart';
+import '../../features/task_manager/presentation/pages/task_manager_page.dart';
+import '../../features/home/presentation/pages/info/about_page.dart';
+import '../../features/home/presentation/pages/info/how_it_works_page.dart';
+import '../../features/home/presentation/pages/info/privacy_page.dart';
+import '../../features/apps/presentation/pages/app_details_page.dart';
+import '../../features/apps/domain/entities/device_app.dart';
+import 'navigation.dart';
+
+/// Centralized route names for type-safe navigation.
+abstract class AppRoutes {
+  static const String splash = '/';
+  static const String home = '/home';
+  static const String search = '/search';
+  static const String scan = '/scan';
+  static const String analytics = '/analytics';
+  static const String taskManager = '/task-manager';
+  static const String about = '/about';
+  static const String howItWorks = '/how-it-works';
+  static const String privacy = '/privacy';
+  static const String appDetails = '/app-details';
+}
+
+/// Centralized route factory.
+class AppRouteFactory {
+  AppRouteFactory._();
+
+  /// Generate a route based on settings.
+  static Route<dynamic>? onGenerateRoute(RouteSettings settings) {
+    switch (settings.name) {
+      case AppRoutes.splash:
+        return PremiumPageRoute(
+          page: const SplashScreen(),
+          settings: settings,
+          transitionType: TransitionType.fade,
+        );
+
+      case AppRoutes.home:
+        return BubbleRevealPageRoute(
+          page: const HomePage(),
+          settings: settings,
+          tapPosition: TapTracker.lastTapPosition,
+        );
+
+      case AppRoutes.search:
+        return BubbleRevealPageRoute(
+          page: const SearchPage(),
+          settings: settings,
+          tapPosition: TapTracker.lastTapPosition,
+        );
+
+      case AppRoutes.scan:
+        return BubbleRevealPageRoute(
+          page: const ScanPage(),
+          settings: settings,
+          tapPosition: TapTracker.lastTapPosition,
+        );
+
+      case AppRoutes.analytics:
+        return BubbleRevealPageRoute(
+          page: const AnalyticsPage(),
+          settings: settings,
+          tapPosition: TapTracker.lastTapPosition,
+        );
+
+      case AppRoutes.taskManager:
+        return BubbleRevealPageRoute(
+          page: const TaskManagerPage(),
+          settings: settings,
+          tapPosition: TapTracker.lastTapPosition,
+        );
+
+      case AppRoutes.about:
+        return BubbleRevealPageRoute(
+          page: const AboutPage(),
+          settings: settings,
+          tapPosition: TapTracker.lastTapPosition,
+        );
+
+      case AppRoutes.howItWorks:
+        return BubbleRevealPageRoute(
+          page: const HowItWorksPage(),
+          settings: settings,
+          tapPosition: TapTracker.lastTapPosition,
+        );
+
+      case AppRoutes.privacy:
+        return BubbleRevealPageRoute(
+          page: const PrivacyPage(),
+          settings: settings,
+          tapPosition: TapTracker.lastTapPosition,
+        );
+
+      case AppRoutes.appDetails:
+        final app = settings.arguments as DeviceApp;
+        return BubbleRevealPageRoute(
+          page: AppDetailsPage(app: app),
+          settings: settings,
+          tapPosition: TapTracker.lastTapPosition,
+        );
+
+      default:
+        return MaterialPageRoute(
+          builder: (_) => Scaffold(
+            body: Center(child: Text('Route not found: ${settings.name}')),
+          ),
+        );
+    }
+  }
+
+  // ============================================================
+  // CONVENIENCE NAVIGATION METHODS
+  // ============================================================
+
+  /// Push to home with premium reveal.
+  static Future<void> toHome(BuildContext context) {
+    return PremiumNavigation.push(context, const HomePage());
+  }
+
+  /// Push to search page.
+  static Future<void> toSearch(BuildContext context) {
+    return PremiumNavigation.push(context, const SearchPage());
+  }
+
+  /// Push to scan page.
+  static Future<void> toScan(BuildContext context) {
+    return PremiumNavigation.push(context, const ScanPage());
+  }
+
+  /// Push to analytics page.
+  static Future<void> toAnalytics(BuildContext context) {
+    return PremiumNavigation.push(context, const AnalyticsPage());
+  }
+
+  /// Push to task manager.
+  static Future<void> toTaskManager(BuildContext context) {
+    return PremiumNavigation.push(context, const TaskManagerPage());
+  }
+
+  /// Push to about page.
+  static Future<void> toAbout(BuildContext context) {
+    return PremiumNavigation.push(context, const AboutPage());
+  }
+
+  /// Push to how it works page.
+  static Future<void> toHowItWorks(BuildContext context) {
+    return PremiumNavigation.push(context, const HowItWorksPage());
+  }
+
+  /// Push to privacy page.
+  static Future<void> toPrivacy(BuildContext context) {
+    return PremiumNavigation.push(context, const PrivacyPage());
+  }
+
+  /// Push to app details page with premium reveal.
+  static Future<void> toAppDetails(BuildContext context, DeviceApp app) {
+    return PremiumNavigation.push(context, AppDetailsPage(app: app));
+  }
+}

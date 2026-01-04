@@ -1,10 +1,10 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/navigation/navigation.dart';
 import '../../../home/presentation/widgets/premium_sliver_app_bar.dart';
 import '../../../apps/domain/entities/device_app.dart';
 import '../../../apps/presentation/providers/apps_provider.dart';
-import '../../../apps/presentation/pages/app_details_page.dart';
 
 class AnalyticsPage extends ConsumerStatefulWidget {
   const AnalyticsPage({super.key});
@@ -650,31 +650,8 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
   }
 
   void _navigateToApp(BuildContext context, DeviceApp app) {
-    Navigator.of(context).push(
-      PageRouteBuilder(
-        transitionDuration: const Duration(milliseconds: 600),
-        reverseTransitionDuration: const Duration(milliseconds: 400),
-        pageBuilder: (context, animation, secondaryAnimation) {
-          return RepaintBoundary(
-            child: FadeTransition(
-              opacity: CurvedAnimation(
-                parent: animation,
-                // Vital Tweak: Delay the content fade-in slightly (0.15) so the Hero
-                // icon has strictly higher priority at the start.
-                // This eliminates the "harsh" overlap and reduces early frame load.
-                curve: const Interval(0.15, 1.0, curve: Curves.easeOut),
-              ),
-              child: AppDetailsPage(app: app),
-            ),
-          );
-        },
-        transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          // Just return the child (which is already wrapped in Fade+Repaint).
-          // We avoid redundant transitions here to save memory/FPS.
-          return child;
-        },
-      ),
-    );
+    // Use centralized navigation for consistent premium transitions
+    AppRouteFactory.toAppDetails(context, app);
   }
 }
 

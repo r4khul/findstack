@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:unfilter/features/home/presentation/pages/home_page.dart';
+import '../../../../core/navigation/navigation.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -23,7 +23,7 @@ class _SplashScreenState extends State<SplashScreen>
 
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 2000),
+      duration: MotionTokens.fullscreenOverlay * 4, // ~1800ms total animation
     );
 
     // Initial scale up and fade in for the logo
@@ -46,7 +46,7 @@ class _SplashScreenState extends State<SplashScreen>
         Tween<Offset>(begin: const Offset(0, 0.5), end: Offset.zero).animate(
           CurvedAnimation(
             parent: _controller,
-            curve: const Interval(0.4, 0.8, curve: Curves.easeOutCubic),
+            curve: Interval(0.4, 0.8, curve: MotionTokens.pageEnter),
           ),
         );
 
@@ -59,32 +59,11 @@ class _SplashScreenState extends State<SplashScreen>
 
     _controller.forward();
 
-    // Navigate to next screen after delay
-    Future.delayed(const Duration(milliseconds: 3000), () {
+    // Navigate to home after animation completes
+    Future.delayed(const Duration(milliseconds: 2500), () {
       if (mounted) {
-        Navigator.of(context).pushReplacement(
-          PageRouteBuilder(
-            pageBuilder: (context, animation, secondaryAnimation) =>
-                const HomePage(),
-            transitionsBuilder:
-                (context, animation, secondaryAnimation, child) {
-                  const begin = Offset(0.0, 1.0);
-                  const end = Offset.zero;
-                  const curve = Curves.ease;
-
-                  var tween = Tween(
-                    begin: begin,
-                    end: end,
-                  ).chain(CurveTween(curve: curve));
-
-                  return SlideTransition(
-                    position: animation.drive(tween),
-                    child: child,
-                  );
-                },
-            transitionDuration: const Duration(milliseconds: 800),
-          ),
-        );
+        // Use centralized navigation with premium transition
+        AppRouteFactory.toHome(context);
       }
     });
   }

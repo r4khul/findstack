@@ -4,9 +4,9 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/widgets/premium_app_bar.dart';
+import '../../../../core/navigation/navigation.dart';
 import '../../../apps/domain/entities/device_app.dart';
 import '../../../apps/presentation/providers/apps_provider.dart';
-import '../../../../features/apps/presentation/pages/app_details_page.dart';
 
 class StatisticsDialog extends ConsumerStatefulWidget {
   const StatisticsDialog({super.key});
@@ -349,10 +349,8 @@ class _StatisticsDialogState extends ConsumerState<StatisticsDialog> {
   }
 
   void _navigateToApp(BuildContext context, DeviceApp app) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => AppDetailsPage(app: app)),
-    );
+    // Use centralized navigation for consistent premium transitions
+    AppRouteFactory.toAppDetails(context, app);
   }
 
   List<PieChartSectionData> _generateSections(

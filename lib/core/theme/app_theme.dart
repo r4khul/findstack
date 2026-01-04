@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'app_colors.dart';
+import 'pro_transitions.dart';
 
 class AppTheme {
   AppTheme._();
@@ -39,6 +40,15 @@ class AppTheme {
         fontWeight: FontWeight.bold,
         letterSpacing: -0.5,
       ),
+    ),
+    bottomSheetTheme: const BottomSheetThemeData(
+      backgroundColor: AppColors.lightSurface,
+      modalBackgroundColor: AppColors.lightSurface,
+      surfaceTintColor: Colors.transparent,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      clipBehavior: Clip.antiAlias,
     ),
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
@@ -126,6 +136,15 @@ class AppTheme {
           displayColor: AppColors.lightTextPrimary,
           fontFamily: 'UncutSans',
         ),
+    pageTransitionsTheme: const PageTransitionsTheme(
+      builders: {
+        TargetPlatform.android: ProPageTransitionsBuilder(),
+        TargetPlatform.iOS: ProPageTransitionsBuilder(),
+        TargetPlatform.linux: ProPageTransitionsBuilder(),
+        TargetPlatform.macOS: ProPageTransitionsBuilder(),
+        TargetPlatform.windows: ProPageTransitionsBuilder(),
+      },
+    ),
   );
 
   static final ThemeData darkTheme = ThemeData(
@@ -162,6 +181,15 @@ class AppTheme {
         fontWeight: FontWeight.bold,
         letterSpacing: -0.5,
       ),
+    ),
+    bottomSheetTheme: const BottomSheetThemeData(
+      backgroundColor: AppColors.darkSurface, // Dark Grey
+      modalBackgroundColor: AppColors.darkSurface,
+      surfaceTintColor: Colors.transparent,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      clipBehavior: Clip.antiAlias,
     ),
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
@@ -246,5 +274,14 @@ class AppTheme {
           displayColor: AppColors.darkTextPrimary,
           fontFamily: 'UncutSans',
         ),
+    pageTransitionsTheme: const PageTransitionsTheme(
+      builders: {
+        TargetPlatform.android: ProPageTransitionsBuilder(),
+        TargetPlatform.iOS: ProPageTransitionsBuilder(),
+        TargetPlatform.linux: ProPageTransitionsBuilder(),
+        TargetPlatform.macOS: ProPageTransitionsBuilder(),
+        TargetPlatform.windows: ProPageTransitionsBuilder(),
+      },
+    ),
   );
 }

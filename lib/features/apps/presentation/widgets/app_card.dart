@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:skeletonizer/skeletonizer.dart';
-import '../../domain/entities/device_app.dart';
-import '../pages/app_details_page.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import '../../../../core/navigation/navigation.dart';
+import '../../domain/entities/device_app.dart';
 
 class AppCard extends StatelessWidget {
   final DeviceApp app;
@@ -92,9 +92,8 @@ class AppCard extends StatelessWidget {
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
         onTap: () {
-          Navigator.of(context).push(
-            MaterialPageRoute(builder: (context) => AppDetailsPage(app: app)),
-          );
+          // Use centralized navigation for consistent premium transitions
+          AppRouteFactory.toAppDetails(context, app);
         },
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),

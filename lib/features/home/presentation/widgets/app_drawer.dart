@@ -5,13 +5,9 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter/services.dart';
 
 import '../../../../core/providers/theme_provider.dart';
-import '../providers/github_stars_provider.dart';
-import '../../../analytics/presentation/pages/analytics_page.dart';
 import '../../../../core/widgets/theme_transition_wrapper.dart';
-import '../pages/info/how_it_works_page.dart';
-import '../pages/info/privacy_page.dart';
-import '../pages/info/about_page.dart';
-import '../../../task_manager/presentation/pages/task_manager_page.dart';
+import '../../../../core/navigation/navigation.dart';
+import '../providers/github_stars_provider.dart';
 
 class AppDrawer extends ConsumerStatefulWidget {
   const AppDrawer({super.key});
@@ -65,12 +61,7 @@ class _AppDrawerState extends ConsumerState<AppDrawer> {
                       icon: Icons.pie_chart_outline,
                       onTap: () {
                         Navigator.pop(context);
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const AnalyticsPage(),
-                          ),
-                        );
+                        AppRouteFactory.toAnalytics(context);
                       },
                     ),
                     _buildNavTile(
@@ -80,12 +71,7 @@ class _AppDrawerState extends ConsumerState<AppDrawer> {
                       icon: Icons.memory_rounded,
                       onTap: () {
                         Navigator.pop(context);
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const TaskManagerPage(),
-                          ),
-                        );
+                        AppRouteFactory.toTaskManager(context);
                       },
                     ),
 
@@ -99,12 +85,7 @@ class _AppDrawerState extends ConsumerState<AppDrawer> {
                       icon: Icons.lightbulb_outline,
                       onTap: () {
                         Navigator.pop(context);
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const HowItWorksPage(),
-                          ),
-                        );
+                        AppRouteFactory.toHowItWorks(context);
                       },
                     ),
                     _buildNavTile(
@@ -114,12 +95,7 @@ class _AppDrawerState extends ConsumerState<AppDrawer> {
                       icon: Icons.shield_outlined,
                       onTap: () {
                         Navigator.pop(context);
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const PrivacyPage(),
-                          ),
-                        );
+                        AppRouteFactory.toPrivacy(context);
                       },
                     ),
                     _buildNavTile(
@@ -129,12 +105,7 @@ class _AppDrawerState extends ConsumerState<AppDrawer> {
                       icon: Icons.info_outline,
                       onTap: () {
                         Navigator.pop(context);
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const AboutPage(),
-                          ),
-                        );
+                        AppRouteFactory.toAbout(context);
                       },
                     ),
 

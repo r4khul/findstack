@@ -1,8 +1,8 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/navigation/navigation.dart';
 import '../../../apps/presentation/providers/apps_provider.dart';
-import '../../../scan/presentation/pages/scan_page.dart';
 
 class ScanButton extends ConsumerStatefulWidget {
   const ScanButton({super.key});
@@ -23,10 +23,8 @@ class _ScanButtonState extends ConsumerState<ScanButton> {
         return _ScanDialog(
           onFullScan: () async {
             Navigator.pop(context);
-            // Navigate to full scan page which handles the scan logic
-            Navigator.of(
-              context,
-            ).push(MaterialPageRoute(builder: (context) => const ScanPage()));
+            // Navigate to full scan page with premium transition
+            AppRouteFactory.toScan(context);
           },
           onRevalidate: () {
             Navigator.pop(context);

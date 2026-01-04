@@ -6,10 +6,10 @@ import 'package:battery_plus/battery_plus.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 
+import '../../../../core/navigation/navigation.dart';
 import '../../../apps/presentation/providers/apps_provider.dart';
 import '../../../apps/domain/entities/device_app.dart';
 import '../../../home/presentation/widgets/premium_sliver_app_bar.dart';
-import '../../../apps/presentation/pages/app_details_page.dart';
 import '../providers/process_provider.dart';
 import '../../domain/entities/android_process.dart';
 
@@ -679,10 +679,8 @@ class _TaskManagerPageState extends ConsumerState<TaskManagerPage> {
         color: Colors.transparent,
         child: InkWell(
           onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => AppDetailsPage(app: app)),
-            );
+            // Use centralized navigation for consistent premium transitions
+            AppRouteFactory.toAppDetails(context, app);
           },
           borderRadius: BorderRadius.circular(16),
           child: Container(
