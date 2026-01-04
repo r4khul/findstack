@@ -209,6 +209,7 @@ class AppRepository(private val context: Context) {
         var appSize = 0L
         var dataSize = 0L
         var cacheSize = 0L
+        var externalCacheSize = 0L
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             try {
@@ -225,6 +226,7 @@ class AppRepository(private val context: Context) {
                 appSize = stats.appBytes
                 dataSize = stats.dataBytes
                 cacheSize = stats.cacheBytes
+                externalCacheSize = stats.externalCacheBytes
             } catch (e: Exception) {
                 // Fallback
                 if (appInfo.sourceDir != null) appSize = File(appInfo.sourceDir).length()
@@ -274,6 +276,7 @@ class AppRepository(private val context: Context) {
             "appSize" to appSize,
             "dataSize" to dataSize,
             "cacheSize" to cacheSize,
+            "externalCacheSize" to externalCacheSize,
             "apkPath" to (appInfo.sourceDir ?: ""),
             "dataDir" to (appInfo.dataDir ?: "")
         )

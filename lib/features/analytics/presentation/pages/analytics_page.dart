@@ -5,6 +5,7 @@ import '../../../../core/navigation/navigation.dart';
 import '../../../home/presentation/widgets/premium_sliver_app_bar.dart';
 import '../../../apps/domain/entities/device_app.dart';
 import '../../../apps/presentation/providers/apps_provider.dart';
+import '../../../scan/presentation/pages/scan_page.dart';
 
 class AnalyticsPage extends ConsumerStatefulWidget {
   const AnalyticsPage({super.key});
@@ -13,9 +14,30 @@ class AnalyticsPage extends ConsumerStatefulWidget {
   ConsumerState<AnalyticsPage> createState() => _AnalyticsPageState();
 }
 
-class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
+class _AnalyticsPageState extends ConsumerState<AnalyticsPage>
+    with WidgetsBindingObserver {
   int _touchedIndex = -1;
   int _showTopCount = 5;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      // Auto-refresh permission state when user returns from settings
+      ref.invalidate(usagePermissionProvider);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -30,26 +52,191 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
               .where((a) => a.totalTimeInForeground > 0)
               .toList();
 
+          final permissionAsync = ref.watch(usagePermissionProvider);
+          final hasPermission = permissionAsync.value ?? false;
+
           if (validApps.isEmpty) {
             return CustomScrollView(
               slivers: [
                 const PremiumSliverAppBar(title: "Usage Statistics"),
                 SliverFillRemaining(
                   child: Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.query_stats,
-                          size: 64,
-                          color: theme.colorScheme.outline,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                      child: Container(
+                        padding: const EdgeInsets.all(32),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.surface,
+                          borderRadius: BorderRadius.circular(32),
+                          border: Border.all(
+                            color: theme.colorScheme.outlineVariant.withOpacity(
+                              0.4,
+                            ),
+                            width: 1,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.04),
+                              blurRadius: 30,
+                              offset: const Offset(0, 15),
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: 16),
-                        Text(
-                          "No usage data available",
-                          style: theme.textTheme.titleMedium,
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            // Premium Icon with Glow
+                            Container(
+                              height: 100,
+                              width: 100,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color:
+                                    (hasPermission
+                                            ? theme.colorScheme.primary
+                                            : theme.colorScheme.error)
+                                        .withOpacity(0.05),
+                                border: Border.all(
+                                  color:
+                                      (hasPermission
+                                              ? theme.colorScheme.primary
+                                              : theme.colorScheme.error)
+                                          .withOpacity(0.1),
+                                  width: 1.5,
+                                  style: BorderStyle.solid,
+                                ),
+                              ),
+                              child: Center(
+                                child: Container(
+                                  padding: const EdgeInsets.all(20),
+                                  decoration: BoxDecoration(
+                                    color:
+                                        (hasPermission
+                                                ? theme.colorScheme.primary
+                                                : theme.colorScheme.error)
+                                            .withOpacity(0.1),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Icon(
+                                    hasPermission
+                                        ? Icons.query_stats_rounded
+                                        : Icons.shield_moon_rounded,
+                                    size: 36,
+                                    color: hasPermission
+                                        ? theme.colorScheme.primary
+                                        : theme.colorScheme.error,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 32),
+                            // Title & Description
+                            Text(
+                              hasPermission
+                                  ? "No Insights Yet"
+                                  : "Unlock Insights",
+                              style: theme.textTheme.headlineSmall?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: theme.colorScheme.onSurface,
+                                letterSpacing: -0.5,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              hasPermission
+                                  ? "Deep scan required to analyze your usage patterns tailored to your lifestyle."
+                                  : "Grant usage access to see exactly where your time goes. Your data stays 100% private on this device.",
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant,
+                                height: 1.6,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 36),
+                            // Premium Action Button
+                            SizedBox(
+                              width: double.infinity,
+                              height: 54,
+                              child: FilledButton(
+                                onPressed: () async {
+                                  if (hasPermission) {
+                                    Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder: (_) => const ScanPage(),
+                                      ),
+                                    );
+                                  } else {
+                                    final repo = ref.read(
+                                      deviceAppsRepositoryProvider,
+                                    );
+                                    await repo.requestUsagePermission();
+                                    ref.invalidate(usagePermissionProvider);
+                                  }
+                                },
+                                style:
+                                    FilledButton.styleFrom(
+                                      backgroundColor: hasPermission
+                                          ? theme.colorScheme.primary
+                                          : theme.colorScheme.error,
+                                      foregroundColor:
+                                          theme.colorScheme.onPrimary,
+                                      elevation: 0,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(18),
+                                      ),
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 16,
+                                      ),
+                                    ).copyWith(
+                                      overlayColor:
+                                          WidgetStateProperty.resolveWith((
+                                            states,
+                                          ) {
+                                            return Colors.white.withOpacity(
+                                              0.1,
+                                            );
+                                          }),
+                                    ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      hasPermission
+                                          ? Icons.bolt_rounded
+                                          : Icons
+                                                .settings_accessibility_rounded,
+                                      size: 20,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      hasPermission
+                                          ? "Start Deep Analysis"
+                                          : "Enable Access",
+                                      style: const TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                        letterSpacing: 0.5,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            // Optional: Secondary hint for scan
+                            if (hasPermission)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 16.0),
+                                child: Text(
+                                  "Takes about 20 seconds",
+                                  style: theme.textTheme.labelSmall?.copyWith(
+                                    color: theme.colorScheme.primary,
+                                  ),
+                                ),
+                              ),
+                          ],
                         ),
-                      ],
+                      ),
                     ),
                   ),
                 ),

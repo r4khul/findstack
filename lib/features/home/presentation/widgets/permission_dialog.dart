@@ -146,20 +146,21 @@ class _PermissionDialogState extends State<PermissionDialog>
                           ),
                         ),
                       ),
-                      if (!widget.isPermanent) ...[
-                        const SizedBox(height: 12),
-                        TextButton(
-                          onPressed: () => Navigator.of(context).pop(),
-                          style: TextButton.styleFrom(
-                            foregroundColor: theme.colorScheme.secondary,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                            ),
+                      const SizedBox(height: 12),
+                      // if (!widget.isPermanent) ...[
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        style: TextButton.styleFrom(
+                          textStyle: TextStyle(decoration: TextDecoration.none),
+                          foregroundColor: theme.colorScheme.secondary,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
                           ),
-                          child: const Text("Maybe Later"),
                         ),
-                      ],
+                        child: const Text("Maybe Later"),
+                      ),
                     ],
+                    // ],
                   ),
                 ),
               ),

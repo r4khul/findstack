@@ -45,7 +45,8 @@ class DeviceApp extends Equatable {
   // Storage breakdown (Unfiltered Truth)
   final int appSize; // Code/APK
   final int dataSize; // User Data
-  final int cacheSize; // Cache
+  final int cacheSize; // Total Cache
+  final int externalCacheSize; // External Portion of Cache
 
   // Deep Analysis Fields
   final String installerStore;
@@ -83,6 +84,7 @@ class DeviceApp extends Equatable {
     this.appSize = 0,
     this.dataSize = 0,
     this.cacheSize = 0,
+    this.externalCacheSize = 0,
     this.apkPath = '',
     this.dataDir = '',
     this.installerStore = 'Unknown',
@@ -146,6 +148,7 @@ class DeviceApp extends Equatable {
       appSize: map['appSize'] as int? ?? 0,
       dataSize: map['dataSize'] as int? ?? 0,
       cacheSize: map['cacheSize'] as int? ?? 0,
+      externalCacheSize: map['externalCacheSize'] as int? ?? 0,
       apkPath: map['apkPath'] as String? ?? '',
       dataDir: map['dataDir'] as String? ?? '',
       installerStore: map['installerStore'] as String? ?? 'Unknown',
@@ -211,6 +214,7 @@ class DeviceApp extends Equatable {
       'appSize': appSize,
       'dataSize': dataSize,
       'cacheSize': cacheSize,
+      'externalCacheSize': externalCacheSize,
       'apkPath': apkPath,
       'dataDir': dataDir,
       'installerStore': installerStore,
@@ -244,6 +248,7 @@ class DeviceApp extends Equatable {
     appSize,
     dataSize,
     cacheSize,
+    externalCacheSize,
     apkPath,
     dataDir,
     installerStore,

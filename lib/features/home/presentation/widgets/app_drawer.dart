@@ -485,7 +485,7 @@ class _AppDrawerState extends ConsumerState<AppDrawer> {
                         ),
                       ),
                       Text(
-                        "Star us on GitHub",
+                        "Give a Star on Github",
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: theme.colorScheme.onSurfaceVariant,
                           fontSize: 11,

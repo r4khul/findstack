@@ -128,7 +128,15 @@ class AppRouteFactory {
 
   /// Push to home with premium reveal.
   static Future<void> toHome(BuildContext context) {
-    return PremiumNavigation.push(context, const HomePage());
+    // Use replacement navigation with simple fade for faster startup
+    return Navigator.of(context).pushReplacement(
+      PageRouteBuilder(
+        pageBuilder: (_, __, ___) => const HomePage(),
+        transitionDuration: const Duration(milliseconds: 400),
+        transitionsBuilder: (_, a, __, child) =>
+            FadeTransition(opacity: a, child: child),
+      ),
+    );
   }
 
   /// Push to search page.

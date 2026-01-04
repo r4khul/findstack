@@ -12,6 +12,7 @@ import '../widgets/home_sliver_delegate.dart';
 import '../widgets/back_to_top_fab.dart';
 import '../widgets/app_drawer.dart';
 import '../widgets/permission_dialog.dart';
+import '../../../scan/presentation/pages/scan_page.dart';
 
 class HomePage extends ConsumerStatefulWidget {
   const HomePage({super.key});
@@ -72,15 +73,34 @@ class _HomePageState extends ConsumerState<HomePage>
         }
 
         // If we just got permission (fromResume) OR if the list is empty/stale, trigger scan.
-        // We can just trigger full scan to be safe, apps provider handles optimization?
-        // Actually, let's only trigger if we think we haven't scanned yet.
-        // But for safety:
         if (fromResume || !_isDialogShowing) {
+          // Ensure initialization is complete (cache loaded) before checking data
+          // This prevents "flash" of scan page when data is just loading from cache
+          try {
+            if (ref.read(installedAppsProvider).isLoading) {
+              await ref.read(installedAppsProvider.future);
+            }
+          } catch (_) {
+            // Ignore errors here, provider state will reflect error
+          }
+
+          if (!mounted) return;
+
           final appsState = ref.read(installedAppsProvider);
           final hasData = appsState.value?.isNotEmpty ?? false;
 
+          // If no data, we redirect to Deep Scan (ScanPage) which handles the full scan UI
+          // This ensures user sees the progress and we get fresh data.
           if (!hasData) {
-            ref.read(installedAppsProvider.notifier).fullScan();
+            // Check if we are already on ScanPage to avoid double push?
+            // Since we are in HomePage, we can just push.
+            // We use a small delay to ensure dialog is fully closed if it was open.
+            await Future.delayed(const Duration(milliseconds: 100));
+            if (mounted) {
+              Navigator.of(
+                context,
+              ).push(MaterialPageRoute(builder: (_) => const ScanPage()));
+            }
           }
         }
       } else {

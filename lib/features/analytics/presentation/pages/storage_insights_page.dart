@@ -17,6 +17,14 @@ class StorageInsightsPage extends ConsumerStatefulWidget {
 class _StorageInsightsPageState extends ConsumerState<StorageInsightsPage> {
   int _touchedIndex = -1;
   int _showTopCount = 5;
+  String _searchQuery = "";
+  final TextEditingController _searchController = TextEditingController();
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -25,15 +33,27 @@ class _StorageInsightsPageState extends ConsumerState<StorageInsightsPage> {
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
+      // Use CustomScrollView with SliverAppBar for search bar at top
       body: appsAsync.when(
         data: (apps) {
-          final validApps = apps.where((a) => a.size > 0).toList();
+          // 1. Filter by Search Query
+          final filteredApps = apps.where((app) {
+            final query = _searchQuery.toLowerCase();
+            return app.appName.toLowerCase().contains(query) ||
+                app.packageName.toLowerCase().contains(query);
+          }).toList();
 
-          if (validApps.isEmpty) {
-            return _buildEmptyState(theme);
-          }
+          // 2. Filter by Size > 0
+          final validApps = filteredApps.where((a) => a.size > 0).toList();
 
+          // 3. Sort by Size Descending
           validApps.sort((a, b) => b.size.compareTo(a.size));
+
+          if (validApps.isEmpty && _searchQuery.isEmpty) {
+            return _buildEmptyState(theme, "No storage info available");
+          } else if (validApps.isEmpty) {
+            return _buildEmptyState(theme, "No apps match your search");
+          }
 
           final totalSize = validApps.fold<int>(
             0,
@@ -52,9 +72,13 @@ class _StorageInsightsPageState extends ConsumerState<StorageInsightsPage> {
             (sum, app) => sum + app.cacheSize,
           );
 
-          final topApps = validApps.take(_showTopCount).toList();
-          final topSize = topApps.fold<int>(0, (sum, app) => sum + app.size);
-          final otherSize = totalSize - topSize;
+          // Top apps for Chart
+          final topAppsForChart = validApps.take(_showTopCount).toList();
+          final topSizeForChart = topAppsForChart.fold<int>(
+            0,
+            (sum, app) => sum + app.size,
+          );
+          final otherSizeForChart = totalSize - topSizeForChart;
 
           return CustomScrollView(
             physics: const BouncingScrollPhysics(),
@@ -73,13 +97,14 @@ class _StorageInsightsPageState extends ConsumerState<StorageInsightsPage> {
                     appCodeSize,
                     dataSize,
                     cacheSize,
+                    _searchQuery.isNotEmpty,
                   ),
                 ),
               ),
 
               const SliverToBoxAdapter(child: SizedBox(height: 24)),
 
-              // Filter
+              // Filter Dropdown
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -97,19 +122,29 @@ class _StorageInsightsPageState extends ConsumerState<StorageInsightsPage> {
                 child: _buildChartSection(
                   context,
                   theme,
-                  topApps,
-                  otherSize,
+                  topAppsForChart,
+                  otherSizeForChart,
                   totalSize,
                 ),
               ),
 
-              const SliverToBoxAdapter(child: SizedBox(height: 32)),
+              const SliverToBoxAdapter(child: SizedBox(height: 24)),
+
+              // Search Bar (Moved Below Chart)
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: _buildSearchBar(theme),
+                ),
+              ),
+
+              const SliverToBoxAdapter(child: SizedBox(height: 24)),
 
               // List
               SliverPadding(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 20,
-                  vertical: 20,
+                  vertical: 0,
                 ),
                 sliver: SliverList(
                   delegate: SliverChildBuilderDelegate((context, index) {
@@ -117,7 +152,9 @@ class _StorageInsightsPageState extends ConsumerState<StorageInsightsPage> {
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 16),
                         child: Text(
-                          "HEAVIEST APPS",
+                          _searchQuery.isEmpty
+                              ? "HEAVIEST APPS"
+                              : "SEARCH RESULTS",
                           style: theme.textTheme.labelSmall?.copyWith(
                             fontWeight: FontWeight.bold,
                             letterSpacing: 2.0,
@@ -129,8 +166,8 @@ class _StorageInsightsPageState extends ConsumerState<StorageInsightsPage> {
                       );
                     }
                     final appIndex = index - 1;
-                    final app = topApps[appIndex];
-                    final percent = app.size / totalSize;
+                    final app = validApps[appIndex];
+                    final percent = app.size / (totalSize > 0 ? totalSize : 1);
                     final isTouched = appIndex == _touchedIndex;
 
                     return _buildAppItem(
@@ -141,42 +178,117 @@ class _StorageInsightsPageState extends ConsumerState<StorageInsightsPage> {
                       appIndex,
                       isTouched,
                     );
-                  }, childCount: topApps.length + 1),
+                  }, childCount: validApps.length + 1),
                 ),
               ),
             ],
           );
         },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, _) => Center(child: Text("Error: $err")),
+        loading: () =>
+            const Scaffold(body: Center(child: CircularProgressIndicator())),
+        error: (err, _) => Scaffold(body: Center(child: Text("Error: $err"))),
       ),
     );
   }
 
-  Widget _buildEmptyState(ThemeData theme) {
+  Widget _buildEmptyState(ThemeData theme, String message) {
     return CustomScrollView(
       slivers: [
         const PremiumSliverAppBar(title: "Storage Insights"),
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+            child: _buildSearchBar(theme),
+          ),
+        ),
         SliverFillRemaining(
           child: Center(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(
-                  Icons.sd_storage_outlined,
+                  Icons.search_off_rounded,
                   size: 64,
                   color: theme.colorScheme.outline,
                 ),
                 const SizedBox(height: 16),
-                Text(
-                  "No storage info available",
-                  style: theme.textTheme.titleMedium,
-                ),
+                Text(message, style: theme.textTheme.titleMedium),
               ],
             ),
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildSearchBar(ThemeData theme) {
+    return Container(
+      height: 50,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        color: theme.brightness == Brightness.dark
+            ? theme.colorScheme.surface
+            : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: theme.colorScheme.outline.withOpacity(0.2),
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.search,
+            size: 20,
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: TextField(
+              controller: _searchController,
+              textAlignVertical: TextAlignVertical.center,
+              decoration: InputDecoration(
+                hintText: "Search storage...",
+                border: InputBorder.none,
+                focusedBorder: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                errorBorder: InputBorder.none,
+                disabledBorder: InputBorder.none,
+                hintStyle: theme.textTheme.bodyLarge?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant.withOpacity(0.6),
+                ),
+                contentPadding: EdgeInsets.zero,
+                isDense: true,
+              ),
+              style: theme.textTheme.bodyLarge?.copyWith(fontSize: 16),
+              onChanged: (val) {
+                setState(() {
+                  _searchQuery = val;
+                });
+              },
+            ),
+          ),
+          if (_searchQuery.isNotEmpty)
+            GestureDetector(
+              onTap: () {
+                _searchController.clear();
+                setState(() => _searchQuery = "");
+              },
+              child: Icon(
+                Icons.close,
+                size: 20,
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+        ],
+      ),
     );
   }
 
@@ -186,6 +298,7 @@ class _StorageInsightsPageState extends ConsumerState<StorageInsightsPage> {
     int code,
     int data,
     int cache,
+    bool isfiltered,
   ) {
     return Container(
       padding: const EdgeInsets.all(24),
@@ -216,7 +329,7 @@ class _StorageInsightsPageState extends ConsumerState<StorageInsightsPage> {
           ),
           const SizedBox(height: 8),
           Text(
-            "TOTAL CONSUMED",
+            isfiltered ? "FILTERED SIZE" : "TOTAL CONSUMED",
             style: theme.textTheme.labelSmall?.copyWith(
               fontWeight: FontWeight.bold,
               letterSpacing: 1.5,
@@ -408,8 +521,7 @@ class _StorageInsightsPageState extends ConsumerState<StorageInsightsPage> {
     int otherSize,
   ) {
     List<PieChartSectionData> sections = [];
-    final bool showBadges =
-        apps.length <= 10; // Only show badges if strict filter
+    final bool showBadges = apps.length <= 10;
 
     for (int i = 0; i < apps.length; i++) {
       final isTouched = i == _touchedIndex;
@@ -417,7 +529,6 @@ class _StorageInsightsPageState extends ConsumerState<StorageInsightsPage> {
       final app = apps[i];
       final value = app.size.toDouble();
 
-      // Monochrome Palette similar to Analytics
       final double normalizedIndex = i / (apps.isNotEmpty ? apps.length : 1);
       final double opacity = 0.9 - (normalizedIndex * 0.7);
       final Color color = theme.colorScheme.primary.withValues(
@@ -470,6 +581,10 @@ class _StorageInsightsPageState extends ConsumerState<StorageInsightsPage> {
     int index,
     bool isTouched,
   ) {
+    final internalCache = app.cacheSize >= app.externalCacheSize
+        ? app.cacheSize - app.externalCacheSize
+        : app.cacheSize; // Safety check
+
     return GestureDetector(
       onTap: () => AppRouteFactory.toAppDetails(context, app),
       onTapDown: (_) => setState(() => _touchedIndex = index),
@@ -549,20 +664,61 @@ class _StorageInsightsPageState extends ConsumerState<StorageInsightsPage> {
                 ),
               ],
             ),
-            // Micro Details (Unfiltered Truth)
+            // MICRO DETAILS
             if (isTouched) ...[
               const SizedBox(height: 12),
               Divider(
                 color: theme.colorScheme.outlineVariant.withValues(alpha: 0.2),
               ),
               const SizedBox(height: 8),
+
+              // First Row: Core Stats
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  _buildMicroStat(theme, "Code", app.appSize),
-                  _buildMicroStat(theme, "Data", app.dataSize),
-                  _buildMicroStat(theme, "Cache", app.cacheSize),
+                  _buildMicroStat(
+                    theme,
+                    "Code & OBB",
+                    app.appSize,
+                  ), // OBB is in appSize
+                  _buildMicroStat(theme, "User Data", app.dataSize),
+                  _buildMicroStat(theme, "Total Cache", app.cacheSize),
                 ],
+              ),
+              const SizedBox(height: 8),
+              // Second Row: Cache Breakdown (The Unfiltered Truth)
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.surface.withOpacity(0.5),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: theme.colorScheme.outlineVariant.withOpacity(0.1),
+                  ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    _buildSmallMicroStat(
+                      theme,
+                      "Internal Cache",
+                      internalCache,
+                    ),
+                    Container(
+                      width: 1,
+                      height: 20,
+                      color: theme.colorScheme.outlineVariant.withOpacity(0.2),
+                    ),
+                    _buildSmallMicroStat(
+                      theme,
+                      "External Cache",
+                      app.externalCacheSize,
+                    ),
+                  ],
+                ),
               ),
             ],
           ],
@@ -584,6 +740,27 @@ class _StorageInsightsPageState extends ConsumerState<StorageInsightsPage> {
           label,
           style: theme.textTheme.labelSmall?.copyWith(
             color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+            fontSize: 10,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSmallMicroStat(ThemeData theme, String label, int bytes) {
+    return Row(
+      children: [
+        Text(
+          "$label: ",
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+            fontSize: 10,
+          ),
+        ),
+        Text(
+          _formatBytes(bytes),
+          style: theme.textTheme.labelSmall?.copyWith(
+            fontWeight: FontWeight.bold,
             fontSize: 10,
           ),
         ),
