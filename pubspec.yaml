@@ -20,6 +20,9 @@ dependencies:
   http: ^1.6.0
   url_launcher: ^6.3.2
   skeletonizer: ^2.1.2
+  system_info2: ^4.1.0
+  battery_plus: ^7.0.0
+  device_info_plus: ^12.3.0
 
 dev_dependencies:
   flutter_test:

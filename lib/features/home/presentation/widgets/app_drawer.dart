@@ -11,6 +11,7 @@ import '../../../../core/widgets/theme_transition_wrapper.dart';
 import '../pages/info/how_it_works_page.dart';
 import '../pages/info/privacy_page.dart';
 import '../pages/info/about_page.dart';
+import '../../../task_manager/presentation/pages/task_manager_page.dart';
 
 class AppDrawer extends ConsumerStatefulWidget {
   const AppDrawer({super.key});
@@ -68,6 +69,21 @@ class _AppDrawerState extends ConsumerState<AppDrawer> {
                           context,
                           MaterialPageRoute(
                             builder: (context) => const AnalyticsPage(),
+                          ),
+                        );
+                      },
+                    ),
+                    _buildNavTile(
+                      context,
+                      title: "Task Manager",
+                      subtitle: "Monitor system resources",
+                      icon: Icons.memory_rounded,
+                      onTap: () {
+                        Navigator.pop(context);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const TaskManagerPage(),
                           ),
                         );
                       },
