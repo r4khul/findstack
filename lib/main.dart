@@ -5,7 +5,7 @@ import 'core/widgets/theme_transition_wrapper.dart';
 import 'core/navigation/navigation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'features/splash/presentation/pages/splash_screen.dart';
-import 'core/version/update_ui.dart';
+import 'features/update/presentation/widgets/update_ui.dart';
 
 void main() {
   runApp(const ProviderScope(child: UnfilterApp()));
@@ -30,7 +30,7 @@ class UnfilterApp extends ConsumerWidget {
       themeAnimationDuration: Duration.zero,
       builder: (context, child) => RepaintBoundary(
         key: PremiumNavigation.rootBoundaryKey,
-        child: VersionGate(
+        child: VersionCheckGate(
           child: TapPositionProvider(
             child: ThemeTransitionWrapper(child: child!),
           ),

@@ -8,8 +8,9 @@ import '../../../../core/providers/theme_provider.dart';
 import '../../../../core/widgets/theme_transition_wrapper.dart';
 import '../../../../core/navigation/navigation.dart';
 import '../providers/github_stars_provider.dart';
-import '../../../../core/version/version_provider.dart';
-import '../../../../core/version/version_models.dart';
+import '../../../../features/update/presentation/providers/update_provider.dart';
+import '../../../../features/update/domain/update_service.dart'; // For enums
+import '../../../../features/update/presentation/widgets/update_ui.dart';
 
 class AppDrawer extends ConsumerStatefulWidget {
   const AppDrawer({super.key});
@@ -112,17 +113,63 @@ class _AppDrawerState extends ConsumerState<AppDrawer> {
                     ),
                     Consumer(
                       builder: (context, ref, child) {
+                        final updateAsync = ref.watch(updateCheckProvider);
+
+                        return _buildNavTile(
+                          context,
+                          title: "Check for Updates",
+                          subtitle: updateAsync.when(
+                            data: (result) {
+                              if (result.status == UpdateStatus.forceUpdate ||
+                                  result.status == UpdateStatus.softUpdate) {
+                                return "Update Available";
+                              }
+                              return "You're up to date";
+                            },
+                            loading: () => "Checking...",
+                            error: (_, __) => "Tap to retry",
+                          ),
+                          icon: Icons.system_update_rounded,
+                          onTap: () {
+                            final result = updateAsync.value;
+                            if (result?.status == UpdateStatus.softUpdate ||
+                                result?.status == UpdateStatus.forceUpdate) {
+                              // If update available, maybe show the specific dialog or just trigger the download flow?
+                              // Or we can leverage the global VersionGate to show the banner/screen?
+                              // Since the banner stays on screen if SoftUpdate, user can just click that.
+                              Navigator.pop(context);
+                              // But if they clicked here, they expect action.
+                              // Let's show a modal bottom sheet with similar content to the banner/screen.
+                              showModalBottomSheet(
+                                context: context,
+                                backgroundColor: Colors.transparent,
+                                builder: (ctx) => Padding(
+                                  padding: const EdgeInsets.all(16),
+                                  child: SoftUpdateBanner(result: result!),
+                                ),
+                              );
+                            } else {
+                              // Trigger refresh
+                              ref.invalidate(updateCheckProvider);
+                            }
+                          },
+                        );
+                      },
+                    ),
+
+                    Consumer(
+                      builder: (context, ref, child) {
                         final versionAsync = ref.watch(currentVersionProvider);
-                        final updateState = ref.watch(updateStateProvider);
+                        final updateAsync = ref.watch(updateCheckProvider);
                         final isUpdateAvailable =
-                            updateState.asData?.value.status ==
-                            AppUpdateStatus.softUpdate;
+                            updateAsync.asData?.value.status ==
+                            UpdateStatus.softUpdate;
                         return _buildNavTile(
                           context,
                           title: "About",
                           subtitle: versionAsync.when(
                             data: (v) =>
-                                "v${v.displayString}${isUpdateAvailable ? ' • Update' : ''}",
+                                "v${v.toString()}${isUpdateAvailable ? ' • Update' : ''}",
                             loading: () => "Checking version...",
                             error: (_, __) => "Version Unknown",
                           ),
