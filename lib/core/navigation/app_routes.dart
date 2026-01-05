@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../features/home/presentation/pages/home_page.dart';
 import '../../features/splash/presentation/pages/splash_screen.dart';
+import '../../features/update/presentation/pages/update_check_page.dart';
 import '../../features/search/presentation/pages/search_page.dart';
 import '../../features/scan/presentation/pages/scan_page.dart';
 import '../../features/analytics/presentation/pages/analytics_page.dart';
@@ -26,6 +27,7 @@ abstract class AppRoutes {
   static const String privacy = '/privacy';
   static const String appDetails = '/app-details';
   static const String storageInsights = '/storage-insights';
+  static const String updateCheck = '/update-check';
 }
 
 /// Centralized route factory.
@@ -113,6 +115,13 @@ class AppRouteFactory {
           tapPosition: TapTracker.lastTapPosition,
         );
 
+      case AppRoutes.updateCheck:
+        return BubbleRevealPageRoute(
+          page: const UpdateCheckPage(),
+          settings: settings,
+          tapPosition: TapTracker.lastTapPosition,
+        );
+
       default:
         return MaterialPageRoute(
           builder: (_) => Scaffold(
@@ -182,5 +191,10 @@ class AppRouteFactory {
   /// Push to app details page with premium reveal.
   static Future<void> toAppDetails(BuildContext context, DeviceApp app) {
     return PremiumNavigation.push(context, AppDetailsPage(app: app));
+  }
+
+  /// Push to update check page.
+  static Future<void> toUpdateCheck(BuildContext context) {
+    return PremiumNavigation.push(context, const UpdateCheckPage());
   }
 }

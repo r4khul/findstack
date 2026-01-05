@@ -1,7 +1,7 @@
 name: unfilter
 description: "An app that shows what other apps are built with"
 publish_to: "none"
-version: 1.0.0+1
+version: 1.0.0+2
 
 environment:
   sdk: ^3.10.3
@@ -25,6 +25,8 @@ dependencies:
   device_info_plus: ^12.3.0
   shorebird_code_push: ^2.0.5
   package_info_plus: ^9.0.0
+  pub_semver: ^2.2.0
+  open_filex: ^4.7.0
 
 dev_dependencies:
   flutter_test:
