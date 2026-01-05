@@ -71,20 +71,24 @@ class ThemeTransitionWrapperState extends State<ThemeTransitionWrapper>
         _repaintKey.currentContext?.findRenderObject()
             as RenderRepaintBoundary?;
 
-    if (boundary != null && boundary.debugNeedsPaint == false) {
-      final deviceRatio = View.of(context).devicePixelRatio;
-      final pixelRatio = deviceRatio > 1.5 ? 1.5 : deviceRatio;
+    if (boundary != null) {
+      try {
+        final deviceRatio = View.of(context).devicePixelRatio;
+        final pixelRatio = deviceRatio > 1.5 ? 1.5 : deviceRatio;
 
-      final image = await boundary.toImage(pixelRatio: pixelRatio);
+        final image = await boundary.toImage(pixelRatio: pixelRatio);
 
-      setState(() {
-        _screenshot = image;
-        _center = center;
-      });
+        setState(() {
+          _screenshot = image;
+          _center = center;
+        });
 
-      onThemeSwitch();
-
-      _controller.forward(from: 0.0);
+        onThemeSwitch();
+        _controller.forward(from: 0.0);
+      } catch (e) {
+        // Fallback if screenshot fails
+        onThemeSwitch();
+      }
     } else {
       onThemeSwitch();
     }

@@ -23,6 +23,8 @@ dependencies:
   system_info2: ^4.1.0
   battery_plus: ^7.0.0
   device_info_plus: ^12.3.0
+  shorebird_code_push: ^2.0.5
+  package_info_plus: ^9.0.0
 
 dev_dependencies:
   flutter_test:
@@ -43,6 +45,7 @@ flutter:
     - assets/fonts/
     - assets/icons/
     - assets/vectors/
+    - shorebird.yaml
   fonts:
     - family: UncutSans
       fonts:

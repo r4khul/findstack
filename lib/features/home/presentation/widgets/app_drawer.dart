@@ -8,6 +8,8 @@ import '../../../../core/providers/theme_provider.dart';
 import '../../../../core/widgets/theme_transition_wrapper.dart';
 import '../../../../core/navigation/navigation.dart';
 import '../providers/github_stars_provider.dart';
+import '../../../../core/version/version_provider.dart';
+import '../../../../core/version/version_models.dart';
 
 class AppDrawer extends ConsumerStatefulWidget {
   const AppDrawer({super.key});
@@ -108,14 +110,28 @@ class _AppDrawerState extends ConsumerState<AppDrawer> {
                         AppRouteFactory.toPrivacy(context);
                       },
                     ),
-                    _buildNavTile(
-                      context,
-                      title: "About",
-                      subtitle: "Version 1.0.0",
-                      icon: Icons.info_outline,
-                      onTap: () {
-                        Navigator.pop(context);
-                        AppRouteFactory.toAbout(context);
+                    Consumer(
+                      builder: (context, ref, child) {
+                        final versionAsync = ref.watch(currentVersionProvider);
+                        final updateState = ref.watch(updateStateProvider);
+                        final isUpdateAvailable =
+                            updateState.asData?.value.status ==
+                            AppUpdateStatus.softUpdate;
+                        return _buildNavTile(
+                          context,
+                          title: "About",
+                          subtitle: versionAsync.when(
+                            data: (v) =>
+                                "v${v.displayString}${isUpdateAvailable ? ' • Update' : ''}",
+                            loading: () => "Checking version...",
+                            error: (_, __) => "Version Unknown",
+                          ),
+                          icon: Icons.info_outline,
+                          onTap: () {
+                            Navigator.pop(context);
+                            AppRouteFactory.toAbout(context);
+                          },
+                        );
                       },
                     ),
 
