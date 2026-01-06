@@ -51,6 +51,51 @@ class InstalledAppsNotifier extends AsyncNotifier<List<DeviceApp>> {
     );
   }
 
+  /// Resync a single app by fetching fresh details.
+  /// Returns the updated app data, or null if failed.
+  Future<DeviceApp?> resyncApp(String packageName) async {
+    final repository = ref.read(deviceAppsRepositoryProvider);
+
+    try {
+      print("[Unfilter] ResyncApp: Fetching details for $packageName");
+
+      // Fetch fresh details for this single app
+      final details = await repository.getAppsDetails([packageName]);
+
+      if (details.isEmpty) {
+        print("[Unfilter] ResyncApp: No details returned for $packageName");
+        return null;
+      }
+
+      final updatedApp = details.first;
+      print(
+        "[Unfilter] ResyncApp: Got updated details for ${updatedApp.appName}",
+      );
+
+      // Update the state with the new app data
+      final currentApps = switch (state) {
+        AsyncData(:final value) => value,
+        _ => <DeviceApp>[],
+      };
+      final updatedApps = currentApps.map((app) {
+        if (app.packageName == packageName) {
+          return updatedApp;
+        }
+        return app;
+      }).toList();
+
+      // Update cache and state
+      await repository.updateCache(updatedApps);
+      state = AsyncValue.data(updatedApps);
+
+      print("[Unfilter] ResyncApp: Updated cache and state");
+      return updatedApp;
+    } catch (e) {
+      print("[Unfilter] ResyncApp: Failed - $e");
+      return null;
+    }
+  }
+
   Future<void> revalidate({List<DeviceApp>? cachedApps}) async {
     final repository = ref.read(deviceAppsRepositoryProvider);
 

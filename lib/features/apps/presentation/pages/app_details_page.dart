@@ -12,6 +12,7 @@ import '../../../home/presentation/widgets/premium_sliver_app_bar.dart';
 import '../../domain/entities/app_usage_point.dart';
 import '../../domain/entities/device_app.dart';
 import '../providers/app_detail_provider.dart';
+import '../providers/apps_provider.dart';
 import '../widgets/app_detail_share_poster.dart';
 import '../widgets/usage_chart.dart';
 
@@ -27,8 +28,126 @@ class AppDetailsPage extends ConsumerStatefulWidget {
 class _AppDetailsPageState extends ConsumerState<AppDetailsPage> {
   final GlobalKey _sharePosterKey = GlobalKey();
   bool _isSharing = false;
+  bool _isResyncing = false;
+  late DeviceApp _currentApp;
 
-  DeviceApp get app => widget.app;
+  DeviceApp get app => _currentApp;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentApp = widget.app;
+  }
+
+  /// Handles resync: fetches fresh app details and updates UI
+  Future<void> _handleResync() async {
+    if (_isResyncing) return;
+
+    setState(() => _isResyncing = true);
+
+    try {
+      // Refresh usage history
+      ref.invalidate(appUsageHistoryProvider(_currentApp.packageName));
+
+      // Fetch fresh app details
+      final updatedApp = await ref
+          .read(installedAppsProvider.notifier)
+          .resyncApp(_currentApp.packageName);
+
+      if (updatedApp != null && mounted) {
+        setState(() {
+          _currentApp = updatedApp;
+        });
+
+        _showPremiumSnackbar(
+          icon: Icons.check_circle_rounded,
+          message: 'App data refreshed',
+          isSuccess: true,
+        );
+      }
+    } catch (e) {
+      debugPrint('Resync error: $e');
+      if (mounted) {
+        _showPremiumSnackbar(
+          icon: Icons.error_outline_rounded,
+          message: 'Failed to resync',
+          isSuccess: false,
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isResyncing = false);
+    }
+  }
+
+  /// Shows a premium glassmorphic styled snackbar matching the app's design theme
+  void _showPremiumSnackbar({
+    required IconData icon,
+    required String message,
+    required bool isSuccess,
+  }) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    final iconColor = isSuccess
+        ? const Color(0xFF4CAF50) // Premium green
+        : theme.colorScheme.error;
+
+    ScaffoldMessenger.of(context).clearSnackBars();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: BackdropFilter(
+            filter: ui.ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              decoration: BoxDecoration(
+                color: isDark
+                    ? const Color(0xFF1A1A1A).withOpacity(0.92)
+                    : const Color(0xFFF0F0F0).withOpacity(0.92),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: theme.colorScheme.onSurface.withOpacity(0.1),
+                  width: 1,
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: iconColor.withOpacity(0.12),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(icon, size: 18, color: iconColor),
+                  ),
+                  const SizedBox(width: 12),
+                  Flexible(
+                    child: Text(
+                      message,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                        color: theme.colorScheme.onSurface.withOpacity(0.9),
+                        letterSpacing: -0.2,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 2),
+        padding: EdgeInsets.zero,
+        margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      ),
+    );
+  }
 
   /// Waits for the current frame to complete (layout + paint).
   Future<void> _waitForFrameComplete() async {
@@ -160,10 +279,7 @@ https://github.com/r4khul/unfilter/releases/latest
             slivers: [
               PremiumSliverAppBar(
                 title: "App Details",
-                onResync: () {
-                  // ignore: unused_result
-                  ref.refresh(appUsageHistoryProvider(app.packageName));
-                },
+                onResync: _isResyncing ? null : _handleResync,
                 onShare: _isSharing ? null : _handleShare,
               ),
               SliverToBoxAdapter(
