@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../features/home/presentation/pages/home_page.dart';
-import '../../features/splash/presentation/pages/splash_screen.dart';
+import '../../core/widgets/app_entry.dart';
 import '../../features/update/presentation/pages/update_check_page.dart';
 import '../../features/search/presentation/pages/search_page.dart';
 import '../../features/scan/presentation/pages/scan_page.dart';
@@ -42,7 +42,7 @@ class AppRouteFactory {
     switch (settings.name) {
       case AppRoutes.splash:
         return PremiumPageRoute(
-          page: const SplashScreen(),
+          page: const AppEntry(),
           settings: settings,
           transitionType: TransitionType.fade,
         );
