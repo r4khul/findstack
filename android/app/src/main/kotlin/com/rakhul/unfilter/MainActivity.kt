@@ -110,8 +110,24 @@ class MainActivity : FlutterActivity() {
                 }
                 "requestUsagePermission" -> {
                     startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
-
                     result.success(true)
+                }
+                "checkInstallPermission" -> {
+                   if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                       result.success(packageManager.canRequestPackageInstalls())
+                   } else {
+                       result.success(true) // Always granted below Oreo
+                   }
+                }
+                "requestInstallPermission" -> {
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                         startActivity(Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES).apply {
+                            data = android.net.Uri.parse("package:$packageName")
+                        })
+                        result.success(true)
+                    } else {
+                        result.success(true)
+                    }
                 }
                 "getRunningProcesses" -> {
                     executor.execute {

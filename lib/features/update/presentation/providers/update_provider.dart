@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pub_semver/pub_semver.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -73,8 +74,23 @@ class UpdateDownloadController extends Notifier<DownloadState> {
     return const DownloadState();
   }
 
-  Future<void> downloadAndInstall(String url) async {
+  Future<void> downloadAndInstall(String url, String version) async {
+    // If we are already done and filePath matches, just install.
+    // However, the service now handles the check-if-exists logic safely.
+    // We just need to prevent double downloading if currently downloading.
     if (state.isDownloading) return;
+
+    if (state.isDone && state.filePath != null) {
+      final file = File(state.filePath!);
+      if (await file.exists()) {
+        // If already downloaded (in memory state), just install
+        final serviceAsync = ref.read(updateServiceFutureProvider);
+        if (serviceAsync.hasValue) {
+          await serviceAsync.value!.installApk(file);
+          return;
+        }
+      }
+    }
 
     state = const DownloadState(isDownloading: true);
 
@@ -87,6 +103,7 @@ class UpdateDownloadController extends Notifier<DownloadState> {
 
       final file = await service.downloadApk(
         url,
+        version,
         onProgress: (p) {
           state = state.copyWith(progress: p);
         },

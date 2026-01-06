@@ -1,8 +1,8 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../domain/update_service.dart';
 import '../providers/update_provider.dart';
+import '../widgets/update_ui.dart';
 import '../../../home/presentation/widgets/premium_sliver_app_bar.dart';
 
 class UpdateCheckPage extends ConsumerStatefulWidget {
@@ -147,18 +147,33 @@ class _UpdateCheckPageState extends ConsumerState<UpdateCheckPage> {
           padding: const EdgeInsets.all(32),
           decoration: BoxDecoration(
             color: isUpdateAvailable
-                ? Colors.blueAccent.withOpacity(0.1)
-                : theme.colorScheme.primary.withOpacity(0.05),
+                ? theme.colorScheme.primary.withOpacity(0.05)
+                : theme.colorScheme.surfaceContainerHighest.withOpacity(0.5),
             shape: BoxShape.circle,
+            border: Border.all(
+              color: isUpdateAvailable
+                  ? theme.colorScheme.primary.withOpacity(0.1)
+                  : Colors.transparent,
+              width: 2,
+            ),
+            boxShadow: isUpdateAvailable
+                ? [
+                    BoxShadow(
+                      color: theme.colorScheme.primary.withOpacity(0.1),
+                      blurRadius: 30,
+                      offset: const Offset(0, 10),
+                    ),
+                  ]
+                : [],
           ),
           child: Icon(
             isUpdateAvailable
                 ? Icons.rocket_launch_rounded
                 : Icons.check_circle_rounded,
-            size: 80,
+            size: 64,
             color: isUpdateAvailable
-                ? Colors.blueAccent
-                : theme.colorScheme.primary,
+                ? theme.colorScheme.primary
+                : theme.colorScheme.onSurfaceVariant,
           ),
         ),
         const SizedBox(height: 32),
@@ -166,9 +181,10 @@ class _UpdateCheckPageState extends ConsumerState<UpdateCheckPage> {
         // Status Text
         Text(
           isUpdateAvailable ? "Update Available" : "You're up to date",
-          style: theme.textTheme.headlineMedium?.copyWith(
+          style: theme.textTheme.headlineLarge?.copyWith(
             fontWeight: FontWeight.bold,
-            letterSpacing: -0.5,
+            letterSpacing: -1.0,
+            color: theme.colorScheme.onSurface,
           ),
           textAlign: TextAlign.center,
         ),
@@ -179,6 +195,7 @@ class _UpdateCheckPageState extends ConsumerState<UpdateCheckPage> {
               : "Unfilter v$currentVersion is the latest version available.",
           style: theme.textTheme.bodyLarge?.copyWith(
             color: theme.colorScheme.onSurfaceVariant,
+            height: 1.5,
           ),
           textAlign: TextAlign.center,
         ),
@@ -187,13 +204,21 @@ class _UpdateCheckPageState extends ConsumerState<UpdateCheckPage> {
           const Spacer(),
           // Version Diff Card
           Container(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.3),
-              borderRadius: BorderRadius.circular(20),
+              color: theme.colorScheme.surface,
+              borderRadius: BorderRadius.circular(32),
               border: Border.all(
-                color: theme.colorScheme.outlineVariant.withOpacity(0.2),
+                color: theme.colorScheme.primary.withOpacity(0.08),
+                width: 1.5,
               ),
+              boxShadow: [
+                BoxShadow(
+                  color: theme.colorScheme.primary.withOpacity(0.05),
+                  blurRadius: 20,
+                  offset: const Offset(0, 8),
+                ),
+              ],
             ),
             child: Column(
               children: [
@@ -217,26 +242,37 @@ class _UpdateCheckPageState extends ConsumerState<UpdateCheckPage> {
                 ),
                 if (result.config!.releaseNotes != null) ...[
                   const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 16.0),
-                    child: Divider(),
+                    padding: EdgeInsets.symmetric(vertical: 20.0),
+                    child: Divider(height: 1),
                   ),
                   Align(
                     alignment: Alignment.centerLeft,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          "What's New",
-                          style: theme.textTheme.titleSmall?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.auto_awesome,
+                              size: 16,
+                              color: theme.colorScheme.primary,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              "What's New",
+                              style: theme.textTheme.titleSmall?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: theme.colorScheme.onSurface,
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 12),
                         Text(
                           result.config!.releaseNotes!,
-                          style: theme.textTheme.bodySmall?.copyWith(
+                          style: theme.textTheme.bodyMedium?.copyWith(
                             color: theme.colorScheme.onSurfaceVariant,
-                            height: 1.5,
+                            height: 1.6,
                           ),
                         ),
                       ],
@@ -254,24 +290,30 @@ class _UpdateCheckPageState extends ConsumerState<UpdateCheckPage> {
         SizedBox(
           width: double.infinity,
           child: isUpdateAvailable
-              ? DownloadButton(
+              ? UpdateDownloadButton(
                   url: result.config?.apkDirectDownloadUrl,
-                  theme: theme,
+                  version:
+                      result.config?.latestNativeVersion.toString() ?? 'latest',
+                  isFullWidth: true,
                 )
               : OutlinedButton(
                   onPressed: () {
                     ref.invalidate(updateCheckProvider);
                   },
                   style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    padding: const EdgeInsets.symmetric(vertical: 18),
                     side: BorderSide(
-                      color: theme.colorScheme.outline.withOpacity(0.5),
+                      color: theme.colorScheme.outline.withOpacity(0.3),
                     ),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
                     ),
+                    foregroundColor: theme.colorScheme.onSurface,
                   ),
-                  child: const Text("Check Again"),
+                  child: const Text(
+                    "Check Again",
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
                 ),
         ),
         const SizedBox(height: 32),
@@ -309,117 +351,6 @@ class _UpdateCheckPageState extends ConsumerState<UpdateCheckPage> {
           ),
         ),
       ],
-    );
-  }
-}
-
-// Separate widget to consume DownloadController cleanly
-class DownloadButton extends ConsumerWidget {
-  final String? url;
-  final ThemeData theme;
-
-  const DownloadButton({super.key, required this.url, required this.theme});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final downloadState = ref.watch(updateDownloadProvider);
-    final notifier = ref.read(updateDownloadProvider.notifier);
-
-    if (downloadState.isDownloading) {
-      return Container(
-        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
-        decoration: BoxDecoration(
-          color: theme.colorScheme.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Row(
-          children: [
-            SizedBox(
-              width: 20,
-              height: 20,
-              child: CircularProgressIndicator(
-                value: downloadState.progress,
-                strokeWidth: 2,
-                color: theme.colorScheme.primary,
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Text(
-                "Downloading... ${(downloadState.progress * 100).toInt()}%",
-                style: theme.textTheme.labelLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    if (downloadState.isDone) {
-      return ElevatedButton(
-        onPressed: () async {
-          if (downloadState.filePath != null) {
-            final file = File(downloadState.filePath!);
-            await ref.read(updateServiceFutureProvider).value?.installApk(file);
-          }
-        },
-        style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFF4CAF50),
-          foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-        ),
-        child: const Text("Install Update"),
-      );
-    }
-
-    if (downloadState.error != null) {
-      return Column(
-        children: [
-          Text(
-            "Download failed. Please try again.",
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.error,
-            ),
-          ),
-          const SizedBox(height: 8),
-          ElevatedButton(
-            onPressed: () => notifier.reset(),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: theme.colorScheme.surface,
-              foregroundColor: theme.colorScheme.onSurface,
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              elevation: 0,
-              side: BorderSide(color: theme.colorScheme.outline),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-            ),
-            child: const Text("Retry"),
-          ),
-        ],
-      );
-    }
-
-    return ElevatedButton(
-      onPressed: () {
-        if (url != null) {
-          notifier.downloadAndInstall(url!);
-        }
-      },
-      style: ElevatedButton.styleFrom(
-        backgroundColor: Colors.blueAccent,
-        foregroundColor: Colors.white,
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        elevation: 0,
-        shadowColor: Colors.blueAccent.withOpacity(0.4),
-      ),
-      child: const Text("Download & Install"),
     );
   }
 }

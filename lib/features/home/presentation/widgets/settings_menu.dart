@@ -1,11 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../update/domain/update_service.dart';
+import '../../../update/presentation/providers/update_provider.dart';
 
-class SettingsMenu extends StatelessWidget {
+class SettingsMenu extends ConsumerWidget {
   const SettingsMenu({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final updateAsync = ref.watch(updateCheckProvider);
+
+    final hasUpdate = updateAsync.maybeWhen(
+      data: (result) =>
+          result.status == UpdateStatus.softUpdate ||
+          result.status == UpdateStatus.forceUpdate,
+      orElse: () => false,
+    );
 
     return IconButton(
       onPressed: () {
@@ -15,28 +26,57 @@ class SettingsMenu extends StatelessWidget {
         padding: const EdgeInsets.only(left: 8),
         highlightColor: theme.colorScheme.primary.withOpacity(0.1),
       ),
-      icon: Container(
-        padding: const EdgeInsets.all(10),
-        decoration: BoxDecoration(
-          color: theme.colorScheme.surface,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: theme.colorScheme.outlineVariant.withOpacity(0.2),
-            width: 1.5,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.02),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
+      icon: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.surface,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: theme.colorScheme.outlineVariant.withOpacity(0.2),
+                width: 1.5,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.02),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
             ),
-          ],
-        ),
-        child: Icon(
-          Icons.menu_rounded,
-          size: 22,
-          color: theme.colorScheme.onSurface,
-        ),
+            child: Icon(
+              Icons.menu_rounded,
+              size: 22,
+              color: theme.colorScheme.onSurface,
+            ),
+          ),
+          if (hasUpdate)
+            Positioned(
+              top: -2,
+              right: -2,
+              child: Container(
+                width: 12,
+                height: 12,
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.error,
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: theme.colorScheme.surface,
+                    width: 2,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: theme.colorScheme.error.withOpacity(0.2),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }

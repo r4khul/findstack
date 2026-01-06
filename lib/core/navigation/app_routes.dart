@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../features/home/presentation/pages/home_page.dart';
-import '../../features/splash/presentation/pages/splash_screen.dart';
+import '../../core/widgets/app_entry.dart';
 import '../../features/update/presentation/pages/update_check_page.dart';
 import '../../features/search/presentation/pages/search_page.dart';
 import '../../features/scan/presentation/pages/scan_page.dart';
@@ -14,9 +14,12 @@ import '../../features/apps/domain/entities/device_app.dart';
 import '../../features/analytics/presentation/pages/storage_insights_page.dart';
 import 'navigation.dart';
 
+import '../../features/onboarding/presentation/pages/onboarding_page.dart';
+
 /// Centralized route names for type-safe navigation.
 abstract class AppRoutes {
   static const String splash = '/';
+  static const String onboarding = '/onboarding';
   static const String home = '/home';
   static const String search = '/search';
   static const String scan = '/scan';
@@ -39,7 +42,7 @@ class AppRouteFactory {
     switch (settings.name) {
       case AppRoutes.splash:
         return PremiumPageRoute(
-          page: const SplashScreen(),
+          page: const AppEntry(),
           settings: settings,
           transitionType: TransitionType.fade,
         );
@@ -122,6 +125,13 @@ class AppRouteFactory {
           tapPosition: TapTracker.lastTapPosition,
         );
 
+      case AppRoutes.onboarding:
+        return PremiumPageRoute(
+          page: const OnboardingPage(),
+          settings: settings,
+          transitionType: TransitionType.fade,
+        );
+
       default:
         return MaterialPageRoute(
           builder: (_) => Scaffold(
@@ -196,5 +206,10 @@ class AppRouteFactory {
   /// Push to update check page.
   static Future<void> toUpdateCheck(BuildContext context) {
     return PremiumNavigation.push(context, const UpdateCheckPage());
+  }
+
+  /// Push replacement to onboarding.
+  static Future<void> toOnboarding(BuildContext context) {
+    return Navigator.of(context).pushReplacementNamed(AppRoutes.onboarding);
   }
 }

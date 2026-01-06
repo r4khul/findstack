@@ -121,7 +121,7 @@ class _AppDrawerState extends ConsumerState<AppDrawer> {
                             data: (result) {
                               if (result.status == UpdateStatus.forceUpdate ||
                                   result.status == UpdateStatus.softUpdate) {
-                                return "Update Available";
+                                return "v${result.config?.latestNativeVersion} Available";
                               }
                               return "You're up to date";
                             },
@@ -133,6 +133,13 @@ class _AppDrawerState extends ConsumerState<AppDrawer> {
                             Navigator.pop(context);
                             AppRouteFactory.toUpdateCheck(context);
                           },
+                          // Show badge on icon if update available
+                          showBadge: updateAsync.maybeWhen(
+                            data: (result) =>
+                                result.status == UpdateStatus.forceUpdate ||
+                                result.status == UpdateStatus.softUpdate,
+                            orElse: () => false,
+                          ),
                         );
                       },
                     ),
@@ -377,6 +384,8 @@ class _AppDrawerState extends ConsumerState<AppDrawer> {
     String? subtitle,
     required IconData icon,
     required VoidCallback onTap,
+    Widget? trailing,
+    bool showBadge = false,
   }) {
     final theme = Theme.of(context);
 
@@ -409,18 +418,40 @@ class _AppDrawerState extends ConsumerState<AppDrawer> {
             ),
             child: Row(
               children: [
-                Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.surfaceContainerHighest
-                        .withOpacity(0.4),
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: Icon(
-                    icon,
-                    color: theme.colorScheme.onSurface,
-                    size: 22,
-                  ),
+                Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.surfaceContainerHighest
+                            .withOpacity(0.4),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: Icon(
+                        icon,
+                        color: theme.colorScheme.onSurface,
+                        size: 22,
+                      ),
+                    ),
+                    if (showBadge)
+                      Positioned(
+                        top: -2,
+                        right: -2,
+                        child: Container(
+                          width: 10,
+                          height: 10,
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.error,
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: theme.colorScheme.surface,
+                              width: 2,
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
                 const SizedBox(width: 8),
                 Expanded(
@@ -448,6 +479,7 @@ class _AppDrawerState extends ConsumerState<AppDrawer> {
                     ],
                   ),
                 ),
+                if (trailing != null) ...[trailing, const SizedBox(width: 8)],
                 Icon(
                   Icons.arrow_forward_ios_rounded,
                   size: 14,
