@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../domain/update_service.dart';
 import '../providers/update_provider.dart';
@@ -296,23 +297,28 @@ class _UpdateCheckPageState extends ConsumerState<UpdateCheckPage> {
                       result.config?.latestNativeVersion.toString() ?? 'latest',
                   isFullWidth: true,
                 )
-              : OutlinedButton(
+              : FilledButton.icon(
                   onPressed: () {
+                    HapticFeedback.mediumImpact();
                     ref.invalidate(updateCheckProvider);
                   },
-                  style: OutlinedButton.styleFrom(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: theme.colorScheme.surfaceContainerHighest
+                        .withOpacity(0.3),
+                    foregroundColor: theme.colorScheme.onSurface,
                     padding: const EdgeInsets.symmetric(vertical: 18),
-                    side: BorderSide(
-                      color: theme.colorScheme.outline.withOpacity(0.3),
-                    ),
+                    elevation: 0,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
+                      side: BorderSide(
+                        color: theme.colorScheme.outline.withOpacity(0.1),
+                      ),
                     ),
-                    foregroundColor: theme.colorScheme.onSurface,
                   ),
-                  child: const Text(
+                  icon: const Icon(Icons.refresh_rounded, size: 20),
+                  label: const Text(
                     "Check Again",
-                    style: TextStyle(fontWeight: FontWeight.bold),
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                   ),
                 ),
         ),

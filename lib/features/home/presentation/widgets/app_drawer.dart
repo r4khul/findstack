@@ -90,16 +90,7 @@ class _AppDrawerState extends ConsumerState<AppDrawer> {
                     const SizedBox(height: 24),
                     _buildSectionHeader(context, "INFORMATION"),
                     const SizedBox(height: 12),
-                    _buildNavTile(
-                      context,
-                      title: "How it works",
-                      subtitle: "Tech detection explained",
-                      icon: Icons.lightbulb_outline,
-                      onTap: () {
-                        Navigator.pop(context);
-                        AppRouteFactory.toHowItWorks(context);
-                      },
-                    ),
+
                     _buildNavTile(
                       context,
                       title: "Privacy & Security",
