@@ -1,22 +1,133 @@
-import 'dart:math';
+import 'dart:io';
+import 'dart:ui' as ui;
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 import '../../../home/presentation/widgets/premium_sliver_app_bar.dart';
 import '../../domain/entities/app_usage_point.dart';
 import '../../domain/entities/device_app.dart';
 import '../providers/app_detail_provider.dart';
+import '../widgets/app_detail_share_poster.dart';
 import '../widgets/usage_chart.dart';
 
-class AppDetailsPage extends ConsumerWidget {
+class AppDetailsPage extends ConsumerStatefulWidget {
   final DeviceApp app;
 
   const AppDetailsPage({super.key, required this.app});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<AppDetailsPage> createState() => _AppDetailsPageState();
+}
+
+class _AppDetailsPageState extends ConsumerState<AppDetailsPage> {
+  final GlobalKey _sharePosterKey = GlobalKey();
+  bool _isSharing = false;
+
+  DeviceApp get app => widget.app;
+
+  /// Waits for the current frame to complete (layout + paint).
+  Future<void> _waitForFrameComplete() async {
+    await WidgetsBinding.instance.endOfFrame;
+  }
+
+  Future<void> _handleShare() async {
+    if (_isSharing) return;
+    setState(() => _isSharing = true);
+
+    try {
+      // Wait for multiple frames to ensure the poster widget is fully rendered
+      for (int i = 0; i < 3; i++) {
+        await _waitForFrameComplete();
+      }
+
+      await Future.delayed(const Duration(milliseconds: 50));
+      await _waitForFrameComplete();
+
+      final posterContext = _sharePosterKey.currentContext;
+      if (posterContext == null) {
+        throw Exception("Share poster widget not found.");
+      }
+
+      final boundary =
+          posterContext.findRenderObject() as RenderRepaintBoundary?;
+      if (boundary == null) {
+        throw Exception("RenderRepaintBoundary not found.");
+      }
+
+      // Safety check for debug mode
+      bool needsPaint = false;
+      assert(() {
+        needsPaint = boundary.debugNeedsPaint;
+        return true;
+      }());
+
+      if (needsPaint) {
+        for (int i = 0; i < 5; i++) {
+          await _waitForFrameComplete();
+        }
+      }
+
+      final image = await boundary.toImage(pixelRatio: 3.0);
+      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+
+      if (byteData == null) {
+        throw Exception("Failed to encode image data.");
+      }
+
+      final pngBytes = byteData.buffer.asUint8List();
+      final tempDir = await getTemporaryDirectory();
+      final file = File(
+        '${tempDir.path}/unfilter_app_${app.packageName.hashCode}.png',
+      );
+      await file.writeAsBytes(pngBytes);
+
+      await SharePlus.instance.share(
+        ShareParams(
+          files: [XFile(file.path)],
+          text:
+              """${app.appName} exposed by Unfilter 🔍
+
+Built with: ${app.stack}
+Version: ${app.version}
+Size on device: ${_formatBytes(app.size)}
+
+See what YOUR apps are really made of →
+https://github.com/r4khul/unfilter/releases/latest
+
+#UnfilterApp #TheRealTruthOfApps""",
+        ),
+      );
+    } catch (e) {
+      debugPrint("Share error: $e");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Failed to share: ${e.toString()}"),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isSharing = false);
+    }
+  }
+
+  String _formatBytes(int bytes) {
+    if (bytes < 1024) return "$bytes B";
+    if (bytes < 1024 * 1024) return "${(bytes / 1024).toStringAsFixed(1)} KB";
+    if (bytes < 1024 * 1024 * 1024) {
+      return "${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB";
+    }
+    return "${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(2)} GB";
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final usageHistoryAsync = ref.watch(
@@ -25,45 +136,67 @@ class AppDetailsPage extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
-      body: CustomScrollView(
-        physics: const BouncingScrollPhysics(),
-        slivers: [
-          PremiumSliverAppBar(
-            title: "App Details",
-            onResync: () {
-              // ignore: unused_result
-              ref.refresh(appUsageHistoryProvider(app.packageName));
-            },
-          ),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  _buildAppHeader(context, theme, isDark),
-                  const SizedBox(height: 32),
-                  _buildStatRow(theme, isDark),
-                  const SizedBox(height: 32),
-                  _buildUsageSection(theme, usageHistoryAsync, isDark),
-                  const SizedBox(height: 32),
-                  _buildInfoSection(context, theme, isDark),
-                  const SizedBox(height: 32),
-                  _buildDeepInsights(context, theme, isDark),
-                  const SizedBox(height: 32),
-                  if (app.nativeLibraries.isNotEmpty) ...[
-                    _buildNativeLibsSection(context, theme, isDark),
-                    const SizedBox(height: 32),
-                  ],
-                  _buildDeveloperSection(context, theme, isDark),
-                  const SizedBox(height: 32),
-                  if (app.permissions.isNotEmpty) ...[
-                    _buildPermissionsSection(context, theme, isDark),
-                    const SizedBox(height: 40),
-                  ],
-                ],
+      body: Stack(
+        children: [
+          // Hidden Poster for Sharing (Rendered Off-Screen but Painted)
+          Positioned(
+            left: -9999,
+            top: -9999,
+            child: RepaintBoundary(
+              key: _sharePosterKey,
+              child: SizedBox(
+                width: 400,
+                child: Material(
+                  type: MaterialType.transparency,
+                  child: AppDetailSharePoster(app: app),
+                ),
               ),
             ),
+          ),
+
+          // Main Content
+          CustomScrollView(
+            physics: const BouncingScrollPhysics(),
+            slivers: [
+              PremiumSliverAppBar(
+                title: "App Details",
+                onResync: () {
+                  // ignore: unused_result
+                  ref.refresh(appUsageHistoryProvider(app.packageName));
+                },
+                onShare: _isSharing ? null : _handleShare,
+              ),
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _buildAppHeader(context, theme, isDark),
+                      const SizedBox(height: 32),
+                      _buildStatRow(theme, isDark),
+                      const SizedBox(height: 32),
+                      _buildUsageSection(theme, usageHistoryAsync, isDark),
+                      const SizedBox(height: 32),
+                      _buildInfoSection(context, theme, isDark),
+                      const SizedBox(height: 32),
+                      _buildDeepInsights(context, theme, isDark),
+                      const SizedBox(height: 32),
+                      if (app.nativeLibraries.isNotEmpty) ...[
+                        _buildNativeLibsSection(context, theme, isDark),
+                        const SizedBox(height: 32),
+                      ],
+                      _buildDeveloperSection(context, theme, isDark),
+                      const SizedBox(height: 32),
+                      if (app.permissions.isNotEmpty) ...[
+                        _buildPermissionsSection(context, theme, isDark),
+                        const SizedBox(height: 40),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -212,6 +345,50 @@ class AppDetailsPage extends ConsumerWidget {
                 ),
               ),
             ],
+          ),
+        ),
+        const SizedBox(height: 20),
+        // Share Button
+        GestureDetector(
+          onTap: _isSharing ? null : _handleShare,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.primaryContainer.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(
+                color: theme.colorScheme.primary.withOpacity(0.2),
+              ),
+            ),
+            child: _isSharing
+                ? SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: theme.colorScheme.primary,
+                    ),
+                  )
+                : Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.ios_share_rounded,
+                        size: 18,
+                        color: theme.colorScheme.primary,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        "Share App Details",
+                        style: TextStyle(
+                          color: theme.colorScheme.primary,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
           ),
         ),
       ],
@@ -1354,12 +1531,5 @@ class AppDetailsPage extends ConsumerWidget {
       default:
         return "API $sdk";
     }
-  }
-
-  String _formatBytes(int bytes) {
-    if (bytes <= 0) return "0 B";
-    const suffixes = ["B", "KB", "MB", "GB", "TB"];
-    var i = (log(bytes) / log(1024)).floor();
-    return '${(bytes / pow(1024, i)).toStringAsFixed(1)} ${suffixes[i]}';
   }
 }

@@ -564,7 +564,6 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage>
       final file = File('${tempDir.path}/unfilter_viral_stats.png');
       await file.writeAsBytes(pngBytes);
 
-      // Use the new SharePlus API (Share is deprecated)
       await SharePlus.instance.share(
         ShareParams(
           files: [XFile(file.path)],

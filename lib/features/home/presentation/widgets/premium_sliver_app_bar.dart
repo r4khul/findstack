@@ -4,12 +4,14 @@ import 'package:flutter/material.dart';
 class PremiumSliverAppBar extends StatefulWidget {
   final String title;
   final VoidCallback? onResync;
+  final VoidCallback? onShare;
   final List<Widget>? actions;
 
   const PremiumSliverAppBar({
     super.key,
     required this.title,
     this.onResync,
+    this.onShare,
     this.actions,
   });
 
@@ -50,6 +52,9 @@ class _PremiumSliverAppBarState extends State<PremiumSliverAppBar> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
+    final hasResync = widget.onResync != null;
+    final hasShare = widget.onShare != null;
+
     _overlayEntry = OverlayEntry(
       builder: (context) {
         return Positioned(
@@ -84,47 +89,41 @@ class _PremiumSliverAppBarState extends State<PremiumSliverAppBar> {
                   borderRadius: BorderRadius.circular(18),
                   child: BackdropFilter(
                     filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                    child: InkWell(
-                      onTap: () {
-                        widget.onResync?.call();
-                        _removeOverlay();
-                      },
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 12,
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(6),
-                              decoration: BoxDecoration(
-                                color: theme.colorScheme.primary.withOpacity(
-                                  0.1,
-                                ),
-                                shape: BoxShape.circle,
-                              ),
-                              child: Icon(
-                                Icons.sync,
-                                size: 16,
-                                color: theme.colorScheme.primary,
-                              ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Resync Option
+                        if (hasResync)
+                          _buildMenuItem(
+                            theme: theme,
+                            icon: Icons.sync,
+                            label: "Resync App",
+                            onTap: () {
+                              widget.onResync?.call();
+                              _removeOverlay();
+                            },
+                          ),
+                        // Divider between items
+                        if (hasResync && hasShare)
+                          Divider(
+                            height: 1,
+                            thickness: 1,
+                            color: theme.colorScheme.onSurface.withOpacity(
+                              0.08,
                             ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Text(
-                                "Resync App",
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 13,
-                                  color: theme.colorScheme.onSurface
-                                      .withOpacity(0.9),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
+                          ),
+                        // Share Option
+                        if (hasShare)
+                          _buildMenuItem(
+                            theme: theme,
+                            icon: Icons.ios_share_rounded,
+                            label: "Share",
+                            onTap: () {
+                              widget.onShare?.call();
+                              _removeOverlay();
+                            },
+                          ),
+                      ],
                     ),
                   ),
                 ),
@@ -144,6 +143,43 @@ class _PremiumSliverAppBarState extends State<PremiumSliverAppBar> {
     Overlay.of(context).insert(_overlayEntry!);
     _isMenuOpen = true;
     if (mounted) setState(() {});
+  }
+
+  Widget _buildMenuItem({
+    required ThemeData theme,
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.primary.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, size: 16, color: theme.colorScheme.primary),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13,
+                  color: theme.colorScheme.onSurface.withOpacity(0.9),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -246,7 +282,7 @@ class _PremiumSliverAppBarState extends State<PremiumSliverAppBar> {
 
                   if (widget.actions != null) ...widget.actions!,
 
-                  if (widget.onResync != null) ...[
+                  if (widget.onResync != null || widget.onShare != null) ...[
                     const SizedBox(width: 8),
                     CompositedTransformTarget(
                       link: _layerLink,
