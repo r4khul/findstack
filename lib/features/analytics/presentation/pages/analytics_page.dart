@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -6,6 +7,14 @@ import '../../../home/presentation/widgets/premium_sliver_app_bar.dart';
 import '../../../apps/domain/entities/device_app.dart';
 import '../../../apps/presentation/providers/apps_provider.dart';
 import '../../../scan/presentation/pages/scan_page.dart';
+import 'dart:io';
+import 'dart:ui' as ui;
+import 'package:flutter/rendering.dart';
+import 'package:flutter/scheduler.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:intl/intl.dart';
+import '../../../home/presentation/widgets/usage_stats_share_poster.dart';
 
 class AnalyticsPage extends ConsumerStatefulWidget {
   const AnalyticsPage({super.key});
@@ -20,6 +29,8 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage>
   int _showTopCount = 5;
   String _searchQuery = "";
   final TextEditingController _searchController = TextEditingController();
+  final GlobalKey _sharePosterKey = GlobalKey();
+  bool _isSharing = false;
 
   @override
   void initState() {
@@ -277,101 +288,129 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage>
           );
           final otherUsage = totalUsage - topUsage;
 
-          return CustomScrollView(
-            physics: const BouncingScrollPhysics(),
-            slivers: [
-              const PremiumSliverAppBar(title: "Usage Statistics"),
-
-              const SliverToBoxAdapter(child: SizedBox(height: 10)),
-
-              // Search Bar
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: _buildSearchBar(theme),
-                ),
-              ),
-
-              const SliverToBoxAdapter(child: SizedBox(height: 24)),
-
-              // Roast Section
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: _buildRoastSection(
-                    theme,
-                    Duration(milliseconds: totalUsage),
+          return Stack(
+            clipBehavior: Clip.none, // Allow off-screen poster to be painted
+            children: [
+              // Hidden Poster for Sharing (Rendered Off-Screen but Painted)
+              // Using Transform.translate instead of Opacity(0) because Opacity(0)
+              // causes Flutter to skip painting entirely, leading to debugNeedsPaint errors.
+              Positioned(
+                left: -9999,
+                top: -9999,
+                child: RepaintBoundary(
+                  key: _sharePosterKey,
+                  child: SizedBox(
+                    width: 400, // Fixed width for consistent poster size
+                    child: _buildSharePoster(topApps, totalUsage),
                   ),
                 ),
               ),
 
-              const SliverToBoxAdapter(child: SizedBox(height: 24)),
+              CustomScrollView(
+                physics: const BouncingScrollPhysics(),
+                slivers: [
+                  PremiumSliverAppBar(title: "Usage Statistics"),
 
-              // Filter Action
-              SliverToBoxAdapter(
-                child: Align(
-                  alignment: Alignment.centerRight,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: _buildFilterAction(theme),
+                  const SliverToBoxAdapter(child: SizedBox(height: 10)),
+
+                  // Search Bar
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: _buildSearchBar(theme),
+                    ),
                   ),
-                ),
-              ),
 
-              const SliverToBoxAdapter(child: SizedBox(height: 16)),
+                  const SliverToBoxAdapter(child: SizedBox(height: 24)),
 
-              // Chart Section
-              SliverToBoxAdapter(
-                child: _buildChartSection(
-                  context,
-                  theme,
-                  topApps,
-                  otherUsage,
-                  totalUsage,
-                ),
-              ),
+                  // Roast Section
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: _buildRoastSection(
+                        theme,
+                        Duration(milliseconds: totalUsage),
+                      ),
+                    ),
+                  ),
 
-              const SliverToBoxAdapter(child: SizedBox(height: 32)),
+                  const SliverToBoxAdapter(child: SizedBox(height: 24)),
 
-              // App List
-              SliverPadding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 20,
-                ),
-                sliver: SliverList(
-                  delegate: SliverChildBuilderDelegate((context, index) {
-                    if (index == 0) {
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 16),
-                        child: Text(
-                          _searchQuery.isEmpty
-                              ? "TOP CONTRIBUTORS"
-                              : "SEARCH RESULTS",
-                          style: theme.textTheme.labelSmall?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 2.0,
-                            color: theme.colorScheme.onSurface.withValues(
-                              alpha: 0.4,
-                            ),
-                          ),
-                        ),
-                      );
-                    }
-                    final appIndex = index - 1;
-                    final app = topApps[appIndex];
-                    final percent = (app.totalTimeInForeground / totalUsage);
-                    final isTouched = appIndex == _touchedIndex;
-                    return _buildAppItem(
+                  // Filter Action
+                  // Action Row: Share (Left) + Filter (Right)
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          // New Modern Share Button
+                          _buildShareActionButton(theme),
+
+                          // Existing Filter Button
+                          _buildFilterAction(theme),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  const SliverToBoxAdapter(child: SizedBox(height: 16)),
+
+                  // Chart Section
+                  SliverToBoxAdapter(
+                    child: _buildChartSection(
                       context,
                       theme,
-                      app,
-                      percent,
-                      appIndex,
-                      isTouched,
-                    );
-                  }, childCount: topApps.length + 1),
-                ),
+                      topApps,
+                      otherUsage,
+                      totalUsage,
+                    ),
+                  ),
+
+                  const SliverToBoxAdapter(child: SizedBox(height: 32)),
+
+                  // App List
+                  SliverPadding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 20,
+                    ),
+                    sliver: SliverList(
+                      delegate: SliverChildBuilderDelegate((context, index) {
+                        if (index == 0) {
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 16),
+                            child: Text(
+                              _searchQuery.isEmpty
+                                  ? "TOP CONTRIBUTORS"
+                                  : "SEARCH RESULTS",
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 2.0,
+                                color: theme.colorScheme.onSurface.withValues(
+                                  alpha: 0.4,
+                                ),
+                              ),
+                            ),
+                          );
+                        }
+                        final appIndex = index - 1;
+                        final app = topApps[appIndex];
+                        final percent =
+                            (app.totalTimeInForeground / totalUsage);
+                        final isTouched = appIndex == _touchedIndex;
+                        return _buildAppItem(
+                          context,
+                          theme,
+                          app,
+                          percent,
+                          appIndex,
+                          isTouched,
+                        );
+                      }, childCount: topApps.length + 1),
+                    ),
+                  ),
+                ],
               ),
             ],
           );
@@ -381,6 +420,181 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage>
         error: (err, _) => Scaffold(body: Center(child: Text("Error: $err"))),
       ),
     );
+  }
+
+  Widget _buildShareActionButton(ThemeData theme) {
+    return GestureDetector(
+      onTap: _isSharing ? null : _handleShare,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.primaryContainer.withValues(
+            alpha: 0.2,
+          ), // Subtle tint
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: theme.colorScheme.primary.withValues(alpha: 0.1),
+          ),
+        ),
+        child: _isSharing
+            ? SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: theme.colorScheme.primary,
+                ),
+              )
+            : Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.ios_share_rounded, // More "modern/share" icon
+                    size: 16,
+                    color: theme.colorScheme.primary,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    "Share",
+                    style: theme.textTheme.labelMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: theme.colorScheme.primary,
+                    ),
+                  ),
+                ],
+              ),
+      ),
+    );
+  }
+
+  Widget _buildSharePoster(List<DeviceApp> topApps, int totalUsage) {
+    if (topApps.isEmpty) return const SizedBox.shrink();
+
+    // Prepare Data for Poster
+    // We reuse the logic for Roast
+    String roast = "Ideally, you could have learnt a new language.";
+    final duration = Duration(milliseconds: totalUsage);
+    final hours = duration.inHours;
+
+    if (hours > 1000) {
+      roast = "That's... a significant portion of your finite existence.";
+    } else if (hours > 500) {
+      roast = "You could have walked to Mordor and back.";
+    } else if (hours > 100) {
+      roast = "Think of the books you could have read.";
+    } else if (hours > 24) {
+      roast = "A whole day gone. Poof.";
+    } else if (hours > 5) {
+      roast = "Productivity taking a hit, isn't it?";
+    } else {
+      roast = "Surprisingly productive... or just installed?";
+    }
+
+    // Top 6 for poster is usually cleaner
+    final posterApps = topApps.take(6).toList();
+
+    return Material(
+      type: MaterialType.transparency,
+      child: UsageStatsSharePoster(
+        topApps: posterApps,
+        totalUsage: duration,
+        date: DateFormat.yMMMMd().format(DateTime.now()),
+        roastContent: roast,
+      ),
+    );
+  }
+
+  /// Waits for the current frame to complete (layout + paint).
+  Future<void> _waitForFrameComplete() async {
+    // endOfFrame completes after the frame has been rendered
+    await WidgetsBinding.instance.endOfFrame;
+  }
+
+  Future<void> _handleShare() async {
+    if (_isSharing) return;
+    setState(() => _isSharing = true);
+
+    try {
+      // Force a rebuild and wait for multiple complete frames
+      // to ensure the off-screen poster is fully laid out and painted.
+      for (int i = 0; i < 3; i++) {
+        await _waitForFrameComplete();
+      }
+
+      // Small additional delay to be extra safe on slower devices
+      await Future.delayed(const Duration(milliseconds: 50));
+      await _waitForFrameComplete();
+
+      final posterContext = _sharePosterKey.currentContext;
+      if (posterContext == null) {
+        throw Exception("Share poster widget not found.");
+      }
+
+      final boundary =
+          posterContext.findRenderObject() as RenderRepaintBoundary?;
+      if (boundary == null) {
+        throw Exception("RenderRepaintBoundary not found.");
+      }
+
+      // In debug mode, check if paint is needed. In release, this flag doesn't exist.
+      // We use a try-catch because debugNeedsPaint only exists in debug builds.
+      bool needsPaint = false;
+      assert(() {
+        needsPaint = boundary.debugNeedsPaint;
+        return true;
+      }());
+
+      if (needsPaint) {
+        // If still needs paint, wait more aggressively
+        for (int i = 0; i < 5; i++) {
+          await _waitForFrameComplete();
+        }
+      }
+
+      final image = await boundary.toImage(pixelRatio: 3.0);
+      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+
+      if (byteData == null) {
+        throw Exception("Failed to encode image data.");
+      }
+
+      final pngBytes = byteData.buffer.asUint8List();
+      final tempDir = await getTemporaryDirectory();
+      final file = File('${tempDir.path}/unfilter_viral_stats.png');
+      await file.writeAsBytes(pngBytes);
+
+      // Use the new SharePlus API (Share is deprecated)
+      await SharePlus.instance.share(
+        ShareParams(
+          files: [XFile(file.path)],
+          text: """Unfilter just exposed my screen addiction. 💀
+
+✦ See what apps are REALLY built with
+✦ Real usage stats, no sugar-coating
+✦ Monitor background tasks eating your battery
+✦ In-app updates, no Play Store needed
+
+100% open source. No trackers. No BS.
+
+Get it → https://github.com/r4khul/unfilter/releases/latest
+
+#UnfilterApp #TheRealTruthOfApps""",
+        ),
+      );
+    } catch (e) {
+      debugPrint("Share error: $e");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Failed to share: ${e.toString()}"),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isSharing = false);
+    }
   }
 
   Widget _buildFilterAction(ThemeData theme) {

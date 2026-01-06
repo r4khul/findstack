@@ -4,8 +4,14 @@ import 'package:flutter/material.dart';
 class PremiumSliverAppBar extends StatefulWidget {
   final String title;
   final VoidCallback? onResync;
+  final List<Widget>? actions;
 
-  const PremiumSliverAppBar({super.key, required this.title, this.onResync});
+  const PremiumSliverAppBar({
+    super.key,
+    required this.title,
+    this.onResync,
+    this.actions,
+  });
 
   @override
   State<PremiumSliverAppBar> createState() => _PremiumSliverAppBarState();
@@ -238,6 +244,8 @@ class _PremiumSliverAppBarState extends State<PremiumSliverAppBar> {
                     ),
                   ),
 
+                  if (widget.actions != null) ...widget.actions!,
+
                   if (widget.onResync != null) ...[
                     const SizedBox(width: 8),
                     CompositedTransformTarget(
@@ -259,7 +267,8 @@ class _PremiumSliverAppBarState extends State<PremiumSliverAppBar> {
                         ),
                       ),
                     ),
-                  ] else if (Navigator.canPop(context)) ...[
+                  ] else if (Navigator.canPop(context) &&
+                      (widget.actions == null || widget.actions!.isEmpty)) ...[
                     const SizedBox(width: 36), // Balance the leading icon width
                   ],
                 ],

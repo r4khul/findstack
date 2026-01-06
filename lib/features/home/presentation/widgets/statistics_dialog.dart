@@ -7,6 +7,13 @@ import '../../../../core/widgets/premium_app_bar.dart';
 import '../../../../core/navigation/navigation.dart';
 import '../../../apps/domain/entities/device_app.dart';
 import '../../../apps/presentation/providers/apps_provider.dart';
+import 'dart:io';
+import 'dart:ui' as ui;
+import 'package:flutter/rendering.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:intl/intl.dart';
+import 'usage_stats_share_poster.dart';
 
 class StatisticsDialog extends ConsumerStatefulWidget {
   const StatisticsDialog({super.key});
@@ -18,6 +25,8 @@ class StatisticsDialog extends ConsumerStatefulWidget {
 class _StatisticsDialogState extends ConsumerState<StatisticsDialog> {
   int _touchedIndex = -1;
   int _showTopCount = 5;
+  final GlobalKey _sharePosterKey = GlobalKey();
+  bool _isSharing = false;
 
   @override
   Widget build(BuildContext context) {
@@ -59,12 +68,41 @@ class _StatisticsDialogState extends ConsumerState<StatisticsDialog> {
                   child: const Icon(Icons.close_rounded, size: 20),
                 ),
               ),
-              actions: [_buildFilterAction(theme), const SizedBox(width: 8)],
+              actions: [
+                _buildShareButton(context, appsAsync.asData?.value),
+                const SizedBox(width: 8),
+                _buildFilterAction(theme),
+                const SizedBox(width: 8),
+              ],
             ),
-            body: appsAsync.when(
-              data: (apps) => _buildContent(context, apps),
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (err, _) => Center(child: Text("Error: $err")),
+            body: Stack(
+              children: [
+                // Hidden Poster for Sharing (Rendered Off-Screen)
+                Opacity(
+                  opacity: 0.0,
+                  child: IgnorePointer(
+                    child: OverflowBox(
+                      alignment: Alignment.topLeft,
+                      minWidth: 0,
+                      maxWidth: double.infinity,
+                      minHeight: 0,
+                      maxHeight: double.infinity,
+                      child: RepaintBoundary(
+                        key: _sharePosterKey,
+                        child: _buildSharePoster(appsAsync.asData?.value),
+                      ),
+                    ),
+                  ),
+                ),
+
+                // Main Content
+                appsAsync.when(
+                  data: (apps) => _buildContent(context, apps),
+                  loading: () =>
+                      const Center(child: CircularProgressIndicator()),
+                  error: (err, _) => Center(child: Text("Error: $err")),
+                ),
+              ],
             ),
           ),
         ),
@@ -72,12 +110,121 @@ class _StatisticsDialogState extends ConsumerState<StatisticsDialog> {
     );
   }
 
+  Widget _buildShareButton(BuildContext context, List<DeviceApp>? apps) {
+    final theme = Theme.of(context);
+    final bool isEnabled = apps != null && !_isSharing;
+
+    return IconButton(
+      onPressed: isEnabled ? () => _handleShare(apps) : null,
+      icon: _isSharing
+          ? SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: theme.colorScheme.onSurface,
+              ),
+            )
+          : Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.primaryContainer,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.share_rounded,
+                size: 20,
+                color: theme.colorScheme.primary,
+              ),
+            ),
+      tooltip: "Share Stats",
+    );
+  }
+
+  Widget _buildSharePoster(List<DeviceApp>? apps) {
+    if (apps == null) return const SizedBox.shrink();
+
+    // Prepare Data for Poster
+    final validApps = apps.where((a) => a.totalTimeInForeground > 0).toList()
+      ..sort(
+        (a, b) => b.totalTimeInForeground.compareTo(a.totalTimeInForeground),
+      );
+
+    final totalUsageMs = validApps.fold<int>(
+      0,
+      (sum, app) => sum + app.totalTimeInForeground,
+    );
+    final topApps = validApps
+        .take(6)
+        .toList(); // Top 6 is good for poster density
+
+    return Material(
+      type: MaterialType.transparency,
+      child: UsageStatsSharePoster(
+        topApps: topApps,
+        totalUsage: Duration(milliseconds: totalUsageMs),
+        date: DateFormat.yMMMMd().format(DateTime.now()),
+      ),
+    );
+  }
+
+  Future<void> _handleShare(List<DeviceApp> apps) async {
+    if (_isSharing) return;
+    setState(() => _isSharing = true);
+
+    try {
+      // Small delay to ensure any layout updates (if needed) are processed
+      await Future.delayed(const Duration(milliseconds: 50));
+
+      final boundary =
+          _sharePosterKey.currentContext?.findRenderObject()
+              as RenderRepaintBoundary?;
+
+      if (boundary == null) {
+        throw Exception("Could not find capture boundary");
+      }
+
+      final image = await boundary.toImage(pixelRatio: 3.0);
+      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+
+      if (byteData == null) {
+        throw Exception("Failed to encode image");
+      }
+
+      final pngBytes = byteData.buffer.asUint8List();
+      final tempDir = await getTemporaryDirectory();
+      final file = File('${tempDir.path}/unfilter_usage_share.png');
+      await file.writeAsBytes(pngBytes);
+
+      await Share.shareXFiles(
+        [XFile(file.path)],
+        text:
+            "My digital footprint on Unfilter. Are you addicted? \n#DigitalWellbeing #UnfilterApp",
+      );
+    } catch (e) {
+      debugPrint("Share error: $e");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Failed to share image. Please try again."),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isSharing = false);
+    }
+  }
+
   Widget _buildFilterAction(ThemeData theme) {
     return PopupMenuButton<int>(
       initialValue: _showTopCount,
       onSelected: (value) {
         if (mounted) {
-          setState(() => _showTopCount = value);
+          setState(() {
+            _showTopCount = value;
+            _touchedIndex = -1;
+          });
         }
       },
       itemBuilder: (context) => [
@@ -198,7 +345,8 @@ class _StatisticsDialogState extends ConsumerState<StatisticsDialog> {
                     totalUsage,
                   ),
                 ),
-                swapAnimationDuration: const Duration(milliseconds: 350),
+                // Disable animation to prevent RangeError on data change
+                swapAnimationDuration: Duration.zero,
                 swapAnimationCurve: Curves.easeOutQuad,
               ),
               // Center Info
@@ -245,7 +393,7 @@ class _StatisticsDialogState extends ConsumerState<StatisticsDialog> {
         // List View
         Expanded(
           child: Container(
-            margin: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+            margin: const EdgeInsets.symmetric(horizontal: 20),
             decoration: BoxDecoration(
               color: theme.colorScheme.surfaceContainerLow,
               borderRadius: BorderRadius.circular(24),
@@ -349,6 +497,49 @@ class _StatisticsDialogState extends ConsumerState<StatisticsDialog> {
                   );
                 },
               ),
+            ),
+          ),
+        ),
+
+        // Prominent Share Button
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+          child: SizedBox(
+            width: double.infinity,
+            height: 56,
+            child: ElevatedButton(
+              onPressed: () => _handleShare(validApps),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: theme.colorScheme.primary,
+                foregroundColor: theme.colorScheme.onPrimary,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+              ),
+              child: _isSharing
+                  ? SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(
+                        color: theme.colorScheme.onPrimary,
+                        strokeWidth: 2,
+                      ),
+                    )
+                  : Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.share_rounded, size: 20),
+                        const SizedBox(width: 12),
+                        const Text(
+                          "Share Statistics",
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
             ),
           ),
         ),
