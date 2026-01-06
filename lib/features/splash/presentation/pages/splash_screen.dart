@@ -1,15 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/navigation/navigation.dart';
+import '../../../onboarding/presentation/providers/onboarding_provider.dart';
 
-class SplashScreen extends StatefulWidget {
+class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
 
   @override
-  State<SplashScreen> createState() => _SplashScreenState();
+  ConsumerState<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen>
+class _SplashScreenState extends ConsumerState<SplashScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _scaleAnimation;
@@ -60,10 +62,17 @@ class _SplashScreenState extends State<SplashScreen>
     _controller.forward();
 
     // Navigate to home after animation completes
-    Future.delayed(const Duration(milliseconds: 2500), () {
+    Future.delayed(const Duration(milliseconds: 2500), () async {
       if (mounted) {
-        // Use centralized navigation with premium transition
-        AppRouteFactory.toHome(context);
+        // Check onboarding status
+        final onboardingState = await ref.read(onboardingStateProvider.future);
+        if (mounted) {
+          if (onboardingState) {
+            AppRouteFactory.toHome(context);
+          } else {
+            AppRouteFactory.toOnboarding(context);
+          }
+        }
       }
     });
   }

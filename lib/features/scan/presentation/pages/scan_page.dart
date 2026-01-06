@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/navigation/app_routes.dart';
 import '../../domain/entities/scan_progress.dart';
 import '../widgets/scan_progress_widget.dart';
 import '../../../apps/presentation/providers/apps_provider.dart';
 import '../../../home/presentation/widgets/permission_dialog.dart';
 
 class ScanPage extends ConsumerStatefulWidget {
-  const ScanPage({super.key});
+  final bool fromOnboarding;
+
+  const ScanPage({super.key, this.fromOnboarding = false});
 
   @override
   ConsumerState<ScanPage> createState() => _ScanPageState();
@@ -53,6 +56,8 @@ class _ScanPageState extends ConsumerState<ScanPage>
     final repo = ref.read(deviceAppsRepositoryProvider);
     final hasPermission = await repo.checkUsagePermission();
 
+    // If coming from onboarding, we assume permission is granted or dealt with.
+    // But explicit check is safer.
     if (hasPermission) {
       _startScan();
     } else {
@@ -103,7 +108,11 @@ class _ScanPageState extends ConsumerState<ScanPage>
     ref.read(installedAppsProvider.notifier).fullScan().then((_) {
       // give users a moment to see "100%"
       Future.delayed(const Duration(milliseconds: 800), () {
-        if (mounted && Navigator.canPop(context)) {
+        if (!mounted) return;
+
+        if (widget.fromOnboarding) {
+          AppRouteFactory.toHome(context);
+        } else if (Navigator.canPop(context)) {
           Navigator.pop(context);
         }
       });
