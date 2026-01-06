@@ -578,6 +578,8 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage>
 
 Get it → https://github.com/r4khul/unfilter/releases/latest
 
+Love open source? Give a ⭐ on GitHub!
+
 #UnfilterApp #TheRealTruthOfApps""",
         ),
       );

@@ -13,6 +13,7 @@ class ShareOptionsConfig {
   final bool showTechVersions;
   final bool showComponents;
   final bool showSplitApks;
+  final bool posterDarkMode;
 
   const ShareOptionsConfig({
     this.showVersion = true,
@@ -24,9 +25,9 @@ class ShareOptionsConfig {
     this.showTechVersions = true,
     this.showComponents = true,
     this.showSplitApks = true,
+    this.posterDarkMode = true,
   });
 
-  /// Creates a copy with the specified field toggled
   ShareOptionsConfig copyWith({
     bool? showVersion,
     bool? showSdk,
@@ -37,6 +38,7 @@ class ShareOptionsConfig {
     bool? showTechVersions,
     bool? showComponents,
     bool? showSplitApks,
+    bool? posterDarkMode,
   }) {
     return ShareOptionsConfig(
       showVersion: showVersion ?? this.showVersion,
@@ -48,6 +50,7 @@ class ShareOptionsConfig {
       showTechVersions: showTechVersions ?? this.showTechVersions,
       showComponents: showComponents ?? this.showComponents,
       showSplitApks: showSplitApks ?? this.showSplitApks,
+      posterDarkMode: posterDarkMode ?? this.posterDarkMode,
     );
   }
 
@@ -79,7 +82,8 @@ class ShareOptionsConfig {
           showSource == other.showSource &&
           showTechVersions == other.showTechVersions &&
           showComponents == other.showComponents &&
-          showSplitApks == other.showSplitApks;
+          showSplitApks == other.showSplitApks &&
+          posterDarkMode == other.posterDarkMode;
 
   @override
   int get hashCode => Object.hash(
@@ -92,5 +96,6 @@ class ShareOptionsConfig {
     showTechVersions,
     showComponents,
     showSplitApks,
+    posterDarkMode,
   );
 }

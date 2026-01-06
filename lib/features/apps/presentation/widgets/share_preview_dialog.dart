@@ -11,7 +11,7 @@ import 'customizable_share_poster.dart';
 import 'share_options_config.dart';
 
 /// A premium share preview dialog with real-time customization.
-/// Features butter-smooth animations, glassmorphism, and advanced optimizations.
+/// Compact layout: options at top, preview fills the rest.
 class SharePreviewDialog extends StatefulWidget {
   final DeviceApp app;
 
@@ -23,7 +23,7 @@ class SharePreviewDialog extends StatefulWidget {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      barrierColor: Colors.black54,
+      barrierColor: Colors.black.withOpacity(0.7),
       enableDrag: true,
       useSafeArea: true,
       builder: (context) => SharePreviewDialog(app: app),
@@ -50,18 +50,18 @@ class _SharePreviewDialogState extends State<SharePreviewDialog>
   void initState() {
     super.initState();
     _entranceController = AnimationController(
-      duration: const Duration(milliseconds: 400),
+      duration: const Duration(milliseconds: 350),
       vsync: this,
     );
 
-    _scaleAnimation = Tween<double>(begin: 0.92, end: 1.0).animate(
+    _scaleAnimation = Tween<double>(begin: 0.95, end: 1.0).animate(
       CurvedAnimation(parent: _entranceController, curve: Curves.easeOutCubic),
     );
 
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
         parent: _entranceController,
-        curve: const Interval(0.0, 0.6, curve: Curves.easeOut),
+        curve: const Interval(0.0, 0.5, curve: Curves.easeOut),
       ),
     );
 
@@ -159,6 +159,8 @@ class _SharePreviewDialogState extends State<SharePreviewDialog>
     buffer.writeln("See what YOUR apps are really made of →");
     buffer.writeln("https://github.com/r4khul/unfilter/releases/latest");
     buffer.writeln();
+    buffer.writeln("Love open source? Give a ⭐ on GitHub!");
+    buffer.writeln();
     buffer.writeln("#UnfilterApp #TheRealTruthOfApps");
 
     return buffer.toString();
@@ -191,308 +193,316 @@ class _SharePreviewDialogState extends State<SharePreviewDialog>
           ),
         );
       },
-      child: Container(
-        height: screenHeight * 0.88,
-        decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF0A0A0A) : const Color(0xFFF8F8F8),
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-          border: Border.all(color: theme.colorScheme.outline.withOpacity(0.1)),
-        ),
-        child: Column(
-          children: [
-            // Drag Handle
-            _buildDragHandle(theme),
-
-            // Header
-            _buildHeader(theme, isDark),
-
-            // Preview Section (Scrollable)
-            Expanded(
-              child: SingleChildScrollView(
-                physics: const BouncingScrollPhysics(),
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Column(
-                  children: [
-                    const SizedBox(height: 16),
-                    // Live Preview
-                    _buildPreviewSection(theme, isDark),
-                    const SizedBox(height: 24),
-                    // Options Grid
-                    _buildOptionsSection(theme, isDark),
-                    const SizedBox(height: 24),
-                  ],
-                ),
+      child: ClipRRect(
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+        child: BackdropFilter(
+          filter: ui.ImageFilter.blur(
+            sigmaX: isDark ? 30 : 15,
+            sigmaY: isDark ? 30 : 15,
+          ),
+          child: Container(
+            height: screenHeight * 0.85,
+            decoration: BoxDecoration(
+              // More distinct background in dark mode
+              color: isDark
+                  ? const Color(0xFF0D0D0D).withOpacity(0.95)
+                  : const Color(0xFFF8F8F8).withOpacity(0.95),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(28),
+              ),
+              border: Border.all(
+                color: isDark
+                    ? Colors.white.withOpacity(0.08)
+                    : Colors.black.withOpacity(0.05),
               ),
             ),
+            child: Column(
+              children: [
+                // Drag Handle + Header
+                _buildHeader(theme, isDark),
 
-            // Share Button
-            _buildShareButton(theme, isDark),
-          ],
-        ),
-      ),
-    );
-  }
+                // Options - Horizontal ListView at top
+                _buildOptionsRow(theme, isDark),
 
-  Widget _buildDragHandle(ThemeData theme) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 12, bottom: 8),
-      child: Container(
-        width: 40,
-        height: 4,
-        decoration: BoxDecoration(
-          color: theme.colorScheme.onSurface.withOpacity(0.2),
-          borderRadius: BorderRadius.circular(2),
+                // Preview Section - Fills remaining space
+                Expanded(child: _buildPreviewSection(theme, isDark)),
+
+                // Share Button
+                _buildShareButton(theme, isDark),
+              ],
+            ),
+          ),
         ),
       ),
     );
   }
 
   Widget _buildHeader(ThemeData theme, bool isDark) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-      child: Row(
+    return Container(
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
+      child: Column(
         children: [
-          GestureDetector(
-            onTap: () => Navigator.of(context).pop(),
-            behavior: HitTestBehavior.opaque,
-            child: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: theme.colorScheme.onSurface.withOpacity(0.05),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(
-                Icons.close_rounded,
-                size: 20,
-                color: theme.colorScheme.onSurface.withOpacity(0.7),
-              ),
+          // Drag Handle
+          Container(
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+              color: theme.colorScheme.onSurface.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(2),
             ),
           ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  "Customize Share",
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              // Close button
+              GestureDetector(
+                onTap: () => Navigator.of(context).pop(),
+                behavior: HitTestBehavior.opaque,
+                child: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.onSurface.withOpacity(0.05),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(
+                    Icons.close_rounded,
+                    size: 18,
+                    color: theme.colorScheme.onSurface.withOpacity(0.6),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  "Customize & Share",
                   style: theme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                     letterSpacing: -0.3,
                   ),
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  "${_config.enabledCount} details selected",
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurface.withOpacity(0.5),
-                  ),
-                ),
-              ],
-            ),
+              ),
+              // Theme toggle
+              _buildThemeToggle(theme, isDark),
+            ],
           ),
         ],
       ),
     );
   }
 
-  Widget _buildPreviewSection(ThemeData theme, bool isDark) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Section Label
-        Row(
+  Widget _buildThemeToggle(ThemeData theme, bool isDark) {
+    return GestureDetector(
+      onTap: () => _updateConfig(
+        _config.copyWith(posterDarkMode: !_config.posterDarkMode),
+      ),
+      behavior: HitTestBehavior.opaque,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeOutCubic,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: _config.posterDarkMode
+              ? Colors.white.withOpacity(0.1)
+              : Colors.black.withOpacity(0.05),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: theme.colorScheme.onSurface.withOpacity(0.1),
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-              decoration: BoxDecoration(
-                color: theme.colorScheme.primary.withOpacity(0.08),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.visibility_rounded,
-                    size: 14,
-                    color: theme.colorScheme.primary,
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    "LIVE PREVIEW",
-                    style: TextStyle(
-                      color: theme.colorScheme.primary,
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 1,
-                    ),
-                  ),
-                ],
+            Icon(
+              _config.posterDarkMode
+                  ? Icons.dark_mode_rounded
+                  : Icons.light_mode_rounded,
+              size: 16,
+              color: theme.colorScheme.onSurface.withOpacity(0.7),
+            ),
+            const SizedBox(width: 6),
+            Text(
+              _config.posterDarkMode ? "Dark" : "Light",
+              style: TextStyle(
+                color: theme.colorScheme.onSurface.withOpacity(0.7),
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
               ),
             ),
           ],
         ),
-        const SizedBox(height: 16),
-
-        // Preview Container with shadow
-        Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(isDark ? 0.3 : 0.12),
-                blurRadius: 24,
-                offset: const Offset(0, 8),
-              ),
-            ],
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(20),
-            child: Stack(
-              children: [
-                // Scaled Preview
-                Transform.scale(
-                  scale: 0.85,
-                  alignment: Alignment.topCenter,
-                  child: RepaintBoundary(
-                    key: _posterKey,
-                    child: CustomizableSharePoster(
-                      app: widget.app,
-                      config: _config,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
+      ),
     );
   }
 
-  Widget _buildOptionsSection(ThemeData theme, bool isDark) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Section Label
-        Padding(
-          padding: const EdgeInsets.only(bottom: 16),
-          child: Text(
-            "INCLUDE IN IMAGE",
-            style: TextStyle(
-              color: theme.colorScheme.onSurface.withOpacity(0.4),
-              fontSize: 11,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 1.5,
+  Widget _buildOptionsRow(ThemeData theme, bool isDark) {
+    final options = <_OptionData>[
+      _OptionData(
+        "Version",
+        Icons.info_outline_rounded,
+        _config.showVersion,
+        () => _config.copyWith(showVersion: !_config.showVersion),
+      ),
+      _OptionData(
+        "SDK",
+        Icons.developer_mode_rounded,
+        _config.showSdk,
+        () => _config.copyWith(showSdk: !_config.showSdk),
+      ),
+      _OptionData(
+        "Usage",
+        Icons.access_time_rounded,
+        _config.showUsage,
+        () => _config.copyWith(showUsage: !_config.showUsage),
+      ),
+      _OptionData(
+        "Install Date",
+        Icons.calendar_today_rounded,
+        _config.showInstallDate,
+        () => _config.copyWith(showInstallDate: !_config.showInstallDate),
+      ),
+      _OptionData(
+        "Size",
+        Icons.storage_rounded,
+        _config.showSize,
+        () => _config.copyWith(showSize: !_config.showSize),
+      ),
+      if (widget.app.installerStore != 'Unknown')
+        _OptionData(
+          "Source",
+          Icons.store_rounded,
+          _config.showSource,
+          () => _config.copyWith(showSource: !_config.showSource),
+        ),
+      if (widget.app.techVersions.isNotEmpty)
+        _OptionData(
+          "Tech",
+          Icons.code_rounded,
+          _config.showTechVersions,
+          () => _config.copyWith(showTechVersions: !_config.showTechVersions),
+        ),
+      _OptionData(
+        "Components",
+        Icons.widgets_rounded,
+        _config.showComponents,
+        () => _config.copyWith(showComponents: !_config.showComponents),
+      ),
+      if (widget.app.splitApks.isNotEmpty)
+        _OptionData(
+          "Splits",
+          Icons.extension_rounded,
+          _config.showSplitApks,
+          () => _config.copyWith(showSplitApks: !_config.showSplitApks),
+        ),
+    ];
+
+    return SizedBox(
+      height: 36,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        physics: const BouncingScrollPhysics(),
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        itemCount: options.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        itemBuilder: (context, index) {
+          final opt = options[index];
+          return _buildOptionChip(opt, theme, isDark);
+        },
+      ),
+    );
+  }
+
+  Widget _buildOptionChip(_OptionData opt, ThemeData theme, bool isDark) {
+    return GestureDetector(
+      onTap: () => _updateConfig(opt.toggle()),
+      behavior: HitTestBehavior.opaque,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOutCubic,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: opt.isEnabled
+              ? theme.colorScheme.primary.withOpacity(isDark ? 0.2 : 0.1)
+              : theme.colorScheme.onSurface.withOpacity(0.04),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: opt.isEnabled
+                ? theme.colorScheme.primary.withOpacity(0.4)
+                : theme.colorScheme.onSurface.withOpacity(0.08),
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (opt.isEnabled) ...[
+              Icon(
+                Icons.check_rounded,
+                size: 14,
+                color: theme.colorScheme.primary,
+              ),
+              const SizedBox(width: 4),
+            ],
+            Icon(
+              opt.icon,
+              size: 14,
+              color: opt.isEnabled
+                  ? theme.colorScheme.primary
+                  : theme.colorScheme.onSurface.withOpacity(0.5),
+            ),
+            const SizedBox(width: 6),
+            Text(
+              opt.label,
+              style: TextStyle(
+                color: opt.isEnabled
+                    ? theme.colorScheme.primary
+                    : theme.colorScheme.onSurface.withOpacity(0.6),
+                fontSize: 12,
+                fontWeight: opt.isEnabled ? FontWeight.w600 : FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPreviewSection(ThemeData theme, bool isDark) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(20, 16, 20, 12),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(isDark ? 0.4 : 0.15),
+            blurRadius: 30,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(20),
+        child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          child: Center(
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: RepaintBoundary(
+                key: _posterKey,
+                child: CustomizableSharePoster(
+                  app: widget.app,
+                  config: _config,
+                ),
+              ),
             ),
           ),
         ),
-
-        // Options Grid - Responsive Wrap
-        Wrap(
-          spacing: 10,
-          runSpacing: 10,
-          children: [
-            _OptionChip(
-              label: "Version",
-              icon: Icons.info_outline_rounded,
-              isEnabled: _config.showVersion,
-              onToggle: () => _updateConfig(
-                _config.copyWith(showVersion: !_config.showVersion),
-              ),
-              theme: theme,
-              isDark: isDark,
-            ),
-            _OptionChip(
-              label: "SDK Range",
-              icon: Icons.developer_mode_rounded,
-              isEnabled: _config.showSdk,
-              onToggle: () =>
-                  _updateConfig(_config.copyWith(showSdk: !_config.showSdk)),
-              theme: theme,
-              isDark: isDark,
-            ),
-            _OptionChip(
-              label: "Usage Time",
-              icon: Icons.access_time_rounded,
-              isEnabled: _config.showUsage,
-              onToggle: () => _updateConfig(
-                _config.copyWith(showUsage: !_config.showUsage),
-              ),
-              theme: theme,
-              isDark: isDark,
-            ),
-            _OptionChip(
-              label: "Install Date",
-              icon: Icons.calendar_today_rounded,
-              isEnabled: _config.showInstallDate,
-              onToggle: () => _updateConfig(
-                _config.copyWith(showInstallDate: !_config.showInstallDate),
-              ),
-              theme: theme,
-              isDark: isDark,
-            ),
-            _OptionChip(
-              label: "App Size",
-              icon: Icons.storage_rounded,
-              isEnabled: _config.showSize,
-              onToggle: () =>
-                  _updateConfig(_config.copyWith(showSize: !_config.showSize)),
-              theme: theme,
-              isDark: isDark,
-            ),
-            if (widget.app.installerStore != 'Unknown')
-              _OptionChip(
-                label: "Source",
-                icon: Icons.store_rounded,
-                isEnabled: _config.showSource,
-                onToggle: () => _updateConfig(
-                  _config.copyWith(showSource: !_config.showSource),
-                ),
-                theme: theme,
-                isDark: isDark,
-              ),
-            if (widget.app.techVersions.isNotEmpty)
-              _OptionChip(
-                label: "Tech Versions",
-                icon: Icons.code_rounded,
-                isEnabled: _config.showTechVersions,
-                onToggle: () => _updateConfig(
-                  _config.copyWith(showTechVersions: !_config.showTechVersions),
-                ),
-                theme: theme,
-                isDark: isDark,
-              ),
-            _OptionChip(
-              label: "Components",
-              icon: Icons.widgets_rounded,
-              isEnabled: _config.showComponents,
-              onToggle: () => _updateConfig(
-                _config.copyWith(showComponents: !_config.showComponents),
-              ),
-              theme: theme,
-              isDark: isDark,
-            ),
-            if (widget.app.splitApks.isNotEmpty)
-              _OptionChip(
-                label: "Split APKs",
-                icon: Icons.extension_rounded,
-                isEnabled: _config.showSplitApks,
-                onToggle: () => _updateConfig(
-                  _config.copyWith(showSplitApks: !_config.showSplitApks),
-                ),
-                theme: theme,
-                isDark: isDark,
-              ),
-          ],
-        ),
-      ],
+      ),
     );
   }
 
   Widget _buildShareButton(ThemeData theme, bool isDark) {
     return SafeArea(
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
         child: GestureDetector(
           onTap: _isSharing ? null : _handleShare,
           child: AnimatedContainer(
@@ -505,7 +515,7 @@ class _SharePreviewDialogState extends State<SharePreviewDialog>
                   ? null
                   : LinearGradient(
                       colors: isDark
-                          ? [const Color(0xFFFFFFFF), const Color(0xFFE0E0E0)]
+                          ? [const Color(0xFFFFFFFF), const Color(0xFFE8E8E8)]
                           : [const Color(0xFF1A1A1A), const Color(0xFF000000)],
                     ),
               color: _isSharing
@@ -517,9 +527,9 @@ class _SharePreviewDialogState extends State<SharePreviewDialog>
                   : [
                       BoxShadow(
                         color: (isDark ? Colors.white : Colors.black)
-                            .withOpacity(0.15),
-                        blurRadius: 20,
-                        offset: const Offset(0, 8),
+                            .withOpacity(0.1),
+                        blurRadius: 16,
+                        offset: const Offset(0, 6),
                       ),
                     ],
             ),
@@ -561,87 +571,11 @@ class _SharePreviewDialogState extends State<SharePreviewDialog>
   }
 }
 
-/// Individual option chip with smooth toggle animation
-class _OptionChip extends StatelessWidget {
+class _OptionData {
   final String label;
   final IconData icon;
   final bool isEnabled;
-  final VoidCallback onToggle;
-  final ThemeData theme;
-  final bool isDark;
+  final ShareOptionsConfig Function() toggle;
 
-  const _OptionChip({
-    required this.label,
-    required this.icon,
-    required this.isEnabled,
-    required this.onToggle,
-    required this.theme,
-    required this.isDark,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onToggle,
-      behavior: HitTestBehavior.opaque,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        curve: Curves.easeOutCubic,
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        decoration: BoxDecoration(
-          color: isEnabled
-              ? theme.colorScheme.primary.withOpacity(isDark ? 0.15 : 0.08)
-              : theme.colorScheme.onSurface.withOpacity(0.04),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isEnabled
-                ? theme.colorScheme.primary.withOpacity(0.3)
-                : theme.colorScheme.onSurface.withOpacity(0.08),
-            width: 1,
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Animated check indicator
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              width: isEnabled ? 18 : 0,
-              child: AnimatedOpacity(
-                duration: const Duration(milliseconds: 150),
-                opacity: isEnabled ? 1.0 : 0.0,
-                child: Padding(
-                  padding: const EdgeInsets.only(right: 6),
-                  child: Icon(
-                    Icons.check_rounded,
-                    size: 14,
-                    color: theme.colorScheme.primary,
-                  ),
-                ),
-              ),
-            ),
-            Icon(
-              icon,
-              size: 16,
-              color: isEnabled
-                  ? theme.colorScheme.primary
-                  : theme.colorScheme.onSurface.withOpacity(0.4),
-            ),
-            const SizedBox(width: 8),
-            Text(
-              label,
-              style: TextStyle(
-                color: isEnabled
-                    ? theme.colorScheme.primary
-                    : theme.colorScheme.onSurface.withOpacity(0.6),
-                fontSize: 13,
-                fontWeight: isEnabled ? FontWeight.w600 : FontWeight.w500,
-                letterSpacing: -0.2,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  const _OptionData(this.label, this.icon, this.isEnabled, this.toggle);
 }
