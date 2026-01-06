@@ -10,9 +10,9 @@ As a developer (or just a curious techie), you might often wonder, _"Is this app
 
 It scans all the apps installed on your device and "unfilters" the technology behind them.
 
-- 👀 **See the Tech Stack:** It tells you if an app uses **Flutter**, **React Native**, **Jetpack Compose**, **Unity**, and many others.
-- 📱 **Deep Dive:** You can click on any app to see more details like its package name, version, and exactly how much storage it's using.
-- 📊 **Clean & Simple:** I designed it to be really easy to use and look good while doing it.
+- **See the Tech Stack:** It tells you if an app uses **Flutter**, **React Native**, **Jetpack Compose**, **Unity**, and many others.
+- **Deep Dive:** You can click on any app to see more details like its package name, version, and exactly how much storage it's using.
+- **Clean & Simple:** I designed it to be really easy to use and look good while doing it.
 
 ## Who is this for?
 
