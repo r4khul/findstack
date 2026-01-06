@@ -111,6 +111,24 @@ class DeviceAppsRepository {
     }
   }
 
+  Future<bool> checkInstallPermission() async {
+    try {
+      final bool result = await platform.invokeMethod('checkInstallPermission');
+      return result;
+    } on PlatformException catch (e) {
+      print("Failed to check install permission: '${e.message}'");
+      return false;
+    }
+  }
+
+  Future<void> requestInstallPermission() async {
+    try {
+      await platform.invokeMethod('requestInstallPermission');
+    } on PlatformException catch (e) {
+      print("Failed to request install permission: '${e.message}'");
+    }
+  }
+
   Future<List<AppUsagePoint>> getAppUsageHistory(String packageName) async {
     try {
       final List<Object?> result = await platform.invokeMethod(

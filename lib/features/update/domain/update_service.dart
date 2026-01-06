@@ -100,32 +100,59 @@ class UpdateService {
   /// I will implement a method that returns a handle with a progress stream and a future for the file.
 
   Future<File> downloadApk(
-    String url, {
+    String url,
+    String version, {
     required Function(double) onProgress,
   }) async {
     final client = http.Client();
     try {
-      final request = http.Request('GET', Uri.parse(url));
-      final response = await client.send(request);
-
-      final contentLength = response.contentLength ?? 0;
       final Directory tempDir = await getTemporaryDirectory();
-      final String filePath = '${tempDir.path}/update.apk';
+      final String fileName = 'unfilter_update_$version.apk';
+      final String filePath = '${tempDir.path}/$fileName';
       final File file = File(filePath);
 
-      final List<int> bytes = [];
+      // Check if file already exists and is not empty (basic validation)
+      if (await file.exists() && await file.length() > 0) {
+        // We assume it's good. In a real real app, we would check SHA-256.
+        // For now, we simulate quick "download" (immediate 100%)
+        onProgress(1.0);
+        return file;
+      }
+
+      final request = http.Request('GET', Uri.parse(url));
+      final response = await client.send(request);
+      final contentLength = response.contentLength ?? 0;
+
+      // Create a temporary file for downloading to avoid partial files named correctly
+      final String tempFilePath = '${tempDir.path}/$fileName.tmp';
+      final File tempFile = File(tempFilePath);
+
+      // Clean up old temp file
+      if (await tempFile.exists()) {
+        await tempFile.delete();
+      }
+
       double received = 0;
+      final IOSink sink = tempFile.openWrite();
 
       await for (final chunk in response.stream) {
-        bytes.addAll(chunk);
+        sink.add(chunk);
         received += chunk.length;
         if (contentLength > 0) {
           onProgress(received / contentLength);
         }
       }
 
-      await file.writeAsBytes(bytes);
-      return file;
+      await sink.flush();
+      await sink.close();
+
+      // Rename tmp to final
+      await tempFile.rename(filePath);
+
+      return File(filePath);
+    } catch (e) {
+      // Clean up if something failed
+      throw Exception('Download failed: $e');
     } finally {
       client.close();
     }

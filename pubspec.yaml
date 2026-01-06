@@ -33,13 +33,26 @@ dev_dependencies:
     sdk: flutter
   flutter_lints: ^6.0.0
   flutter_launcher_icons: ^0.14.2
+  flutter_native_splash: ^2.4.3
 
 flutter_launcher_icons:
   android: true
   ios: true
   image_path: "assets/icons/white-unfilter-bg-black.png" # Standard icon
-  adaptive_icon_background: "#000000" # Pure black layer
+  adaptive_icon_background: "#000000" # Pure white layer
   adaptive_icon_foreground: "assets/icons/white-unfilter-nobg.png" # Floating logo layer
+
+flutter_native_splash:
+  color: "#FFFFFF"
+  image: "assets/icons/black-unfilter-nobg.png"
+  color_dark: "#000000"
+  image_dark: "assets/icons/white-unfilter-nobg.png"
+
+  android_12:
+    image: "assets/icons/black-unfilter-nobg.png"
+    icon_background_color: "#FFFFFF"
+    image_dark: "assets/icons/white-unfilter-nobg.png"
+    icon_background_color_dark: "#000000"
 
 flutter:
   uses-material-design: true
