@@ -7,6 +7,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../domain/update_service.dart';
 import '../../../onboarding/presentation/providers/onboarding_provider.dart';
 import '../providers/update_provider.dart';
+import '../../../../core/navigation/navigation.dart';
+import '../../../../core/navigation/active_route_provider.dart';
 
 class VersionCheckGate extends ConsumerWidget {
   final Widget child;
@@ -17,14 +19,14 @@ class VersionCheckGate extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     // Check onboarding status first
     final onboardingState = ref.watch(onboardingStateProvider);
-
     // If onboarding is loading or not completed, suppress updates
     if (onboardingState.asData?.value != true) {
-      return child;
+      return Stack(children: [child]);
     }
 
     // Watch the update check result
     final updateResultAsync = ref.watch(updateCheckProvider);
+    final activeRoute = ref.watch(activeRouteProvider);
 
     return updateResultAsync.when(
       data: (result) {
@@ -32,12 +34,17 @@ class VersionCheckGate extends ConsumerWidget {
           return ForceUpdateScreen(result: result);
         }
 
+        // Check if we should suppress the banner on specific pages
+        final shouldShowBanner =
+            result.status == UpdateStatus.softUpdate &&
+            activeRoute != AppRoutes.scan;
+
         // Ensure child is built even if soft update is available
         // We will overlay the banner using a Stack
         return Stack(
           children: [
             child,
-            if (result.status == UpdateStatus.softUpdate)
+            if (shouldShowBanner)
               Positioned(
                 bottom: 0,
                 left: 0,
@@ -47,11 +54,12 @@ class VersionCheckGate extends ConsumerWidget {
           ],
         );
       },
-      loading: () => child, // Passively show app while loading
+      loading: () =>
+          Stack(children: [child]), // Passively show app while loading
       error: (e, stack) {
         // Log error but don't block app
         debugPrint('Update check error: $e');
-        return child;
+        return Stack(children: [child]);
       },
     );
   }
@@ -225,7 +233,7 @@ class ForceUpdateScreen extends ConsumerWidget {
                     UpdateDownloadButton(
                       url: result.config?.apkDirectDownloadUrl,
                       version:
-                          result.config?.latestNativeVersion?.toString() ??
+                          result.config?.latestNativeVersion.toString() ??
                           'latest',
                       isFullWidth: true,
                     ),
@@ -425,7 +433,7 @@ class _SoftUpdateBannerState extends ConsumerState<SoftUpdateBanner>
                   UpdateDownloadButton(
                     url: widget.result.config?.apkDirectDownloadUrl,
                     version:
-                        widget.result.config?.latestNativeVersion?.toString() ??
+                        widget.result.config?.latestNativeVersion.toString() ??
                         'latest',
                     isCompact: true,
                   ),

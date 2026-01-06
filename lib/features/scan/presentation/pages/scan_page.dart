@@ -110,10 +110,34 @@ class _ScanPageState extends ConsumerState<ScanPage>
       Future.delayed(const Duration(milliseconds: 800), () {
         if (!mounted) return;
 
-        if (widget.fromOnboarding) {
-          AppRouteFactory.toHome(context);
-        } else if (Navigator.canPop(context)) {
-          Navigator.pop(context);
+        // Verify we actually have data before navigating
+        final apps = ref.read(installedAppsProvider).value;
+        final hasData = apps != null && apps.isNotEmpty;
+
+        if (hasData) {
+          if (widget.fromOnboarding) {
+            AppRouteFactory.toHome(context);
+          } else if (Navigator.canPop(context)) {
+            Navigator.pop(context);
+          }
+        } else {
+          // Scan failed or returned no data - prevent navigation loop
+          setState(() => _hasStartedScan = false); // Allow retry
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text(
+                'Scan failed to retrieve apps. Please try again.',
+              ),
+              backgroundColor: Theme.of(context).colorScheme.error,
+              behavior: SnackBarBehavior.floating,
+              action: SnackBarAction(
+                label: 'Retry',
+                textColor: Colors.white,
+                onPressed: _startScan,
+              ),
+            ),
+          );
         }
       });
     });

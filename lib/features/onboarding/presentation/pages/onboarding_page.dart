@@ -59,7 +59,12 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage>
   }
 
   Future<void> _completeOnboarding() async {
-    await ref.read(onboardingStateProvider.notifier).completeOnboarding();
+    // 1. Capture the notifier before navigation
+    final notifier = ref.read(onboardingStateProvider.notifier);
+
+    // 2. Navigate immediately to ScanPage
+    // We do this BEFORE updating state to ensure the navigation happens
+    // smoothly without being interrupted by parent widget rebuilds (VersionCheckGate).
     if (mounted) {
       Navigator.of(context).pushReplacement(
         PremiumPageRoute(
@@ -69,6 +74,9 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage>
         ),
       );
     }
+
+    // 3. Mark onboarding as complete (background)
+    await notifier.completeOnboarding();
   }
 
   void _nextPage() {

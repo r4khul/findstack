@@ -38,7 +38,7 @@ class UnfilterApp extends ConsumerWidget {
       ),
       home: const SplashScreen(),
       onGenerateRoute: AppRouteFactory.onGenerateRoute,
-      navigatorObservers: [AppNavigatorObserver()],
+      navigatorObservers: [AppNavigatorObserver(ref: ref)],
     );
   }
 }

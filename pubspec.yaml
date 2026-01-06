@@ -38,7 +38,7 @@ flutter_launcher_icons:
   android: true
   ios: true
   image_path: "assets/icons/white-unfilter-bg-black.png" # Standard icon
-  adaptive_icon_background: "#000000" # Pure black layer
+  adaptive_icon_background: "#000000" # Pure white layer
   adaptive_icon_foreground: "assets/icons/white-unfilter-nobg.png" # Floating logo layer
 
 flutter:
