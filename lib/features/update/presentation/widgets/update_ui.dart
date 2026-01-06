@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../domain/update_service.dart';
+import '../../../onboarding/presentation/providers/onboarding_provider.dart';
 import '../providers/update_provider.dart';
 
 class VersionCheckGate extends ConsumerWidget {
@@ -14,6 +15,14 @@ class VersionCheckGate extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Check onboarding status first
+    final onboardingState = ref.watch(onboardingStateProvider);
+
+    // If onboarding is loading or not completed, suppress updates
+    if (onboardingState.asData?.value != true) {
+      return child;
+    }
+
     // Watch the update check result
     final updateResultAsync = ref.watch(updateCheckProvider);
 
