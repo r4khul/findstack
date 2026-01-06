@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../widgets/premium_sliver_app_bar.dart';
 import '../../widgets/github_cta_card.dart';
 
@@ -37,6 +38,13 @@ class PrivacyPage extends StatelessWidget {
                       height: 1.6,
                       fontSize: 16,
                     ),
+                  ),
+                  const SizedBox(height: 24),
+                  _buildExternalLink(
+                    context,
+                    label: "Detailed Policy",
+                    value: "Check Here",
+                    url: "https://github.com/r4khul/unfilter",
                   ),
                   const SizedBox(height: 48),
 
@@ -130,6 +138,62 @@ class PrivacyPage extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildExternalLink(
+    BuildContext context, {
+    required String label,
+    required String value,
+    required String url,
+  }) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () async {
+            final uri = Uri.parse(url);
+            if (await canLaunchUrl(uri)) {
+              await launchUrl(uri, mode: LaunchMode.externalApplication);
+            }
+          },
+          borderRadius: BorderRadius.circular(12),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  label,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.onSurface.withOpacity(0.6),
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                Row(
+                  children: [
+                    Text(
+                      value,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: theme.colorScheme.primary,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    Icon(
+                      Icons.arrow_outward_rounded,
+                      size: 14,
+                      color: theme.colorScheme.primary.withOpacity(0.7),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
