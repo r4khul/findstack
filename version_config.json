@@ -1,6 +1,6 @@
 {
   "latest_native_version": "1.0.0+2",
-  "min_supported_native_version": "1.0.0+2",
+  "min_supported_native_version": "1.0.0+1",
   "release_page_url": "https://github.com/r4khul/unfilter/releases",
   "apk_direct_download_url": "https://github.com/r4khul/unfilter/releases/latest/download/app-release.apk",
   "release_notes": "Initial release with robust OTA update support.",

@@ -1,7 +1,7 @@
 name: unfilter
 description: "An app that shows what other apps are built with"
 publish_to: "none"
-version: 1.0.0+2
+version: 1.0.0+1
 
 environment:
   sdk: ^3.10.3
