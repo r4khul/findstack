@@ -8,6 +8,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:pub_semver/pub_semver.dart';
 import '../data/models/update_config_model.dart';
 import '../data/repositories/update_repository.dart';
+import '../presentation/providers/update_provider.dart' show UpdateErrorType;
 
 enum UpdateStatus { upToDate, softUpdate, forceUpdate, unknown }
 
@@ -16,12 +17,14 @@ class UpdateCheckResult {
   final UpdateConfigModel? config;
   final Version? currentVersion;
   final String? error;
+  final UpdateErrorType? errorType;
 
   const UpdateCheckResult({
     required this.status,
     this.config,
     this.currentVersion,
     this.error,
+    this.errorType,
   });
 }
 

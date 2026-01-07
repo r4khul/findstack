@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -5,6 +6,7 @@ import '../../domain/update_service.dart';
 import '../providers/update_provider.dart';
 import '../widgets/update_ui.dart';
 import '../../../home/presentation/widgets/premium_sliver_app_bar.dart';
+import '../../../../core/services/connectivity_service.dart';
 
 class UpdateCheckPage extends ConsumerStatefulWidget {
   const UpdateCheckPage({super.key});
@@ -13,14 +15,293 @@ class UpdateCheckPage extends ConsumerStatefulWidget {
   ConsumerState<UpdateCheckPage> createState() => _UpdateCheckPageState();
 }
 
-class _UpdateCheckPageState extends ConsumerState<UpdateCheckPage> {
+class _UpdateCheckPageState extends ConsumerState<UpdateCheckPage>
+    with SingleTickerProviderStateMixin {
+  bool _isManuallyChecking = false;
+  late AnimationController _pulseController;
+
   @override
   void initState() {
     super.initState();
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    )..repeat(reverse: true);
+
     // Trigger a fresh check when entering this page
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.invalidate(updateCheckProvider);
     });
+  }
+
+  @override
+  void dispose() {
+    _pulseController.dispose();
+    super.dispose();
+  }
+
+  /// Handles the "Check Again" button press with connectivity awareness
+  Future<void> _handleCheckAgain() async {
+    if (_isManuallyChecking) return;
+
+    setState(() => _isManuallyChecking = true);
+    HapticFeedback.mediumImpact();
+
+    // First check connectivity
+    final connectivity = ref.read(connectivityServiceProvider);
+    final status = await connectivity.checkConnectivity();
+
+    if (status == ConnectivityStatus.offline) {
+      if (mounted) {
+        _showConnectivityDialog(
+          title: 'No Internet Connection',
+          message:
+              'Please connect to WiFi or mobile data to check for updates.',
+          icon: Icons.wifi_off_rounded,
+          status: status,
+        );
+        setState(() => _isManuallyChecking = false);
+      }
+      return;
+    }
+
+    if (status == ConnectivityStatus.serverUnreachable) {
+      if (mounted) {
+        _showConnectivityDialog(
+          title: 'Server Unavailable',
+          message:
+              'The update server is temporarily unreachable. Please try again later.',
+          icon: Icons.cloud_off_rounded,
+          status: status,
+        );
+        setState(() => _isManuallyChecking = false);
+      }
+      return;
+    }
+
+    // Connectivity OK, proceed with update check
+    ref.invalidate(updateCheckProvider);
+
+    // Wait a bit for the provider to start loading, then reset the flag
+    await Future.delayed(const Duration(milliseconds: 500));
+    if (mounted) {
+      setState(() => _isManuallyChecking = false);
+    }
+  }
+
+  /// Shows a premium connectivity warning dialog
+  void _showConnectivityDialog({
+    required String title,
+    required String message,
+    required IconData icon,
+    required ConnectivityStatus status,
+  }) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    showGeneralDialog(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: 'Dismiss',
+      barrierColor: Colors.black.withOpacity(0.5),
+      transitionDuration: const Duration(milliseconds: 300),
+      pageBuilder: (context, animation, secondaryAnimation) {
+        return Center(
+          child: ScaleTransition(
+            scale: CurvedAnimation(
+              parent: animation,
+              curve: Curves.easeOutBack,
+            ),
+            child: Material(
+              color: Colors.transparent,
+              child: Container(
+                width: MediaQuery.of(context).size.width * 0.85,
+                margin: const EdgeInsets.symmetric(horizontal: 24),
+                padding: const EdgeInsets.all(28),
+                decoration: BoxDecoration(
+                  color: isDark
+                      ? const Color(0xFF1A1A1A)
+                      : theme.colorScheme.surface,
+                  borderRadius: BorderRadius.circular(28),
+                  border: Border.all(
+                    color: theme.colorScheme.outline.withOpacity(0.1),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(isDark ? 0.4 : 0.15),
+                      blurRadius: 40,
+                      offset: const Offset(0, 20),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Icon with animated glow
+                    Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.error.withOpacity(0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        icon,
+                        size: 40,
+                        color: theme.colorScheme.error.withOpacity(0.8),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+
+                    // Title
+                    Text(
+                      title,
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: -0.5,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Message
+                    Text(
+                      message,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                        height: 1.5,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 8),
+
+                    // Connectivity tips
+                    _buildConnectivityTips(theme, status),
+
+                    const SizedBox(height: 28),
+
+                    // Actions
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextButton(
+                            onPressed: () => Navigator.of(context).pop(),
+                            style: TextButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                            ),
+                            child: Text(
+                              'Dismiss',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w600,
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: FilledButton(
+                            onPressed: () {
+                              Navigator.of(context).pop();
+                              _handleCheckAgain();
+                            },
+                            style: FilledButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              backgroundColor: theme.colorScheme.primary,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                            ),
+                            child: const Text(
+                              'Try Again',
+                              style: TextStyle(fontWeight: FontWeight.w600),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildConnectivityTips(ThemeData theme, ConnectivityStatus status) {
+    final tips = status == ConnectivityStatus.offline
+        ? [
+            'Check if WiFi is enabled',
+            'Check mobile data settings',
+            'Try toggling airplane mode',
+          ]
+        : [
+            'The update server may be undergoing maintenance',
+            'Try again in a few minutes',
+          ];
+
+    return Container(
+      margin: const EdgeInsets.only(top: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.3),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: theme.colorScheme.outline.withOpacity(0.08)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.lightbulb_outline_rounded,
+                size: 16,
+                color: theme.colorScheme.primary,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Quick Tips',
+                style: theme.textTheme.labelMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: theme.colorScheme.primary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          ...tips.map(
+            (tip) => Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '• ',
+                    style: TextStyle(
+                      color: theme.colorScheme.onSurfaceVariant,
+                      height: 1.4,
+                    ),
+                  ),
+                  Expanded(
+                    child: Text(
+                      tip,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                        height: 1.4,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -31,7 +312,6 @@ class _UpdateCheckPageState extends ConsumerState<UpdateCheckPage> {
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
-      // No standard AppBar, we use CustomScrollView with PremiumSliverAppBar
       body: CustomScrollView(
         physics: const BouncingScrollPhysics(),
         slivers: [
@@ -60,18 +340,48 @@ class _UpdateCheckPageState extends ConsumerState<UpdateCheckPage> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          SizedBox(
-            width: 60,
-            height: 60,
-            child: CircularProgressIndicator(
-              strokeWidth: 3,
-              color: theme.primaryColor,
-            ),
+          // Animated checking indicator
+          AnimatedBuilder(
+            animation: _pulseController,
+            builder: (context, child) {
+              return Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: theme.colorScheme.primary.withOpacity(
+                    0.05 + (_pulseController.value * 0.05),
+                  ),
+                  border: Border.all(
+                    color: theme.colorScheme.primary.withOpacity(0.2),
+                    width: 2,
+                  ),
+                ),
+                child: Center(
+                  child: SizedBox(
+                    width: 32,
+                    height: 32,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 3,
+                      color: theme.colorScheme.primary,
+                    ),
+                  ),
+                ),
+              );
+            },
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 32),
           Text(
             "Checking for updates...",
             style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w600,
+              letterSpacing: -0.3,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            "This may take a moment",
+            style: theme.textTheme.bodySmall?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
             ),
           ),
@@ -81,51 +391,145 @@ class _UpdateCheckPageState extends ConsumerState<UpdateCheckPage> {
   }
 
   Widget _buildErrorState(ThemeData theme, String error) {
+    // Determine error type and show appropriate UI
+    final isNetworkError =
+        error.toLowerCase().contains('internet') ||
+        error.toLowerCase().contains('connection') ||
+        error.toLowerCase().contains('socket') ||
+        error.toLowerCase().contains('network');
+
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(8.0),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.cloud_off_rounded,
-              size: 80,
-              color: theme.colorScheme.error,
-            ),
-            const SizedBox(height: 24),
-            Text(
-              "Connection Error",
-              style: theme.textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.bold,
+            // Error icon with subtle background
+            Container(
+              padding: const EdgeInsets.all(28),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.errorContainer.withOpacity(0.2),
+                shape: BoxShape.circle,
               ),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              "Unable to check for updates. Please check your internet connection and try again.",
-              textAlign: TextAlign.center,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
+              child: Icon(
+                isNetworkError
+                    ? Icons.wifi_off_rounded
+                    : Icons.error_outline_rounded,
+                size: 56,
+                color: theme.colorScheme.error.withOpacity(0.8),
               ),
             ),
             const SizedBox(height: 32),
-            ElevatedButton(
-              onPressed: () => ref.invalidate(updateCheckProvider),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: theme.colorScheme.primary,
-                foregroundColor: theme.colorScheme.onPrimary,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 32,
-                  vertical: 16,
+
+            Text(
+              isNetworkError ? "No Connection" : "Something Went Wrong",
+              style: theme.textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.bold,
+                letterSpacing: -0.5,
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            Text(
+              isNetworkError
+                  ? "Unable to check for updates. Please connect to the internet and try again."
+                  : "We couldn't check for updates right now. Please try again later.",
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+                height: 1.5,
+              ),
+            ),
+
+            if (isNetworkError) ...[
+              const SizedBox(height: 24),
+              _buildQuickNetworkTips(theme),
+            ],
+
+            const SizedBox(height: 40),
+
+            // Retry button
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: _isManuallyChecking ? null : _handleCheckAgain,
+                style: FilledButton.styleFrom(
+                  backgroundColor: theme.colorScheme.primary,
+                  foregroundColor: theme.colorScheme.onPrimary,
+                  padding: const EdgeInsets.symmetric(vertical: 18),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
                 ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
+                icon: _isManuallyChecking
+                    ? SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: theme.colorScheme.onPrimary,
+                        ),
+                      )
+                    : const Icon(Icons.refresh_rounded, size: 20),
+                label: Text(
+                  _isManuallyChecking ? "Checking..." : "Try Again",
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
                 ),
               ),
-              child: const Text("Try Again"),
             ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildQuickNetworkTips(ThemeData theme) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.3),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: theme.colorScheme.outline.withOpacity(0.08)),
+      ),
+      child: Column(
+        children: [
+          _buildTipRow(theme, Icons.wifi_rounded, 'Check WiFi connection'),
+          const SizedBox(height: 8),
+          _buildTipRow(
+            theme,
+            Icons.signal_cellular_alt_rounded,
+            'Check mobile data',
+          ),
+          const SizedBox(height: 8),
+          _buildTipRow(
+            theme,
+            Icons.airplanemode_active_rounded,
+            'Toggle airplane mode',
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTipRow(ThemeData theme, IconData icon, String text) {
+    return Row(
+      children: [
+        Icon(
+          icon,
+          size: 18,
+          color: theme.colorScheme.onSurfaceVariant.withOpacity(0.7),
+        ),
+        const SizedBox(width: 12),
+        Text(
+          text,
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
+      ],
     );
   }
 
@@ -135,6 +539,11 @@ class _UpdateCheckPageState extends ConsumerState<UpdateCheckPage> {
     ThemeData theme,
     bool isDark,
   ) {
+    // Handle connectivity errors in result
+    if (result.errorType == UpdateErrorType.offline) {
+      return _buildOfflineState(theme);
+    }
+
     final isUpdateAvailable =
         result.status == UpdateStatus.softUpdate ||
         result.status == UpdateStatus.forceUpdate;
@@ -143,6 +552,7 @@ class _UpdateCheckPageState extends ConsumerState<UpdateCheckPage> {
     return Column(
       children: [
         const Spacer(flex: 2),
+
         // Hero Icon
         Container(
           padding: const EdgeInsets.all(32),
@@ -237,7 +647,7 @@ class _UpdateCheckPageState extends ConsumerState<UpdateCheckPage> {
                       theme,
                       "Newest",
                       "v${result.config!.latestNativeVersion}",
-                      ishighlighted: true,
+                      isHighlighted: true,
                     ),
                   ],
                 ),
@@ -298,10 +708,7 @@ class _UpdateCheckPageState extends ConsumerState<UpdateCheckPage> {
                   isFullWidth: true,
                 )
               : FilledButton.icon(
-                  onPressed: () {
-                    HapticFeedback.mediumImpact();
-                    ref.invalidate(updateCheckProvider);
-                  },
+                  onPressed: _isManuallyChecking ? null : _handleCheckAgain,
                   style: FilledButton.styleFrom(
                     backgroundColor: theme.colorScheme.surfaceContainerHighest
                         .withOpacity(0.3),
@@ -315,10 +722,22 @@ class _UpdateCheckPageState extends ConsumerState<UpdateCheckPage> {
                       ),
                     ),
                   ),
-                  icon: const Icon(Icons.refresh_rounded, size: 20),
-                  label: const Text(
-                    "Check Again",
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  icon: _isManuallyChecking
+                      ? SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: theme.colorScheme.onSurface,
+                          ),
+                        )
+                      : const Icon(Icons.refresh_rounded, size: 20),
+                  label: Text(
+                    _isManuallyChecking ? "Checking..." : "Check Again",
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
                   ),
                 ),
         ),
@@ -327,11 +746,179 @@ class _UpdateCheckPageState extends ConsumerState<UpdateCheckPage> {
     );
   }
 
+  /// Special state for when connectivity check returns offline
+  Widget _buildOfflineState(ThemeData theme) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // Animated WiFi off icon
+            AnimatedBuilder(
+              animation: _pulseController,
+              builder: (context, child) {
+                return Container(
+                  padding: const EdgeInsets.all(28),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.withOpacity(
+                      0.08 + (_pulseController.value * 0.04),
+                    ),
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: Colors.orange.withOpacity(0.2),
+                      width: 2,
+                    ),
+                  ),
+                  child: Icon(
+                    Icons.wifi_off_rounded,
+                    size: 56,
+                    color: Colors.orange.withOpacity(0.9),
+                  ),
+                );
+              },
+            ),
+            const SizedBox(height: 32),
+
+            Text(
+              "You're Offline",
+              style: theme.textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.bold,
+                letterSpacing: -0.5,
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            Text(
+              "Connect to the internet to check for updates and download new versions.",
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+                height: 1.5,
+              ),
+            ),
+            const SizedBox(height: 32),
+
+            // Network tips card
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surfaceContainerHighest.withOpacity(
+                  0.3,
+                ),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: theme.colorScheme.outline.withOpacity(0.1),
+                ),
+              ),
+              child: Column(
+                children: [
+                  _buildNetworkTipItem(
+                    theme,
+                    Icons.wifi_rounded,
+                    "WiFi",
+                    "Connect to a wireless network",
+                  ),
+                  Divider(
+                    height: 24,
+                    color: theme.colorScheme.outline.withOpacity(0.1),
+                  ),
+                  _buildNetworkTipItem(
+                    theme,
+                    Icons.signal_cellular_alt_rounded,
+                    "Mobile Data",
+                    "Enable cellular data in settings",
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 40),
+
+            // Retry button
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: _isManuallyChecking ? null : _handleCheckAgain,
+                style: FilledButton.styleFrom(
+                  backgroundColor: theme.colorScheme.primary,
+                  foregroundColor: theme.colorScheme.onPrimary,
+                  padding: const EdgeInsets.symmetric(vertical: 18),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+                icon: _isManuallyChecking
+                    ? SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: theme.colorScheme.onPrimary,
+                        ),
+                      )
+                    : const Icon(Icons.refresh_rounded, size: 20),
+                label: Text(
+                  _isManuallyChecking ? "Checking..." : "Try Again",
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNetworkTipItem(
+    ThemeData theme,
+    IconData icon,
+    String title,
+    String subtitle,
+  ) {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: theme.colorScheme.primary.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Icon(icon, size: 22, color: theme.colorScheme.primary),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                subtitle,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildVersionColumn(
     ThemeData theme,
     String label,
     String version, {
-    bool ishighlighted = false,
+    bool isHighlighted = false,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -350,7 +937,7 @@ class _UpdateCheckPageState extends ConsumerState<UpdateCheckPage> {
           version,
           style: theme.textTheme.titleMedium?.copyWith(
             fontWeight: FontWeight.bold,
-            color: ishighlighted
+            color: isHighlighted
                 ? Colors.blueAccent
                 : theme.colorScheme.onSurface,
             fontFamily: 'monospace',
