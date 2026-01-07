@@ -9,6 +9,7 @@ import '../../../onboarding/presentation/providers/onboarding_provider.dart';
 import '../providers/update_provider.dart';
 import '../../../../core/navigation/navigation.dart';
 import '../../../../core/navigation/active_route_provider.dart';
+import '../../../../core/services/connectivity_service.dart';
 
 class VersionCheckGate extends ConsumerWidget {
   final Widget child;
@@ -447,7 +448,7 @@ class _SoftUpdateBannerState extends ConsumerState<SoftUpdateBanner>
   }
 }
 
-class UpdateDownloadButton extends ConsumerWidget {
+class UpdateDownloadButton extends ConsumerStatefulWidget {
   final String? url;
   final String version;
   final bool isCompact;
@@ -462,14 +463,221 @@ class UpdateDownloadButton extends ConsumerWidget {
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final downloadState = ref.watch(updateDownloadProvider);
+  ConsumerState<UpdateDownloadButton> createState() =>
+      _UpdateDownloadButtonState();
+}
+
+class _UpdateDownloadButtonState extends ConsumerState<UpdateDownloadButton> {
+  bool _isCheckingConnectivity = false;
+
+  /// Shows a network error snackbar with action to retry
+  void _showNetworkErrorSnackbar(
+    BuildContext context,
+    ThemeData theme,
+    UpdateErrorType? errorType,
+  ) {
+    final message = _getErrorMessage(errorType);
+    final icon = _getErrorIcon(errorType);
+
+    ScaffoldMessenger.of(context).clearSnackBars();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              decoration: BoxDecoration(
+                color: theme.brightness == Brightness.dark
+                    ? const Color(0xFF1A1A1A).withOpacity(0.95)
+                    : const Color(0xFFF0F0F0).withOpacity(0.95),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: theme.colorScheme.error.withOpacity(0.2),
+                  width: 1,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.error.withOpacity(0.12),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(icon, size: 18, color: theme.colorScheme.error),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _getErrorTitle(errorType),
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                            color: theme.colorScheme.onSurface,
+                            letterSpacing: -0.2,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          message,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 4),
+        padding: EdgeInsets.zero,
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      ),
+    );
+  }
+
+  String _getErrorTitle(UpdateErrorType? errorType) {
+    switch (errorType) {
+      case UpdateErrorType.offline:
+        return 'No Internet';
+      case UpdateErrorType.serverUnreachable:
+        return 'Server Unavailable';
+      case UpdateErrorType.downloadInterrupted:
+        return 'Connection Lost';
+      case UpdateErrorType.fileSystemError:
+        return 'Storage Error';
+      case UpdateErrorType.installationFailed:
+        return 'Installation Failed';
+      default:
+        return 'Download Failed';
+    }
+  }
+
+  String _getErrorMessage(UpdateErrorType? errorType) {
+    switch (errorType) {
+      case UpdateErrorType.offline:
+        return 'Connect to WiFi or mobile data to download.';
+      case UpdateErrorType.serverUnreachable:
+        return 'Update server is temporarily unavailable.';
+      case UpdateErrorType.downloadInterrupted:
+        return 'Please check your connection and try again.';
+      case UpdateErrorType.fileSystemError:
+        return 'Check storage space and permissions.';
+      case UpdateErrorType.installationFailed:
+        return 'Please try installing again.';
+      default:
+        return 'Something went wrong. Please try again.';
+    }
+  }
+
+  IconData _getErrorIcon(UpdateErrorType? errorType) {
+    switch (errorType) {
+      case UpdateErrorType.offline:
+        return Icons.wifi_off_rounded;
+      case UpdateErrorType.serverUnreachable:
+        return Icons.cloud_off_rounded;
+      case UpdateErrorType.downloadInterrupted:
+        return Icons.signal_wifi_statusbar_connected_no_internet_4_rounded;
+      case UpdateErrorType.fileSystemError:
+        return Icons.storage_rounded;
+      case UpdateErrorType.installationFailed:
+        return Icons.error_outline_rounded;
+      default:
+        return Icons.warning_amber_rounded;
+    }
+  }
+
+  Future<void> _handleDownload() async {
+    if (widget.url == null) return;
+
     final notifier = ref.read(updateDownloadProvider.notifier);
+    final downloadState = ref.read(updateDownloadProvider);
+
+    // If already done, just install
+    if (downloadState.isDone && downloadState.filePath != null) {
+      final file = File(downloadState.filePath!);
+      ref.read(updateServiceFutureProvider).value?.installApk(file);
+      return;
+    }
+
+    // If had an error, check connectivity first before retrying
+    if (downloadState.error != null) {
+      setState(() => _isCheckingConnectivity = true);
+
+      final connectivity = await notifier.checkConnectivity();
+
+      if (!mounted) return;
+      setState(() => _isCheckingConnectivity = false);
+
+      if (connectivity == ConnectivityStatus.offline) {
+        _showNetworkErrorSnackbar(
+          context,
+          Theme.of(context),
+          UpdateErrorType.offline,
+        );
+        return;
+      }
+
+      notifier.reset();
+    }
+
+    // Start download
+    notifier.downloadAndInstall(widget.url!, widget.version);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final downloadState = ref.watch(updateDownloadProvider);
     final theme = Theme.of(context);
+
+    // Show error snackbar when error state changes
+    ref.listen<DownloadState>(updateDownloadProvider, (prev, next) {
+      if (next.error != null && prev?.error == null) {
+        _showNetworkErrorSnackbar(context, theme, next.errorType);
+      }
+    });
 
     Widget content;
 
-    if (downloadState.isDownloading) {
+    if (_isCheckingConnectivity) {
+      content = Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          SizedBox(
+            width: 18,
+            height: 18,
+            child: CircularProgressIndicator(
+              strokeWidth: 2.5,
+              color: theme.colorScheme.onPrimary,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Text(
+            'Checking...',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: theme.colorScheme.onPrimary,
+              fontFamily: 'UncutSans',
+            ),
+          ),
+        ],
+      );
+    } else if (downloadState.isDownloading) {
       content = Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -514,18 +722,32 @@ class UpdateDownloadButton extends ConsumerWidget {
         ],
       );
     } else if (downloadState.error != null) {
-      content = Text(
-        'Retry Download',
-        style: TextStyle(
-          fontWeight: FontWeight.bold,
-          color: theme.colorScheme.onError,
-        ),
+      // Enhanced error state with icon
+      content = Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            downloadState.isNetworkError
+                ? Icons.wifi_off_rounded
+                : Icons.refresh_rounded,
+            size: 18,
+            color: theme.colorScheme.onError,
+          ),
+          const SizedBox(width: 8),
+          Text(
+            downloadState.isNetworkError ? 'Check Connection' : 'Retry',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: theme.colorScheme.onError,
+            ),
+          ),
+        ],
       );
     } else {
       content = Text(
         'Update Now',
         style: TextStyle(
-          fontSize: isCompact ? 14 : 16,
+          fontSize: widget.isCompact ? 14 : 16,
           fontWeight: FontWeight.bold,
           color: theme.colorScheme.onPrimary,
         ),
@@ -533,60 +755,64 @@ class UpdateDownloadButton extends ConsumerWidget {
     }
 
     // Button Colors
-    Color? bgColor;
-    Color? fgColor;
+    Color bgColor;
 
     if (downloadState.isDone) {
-      // "Premium Green" requested for install
-      // Using a more sophisticated, "Minimal UI" green for better theme harmony
+      // Premium Green for install
       bgColor = const Color(0xFF00BB2D);
-      fgColor = Colors.white;
     } else if (downloadState.error != null) {
-      bgColor = theme.colorScheme.error;
-      fgColor = theme.colorScheme.onError;
+      // Subtle error color for retry - shows it needs attention
+      bgColor = downloadState.isNetworkError
+          ? Colors.orange.shade700
+          : theme.colorScheme.error;
     } else {
-      // Default: Primary Color (Monochrome)
       bgColor = theme.colorScheme.primary;
-      fgColor = theme.colorScheme.onPrimary;
     }
 
-    return SizedBox(
-      width: isFullWidth ? double.infinity : null,
-      height: isCompact ? 48 : 56,
-      child: ElevatedButton(
-        onPressed: () {
-          if (downloadState.isDownloading) return;
-
-          if (downloadState.isDone && downloadState.filePath != null) {
-            final file = File(downloadState.filePath!);
-            ref.read(updateServiceFutureProvider).value?.installApk(file);
-          } else if (downloadState.error != null) {
-            notifier.reset();
-            if (url != null) {
-              notifier.downloadAndInstall(url!, version);
-            }
-          } else {
-            if (url != null) {
-              notifier.downloadAndInstall(url!, version);
-            }
-          }
-        },
-        style: ElevatedButton.styleFrom(
-          backgroundColor: bgColor,
-          foregroundColor: fgColor,
-          elevation: 0,
-          shadowColor: Colors.transparent,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          textStyle: const TextStyle(
-            fontWeight: FontWeight.bold,
-            fontFamily: 'UncutSans',
-            letterSpacing: -0.5,
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SizedBox(
+          width: widget.isFullWidth ? double.infinity : null,
+          height: widget.isCompact ? 48 : 56,
+          child: ElevatedButton(
+            onPressed: (_isCheckingConnectivity || downloadState.isDownloading)
+                ? null
+                : _handleDownload,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: bgColor,
+              foregroundColor: Colors.white,
+              disabledBackgroundColor: bgColor.withOpacity(0.6),
+              disabledForegroundColor: Colors.white70,
+              elevation: 0,
+              shadowColor: Colors.transparent,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              textStyle: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontFamily: 'UncutSans',
+                letterSpacing: -0.5,
+              ),
+            ),
+            child: content,
           ),
         ),
-        child: content,
-      ),
+
+        // Subtle error message below button when there's an error
+        if (downloadState.error != null && !downloadState.isDownloading) ...[
+          const SizedBox(height: 12),
+          Text(
+            downloadState.isNetworkError
+                ? 'Connect to internet to download'
+                : 'Tap to try again',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant.withOpacity(0.8),
+              fontSize: 12,
+            ),
+          ),
+        ],
+      ],
     );
   }
 }
