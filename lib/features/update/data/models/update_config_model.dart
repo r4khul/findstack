@@ -7,6 +7,8 @@ class UpdateConfigModel {
   final String apkDirectDownloadUrl;
   final String? releaseNotes;
   final bool forceUpdate;
+  final List<String> features;
+  final List<String> fixes;
 
   const UpdateConfigModel({
     required this.latestNativeVersion,
@@ -15,7 +17,15 @@ class UpdateConfigModel {
     required this.apkDirectDownloadUrl,
     this.releaseNotes,
     required this.forceUpdate,
+    this.features = const [],
+    this.fixes = const [],
   });
+
+  /// Whether there are any features or fixes to display
+  bool get hasChangelog => features.isNotEmpty || fixes.isNotEmpty;
+
+  /// Total number of changes (features + fixes)
+  int get totalChanges => features.length + fixes.length;
 
   factory UpdateConfigModel.fromJson(Map<String, dynamic> json) {
     try {
@@ -30,6 +40,16 @@ class UpdateConfigModel {
         apkDirectDownloadUrl: json['apk_direct_download_url'] as String,
         releaseNotes: json['release_notes'] as String?,
         forceUpdate: json['force_update'] as bool? ?? false,
+        features:
+            (json['features'] as List<dynamic>?)
+                ?.map((e) => e as String)
+                .toList() ??
+            const [],
+        fixes:
+            (json['fixes'] as List<dynamic>?)
+                ?.map((e) => e as String)
+                .toList() ??
+            const [],
       );
     } catch (e) {
       throw FormatException('Failed to parse UpdateConfigModel: $e');
@@ -44,6 +64,8 @@ class UpdateConfigModel {
       'apk_direct_download_url': apkDirectDownloadUrl,
       'release_notes': releaseNotes,
       'force_update': forceUpdate,
+      'features': features,
+      'fixes': fixes,
     };
   }
 }
