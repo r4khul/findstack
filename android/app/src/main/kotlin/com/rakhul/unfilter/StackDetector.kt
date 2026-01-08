@@ -176,7 +176,7 @@ class StackDetector {
             if (name.contains("flutter_assets") || name.endsWith("libapp.so") || name.endsWith("app.so")) result.hasFlutterAssets = true
             else if (name.contains("index.android.bundle")) result.hasReactNativeBundle = true
             else if (name.contains("libmonodroid.so") || name.contains("assemblies/Mono.Android.dll")) result.hasXamarin = true
-            else if (name.contains("www/index.html")) result.hasIonic = true
+            else if (name.contains("ionic.js") || name.contains("ionic.css") || name.contains("ionicons")) result.hasIonic = true
             else if (name.contains("libgodot_android.so")) result.hasGodot = true
             else if (name.contains("libunity.so")) result.hasUnity = true
             else if (name.endsWith("capacitor.config.json") || name.contains("public/capacitor.js")) result.hasCapacitor = true
