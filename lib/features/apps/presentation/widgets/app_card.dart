@@ -59,6 +59,9 @@ class AppCard extends StatelessWidget {
         return 'assets/vectors/icon_ionic.svg';
       case 'xamarin':
         return 'assets/vectors/icon_xamarin.svg';
+      case 'jetpack compose':
+      case 'jetpack':
+        return 'assets/vectors/icon_jetpack.svg';
       default:
         return 'assets/vectors/icon_android.svg';
     }
