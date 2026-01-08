@@ -19,9 +19,10 @@ class VersionCheckGate extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     // Check onboarding status first
-    final onboardingState = ref.watch(onboardingStateProvider);
-    // If onboarding is loading or not completed, suppress updates
-    if (onboardingState.asData?.value != true) {
+    // Check onboarding status first
+    final hasCompletedOnboarding = ref.watch(onboardingStateProvider);
+    // If onboarding is not completed, suppress updates
+    if (!hasCompletedOnboarding) {
       return Stack(children: [child]);
     }
 

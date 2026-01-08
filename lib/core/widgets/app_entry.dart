@@ -12,33 +12,17 @@ class AppEntry extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final onboardingState = ref.watch(onboardingStateProvider);
+    final hasCompletedOnboarding = ref.watch(onboardingStateProvider);
 
-    return onboardingState.when(
-      data: (hasCompletedOnboarding) {
-        // Post-frame callback to ensure the widget is built before removing splash
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          FlutterNativeSplash.remove();
-        });
+    // Remove splash screen immediately after first build
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      FlutterNativeSplash.remove();
+    });
 
-        if (hasCompletedOnboarding) {
-          return const HomePage();
-        } else {
-          return const OnboardingPage();
-        }
-      },
-      error: (error, stack) {
-        // Fallback in case of error
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          FlutterNativeSplash.remove();
-        });
-        return const OnboardingPage();
-      },
-      loading: () {
-        // Keep showing the native splash screen (by not removing it)
-        // detailed logic is handled by FlutterNativeSplash.preserve() in main.dart
-        return const SizedBox.shrink();
-      },
-    );
+    if (hasCompletedOnboarding) {
+      return const HomePage();
+    } else {
+      return const OnboardingPage();
+    }
   }
 }
