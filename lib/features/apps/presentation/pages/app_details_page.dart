@@ -343,7 +343,7 @@ class _AppDetailsPageState extends ConsumerState<AppDetailsPage> {
               ),
               const SizedBox(width: 8),
               Text(
-                app.stack,
+                app.stack == 'Jetpack' ? 'Jetpack Compose' : app.stack,
                 style: TextStyle(
                   color: stackColor,
                   fontWeight: FontWeight.bold,
@@ -1483,6 +1483,9 @@ class _AppDetailsPageState extends ConsumerState<AppDetailsPage> {
         return 'assets/vectors/icon_ionic.svg';
       case 'xamarin':
         return 'assets/vectors/icon_xamarin.svg';
+      case 'jetpack compose':
+      case 'jetpack':
+        return 'assets/vectors/icon_jetpack.svg';
       default:
         return 'assets/vectors/icon_android.svg';
     }
