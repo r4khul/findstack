@@ -14,4 +14,5 @@ class TechStacks {
   static const pwa = 'PWA';
   static const ionic = 'Ionic';
   static const xamarin = 'Xamarin';
+  static const jetpack = 'Jetpack';
 }

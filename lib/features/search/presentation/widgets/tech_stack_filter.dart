@@ -19,11 +19,12 @@ class TechStackFilter extends ConsumerWidget {
         'name': TechStacks.reactNative,
         'icon': 'assets/vectors/icon_reactnative.svg',
       },
+      {'name': TechStacks.jetpack, 'icon': 'assets/vectors/icon_jetpack.svg'},
       {'name': TechStacks.kotlin, 'icon': 'assets/vectors/icon_kotlin.svg'},
       {'name': TechStacks.java, 'icon': 'assets/vectors/icon_java.svg'},
-      {'name': TechStacks.pwa, 'icon': 'assets/vectors/icon_pwa.svg'},
       {'name': TechStacks.ionic, 'icon': 'assets/vectors/icon_ionic.svg'},
       {'name': TechStacks.xamarin, 'icon': 'assets/vectors/icon_xamarin.svg'},
+      {'name': TechStacks.pwa, 'icon': 'assets/vectors/icon_pwa.svg'},
     ];
 
     void showStackSelector() {
