@@ -48,6 +48,10 @@ class _HomePageState extends ConsumerState<HomePage>
     if (state == AppLifecycleState.resumed) {
       // Re-check permission when app resumes
       _checkPermissions(fromResume: true);
+
+      // Trigger background revalidation to detect newly installed/uninstalled apps
+      // This is safe to call - it has built-in throttling and conflict prevention
+      ref.read(installedAppsProvider.notifier).backgroundRevalidate();
     }
   }
 

@@ -8,6 +8,11 @@ class InstalledAppsNotifier extends AsyncNotifier<List<DeviceApp>> {
   // Prevent concurrent scans from Flutter side
   bool _isScanInProgress = false;
 
+  // Background revalidation throttling
+  bool _isRevalidating = false;
+  DateTime? _lastRevalidationTime;
+  static const Duration _revalidationCooldown = Duration(seconds: 30);
+
   @override
   Future<List<DeviceApp>> build() async {
     final repository = ref.watch(deviceAppsRepositoryProvider);
@@ -49,8 +54,64 @@ class InstalledAppsNotifier extends AsyncNotifier<List<DeviceApp>> {
       state = await AsyncValue.guard(
         () => repository.getInstalledApps(forceRefresh: true),
       );
+      // Update last revalidation time since we just did a full scan
+      _lastRevalidationTime = DateTime.now();
     } finally {
       _isScanInProgress = false;
+    }
+  }
+
+  /// Safe background revalidation with throttling.
+  /// Call this when the app resumes to detect newly installed/uninstalled apps.
+  /// This method is safe to call frequently - it has built-in cooldown and conflict prevention.
+  Future<void> backgroundRevalidate() async {
+    // Safety check 1: Don't revalidate if a full scan is in progress
+    if (_isScanInProgress) {
+      print("[Unfilter] backgroundRevalidate: Full scan in progress, skipping");
+      return;
+    }
+
+    // Safety check 2: Don't revalidate if already revalidating
+    if (_isRevalidating) {
+      print("[Unfilter] backgroundRevalidate: Already revalidating, skipping");
+      return;
+    }
+
+    // Safety check 3: Cooldown - don't revalidate too frequently
+    if (_lastRevalidationTime != null) {
+      final elapsed = DateTime.now().difference(_lastRevalidationTime!);
+      if (elapsed < _revalidationCooldown) {
+        print(
+          "[Unfilter] backgroundRevalidate: Cooldown active (${elapsed.inSeconds}s < ${_revalidationCooldown.inSeconds}s), skipping",
+        );
+        return;
+      }
+    }
+
+    // Safety check 4: Only revalidate if we have existing data
+    final currentApps = switch (state) {
+      AsyncData(:final value) => value,
+      _ => <DeviceApp>[],
+    };
+    if (currentApps.isEmpty) {
+      print(
+        "[Unfilter] backgroundRevalidate: No existing data, skipping (use fullScan instead)",
+      );
+      return;
+    }
+
+    _isRevalidating = true;
+    print("[Unfilter] backgroundRevalidate: Starting...");
+
+    try {
+      await revalidate(cachedApps: currentApps);
+      _lastRevalidationTime = DateTime.now();
+      print("[Unfilter] backgroundRevalidate: Complete");
+    } catch (e) {
+      print("[Unfilter] backgroundRevalidate: Failed - $e");
+      // Silently fail - don't disrupt user experience
+    } finally {
+      _isRevalidating = false;
     }
   }
 
