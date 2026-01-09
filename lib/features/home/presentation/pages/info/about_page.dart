@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:url_launcher/url_launcher.dart';
+import '../../widgets/external_link_tile.dart';
 import '../../widgets/premium_sliver_app_bar.dart';
 import '../../widgets/github_cta_card.dart';
-import '../../../../../core/navigation/navigation.dart';
 import '../../../../update/presentation/providers/update_provider.dart';
+import '../../../../../core/navigation/navigation.dart';
 
 class AboutPage extends ConsumerWidget {
   const AboutPage({super.key});
@@ -48,14 +48,12 @@ class AboutPage extends ConsumerWidget {
                   const SizedBox(height: 32),
                   _buildSectionHeader(context, "CONNECT"),
                   const SizedBox(height: 16),
-                  _buildSocialLink(
-                    context,
+                  const ExternalLinkTile(
                     label: "Twitter",
                     value: "@r4khul",
                     url: "https://twitter.com/r4khul",
                   ),
-                  _buildSocialLink(
-                    context,
+                  const ExternalLinkTile(
                     label: "GitHub",
                     value: "r4khul",
                     url: "https://github.com/r4khul",
@@ -268,62 +266,6 @@ class AboutPage extends ConsumerWidget {
         letterSpacing: 1.5,
         fontSize: 11,
         color: Theme.of(context).colorScheme.primary.withOpacity(0.6),
-      ),
-    );
-  }
-
-  Widget _buildSocialLink(
-    BuildContext context, {
-    required String label,
-    required String value,
-    required String url,
-  }) {
-    final theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: () async {
-            final uri = Uri.parse(url);
-            if (await canLaunchUrl(uri)) {
-              await launchUrl(uri, mode: LaunchMode.externalApplication);
-            }
-          },
-          borderRadius: BorderRadius.circular(12),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  label,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: theme.colorScheme.onSurface.withOpacity(0.6),
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                Row(
-                  children: [
-                    Text(
-                      value,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                        color: theme.colorScheme.primary,
-                      ),
-                    ),
-                    const SizedBox(width: 4),
-                    Icon(
-                      Icons.arrow_outward_rounded,
-                      size: 14,
-                      color: theme.colorScheme.primary.withOpacity(0.7),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
       ),
     );
   }
