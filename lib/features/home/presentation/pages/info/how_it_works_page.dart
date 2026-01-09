@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../widgets/external_link_tile.dart';
 import '../../widgets/premium_sliver_app_bar.dart';
 
 class HowItWorksPage extends StatelessWidget {
@@ -37,7 +38,12 @@ class HowItWorksPage extends StatelessWidget {
                       fontSize: 16,
                     ),
                   ),
-                  const SizedBox(height: 32),
+                  const ExternalLinkTile(
+                    label: "Open Source",
+                    value: "View Core",
+                    url: "https://github.com/r4khul/unfilter",
+                  ),
+                  const SizedBox(height: 48),
 
                   // Steps
                   _buildStepCard(
