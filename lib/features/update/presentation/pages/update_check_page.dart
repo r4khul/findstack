@@ -552,8 +552,6 @@ class _UpdateCheckPageState extends ConsumerState<UpdateCheckPage>
 
     return Column(
       children: [
-        const SizedBox(height: 48),
-
         // Hero Icon
         TweenAnimationBuilder<double>(
           tween: Tween(begin: 0.0, end: 1.0),
