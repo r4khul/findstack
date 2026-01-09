@@ -552,48 +552,60 @@ class _UpdateCheckPageState extends ConsumerState<UpdateCheckPage>
 
     return Column(
       children: [
-        const Spacer(flex: 2),
+        const SizedBox(height: 48),
 
         // Hero Icon
-        Container(
-          padding: const EdgeInsets.all(32),
-          decoration: BoxDecoration(
-            color: isUpdateAvailable
-                ? theme.colorScheme.primary.withOpacity(0.05)
-                : theme.colorScheme.surfaceContainerHighest.withOpacity(0.5),
-            shape: BoxShape.circle,
-            border: Border.all(
-              color: isUpdateAvailable
-                  ? theme.colorScheme.primary.withOpacity(0.1)
-                  : Colors.transparent,
-              width: 2,
-            ),
-            boxShadow: isUpdateAvailable
-                ? [
-                    BoxShadow(
-                      color: theme.colorScheme.primary.withOpacity(0.1),
-                      blurRadius: 30,
-                      offset: const Offset(0, 10),
-                    ),
-                  ]
-                : [],
-          ),
-          child: Icon(
-            isUpdateAvailable
-                ? Icons.rocket_launch_rounded
-                : Icons.check_circle_rounded,
-            size: 64,
-            color: isUpdateAvailable
-                ? theme.colorScheme.primary
-                : theme.colorScheme.onSurfaceVariant,
-          ),
+        TweenAnimationBuilder<double>(
+          tween: Tween(begin: 0.0, end: 1.0),
+          duration: const Duration(milliseconds: 600),
+          curve: Curves.elasticOut,
+          builder: (context, value, child) {
+            return Transform.scale(
+              scale: value,
+              child: Container(
+                padding: const EdgeInsets.all(32),
+                decoration: BoxDecoration(
+                  color: isUpdateAvailable
+                      ? theme.colorScheme.primary.withOpacity(0.1)
+                      : theme.colorScheme.surfaceContainerHighest.withOpacity(
+                          0.5,
+                        ),
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: isUpdateAvailable
+                        ? theme.colorScheme.primary.withOpacity(0.2)
+                        : Colors.transparent,
+                    width: 2,
+                  ),
+                  boxShadow: isUpdateAvailable
+                      ? [
+                          BoxShadow(
+                            color: theme.colorScheme.primary.withOpacity(0.2),
+                            blurRadius: 30,
+                            offset: const Offset(0, 10),
+                          ),
+                        ]
+                      : [],
+                ),
+                child: Icon(
+                  isUpdateAvailable
+                      ? Icons.rocket_launch_rounded
+                      : Icons.check_circle_rounded,
+                  size: 64,
+                  color: isUpdateAvailable
+                      ? theme.colorScheme.primary
+                      : theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            );
+          },
         ),
         const SizedBox(height: 32),
 
-        // Status Text
+        // Status & Version Info
         Text(
           isUpdateAvailable ? "Update Available" : "You're up to date",
-          style: theme.textTheme.headlineLarge?.copyWith(
+          style: theme.textTheme.headlineMedium?.copyWith(
             fontWeight: FontWeight.bold,
             letterSpacing: -1.0,
             color: theme.colorScheme.onSurface,
@@ -603,8 +615,8 @@ class _UpdateCheckPageState extends ConsumerState<UpdateCheckPage>
         const SizedBox(height: 12),
         Text(
           isUpdateAvailable
-              ? "A new version of Unfilter is ready to install."
-              : "Unfilter v$currentVersion is the latest version available.",
+              ? "A new version of Unfilter is ready."
+              : "Unfilter v$currentVersion is the latest version.",
           style: theme.textTheme.bodyLarge?.copyWith(
             color: theme.colorScheme.onSurfaceVariant,
             height: 1.5,
@@ -612,143 +624,25 @@ class _UpdateCheckPageState extends ConsumerState<UpdateCheckPage>
           textAlign: TextAlign.center,
         ),
 
-        if (isUpdateAvailable && result.config != null) ...[
-          const Spacer(),
-          // Version Diff Card with Changelog
-          Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: theme.colorScheme.surface,
-              borderRadius: BorderRadius.circular(32),
-              border: Border.all(
-                color: theme.colorScheme.primary.withOpacity(0.08),
-                width: 1.5,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: theme.colorScheme.primary.withOpacity(0.05),
-                  blurRadius: 20,
-                  offset: const Offset(0, 8),
-                ),
-              ],
-            ),
-            child: Column(
-              children: [
-                // Version comparison row
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    _buildVersionColumn(theme, "Current", "v$currentVersion"),
-                    Icon(
-                      Icons.arrow_forward_rounded,
-                      color: theme.colorScheme.onSurfaceVariant.withOpacity(
-                        0.4,
-                      ),
-                    ),
-                    _buildVersionColumn(
-                      theme,
-                      "Newest",
-                      "v${result.config!.latestNativeVersion}",
-                      isHighlighted: true,
-                    ),
-                  ],
-                ),
+        const SizedBox(height: 40),
 
-                // Changelog preview section
-                if (result.config!.hasChangelog ||
-                    result.config!.releaseNotes != null) ...[
-                  const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 20.0),
-                    child: Divider(height: 1),
-                  ),
-
-                  // Quick changelog summary
-                  if (result.config!.hasChangelog) ...[
-                    _buildChangelogPreview(theme, result.config!),
-                    const SizedBox(height: 16),
-
-                    // View Details button
-                    SizedBox(
-                      width: double.infinity,
-                      child: TextButton(
-                        onPressed: () => _showChangelogBottomSheet(
-                          context,
-                          result.config!,
-                          theme,
-                        ),
-                        style: TextButton.styleFrom(
-                          backgroundColor: theme.colorScheme.primary
-                              .withOpacity(0.08),
-                          foregroundColor: theme.colorScheme.primary,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              "View Full Changelog",
-                              style: TextStyle(
-                                fontWeight: FontWeight.w600,
-                                fontSize: 14,
-                                color: theme.colorScheme.primary,
-                              ),
-                            ),
-                            const SizedBox(width: 6),
-                            Icon(
-                              Icons.arrow_forward_ios_rounded,
-                              size: 14,
-                              color: theme.colorScheme.primary,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ] else if (result.config!.releaseNotes != null) ...[
-                    // Fallback to simple release notes if no detailed changelog
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.auto_awesome,
-                                size: 16,
-                                color: theme.colorScheme.primary,
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                "What's New",
-                                style: theme.textTheme.titleSmall?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                  color: theme.colorScheme.onSurface,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          Text(
-                            result.config!.releaseNotes!,
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                              color: theme.colorScheme.onSurfaceVariant,
-                              height: 1.6,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ],
-              ],
-            ),
+        // Version Comparison Grid
+        if (isUpdateAvailable && result.config != null)
+          _buildVersionComparisonCard(
+            theme,
+            currentVersion,
+            result.config!.latestNativeVersion.toString(),
           ),
+
+        if (isUpdateAvailable &&
+            result.config != null &&
+            (result.config!.hasChangelog ||
+                result.config!.releaseNotes != null)) ...[
+          const SizedBox(height: 24),
+          _buildChangelogCard(theme, result.config!),
         ],
 
-        const Spacer(flex: 3),
+        const SizedBox(height: 48),
 
         // Action Button
         SizedBox(
@@ -794,8 +688,246 @@ class _UpdateCheckPageState extends ConsumerState<UpdateCheckPage>
                   ),
                 ),
         ),
-        const SizedBox(height: 32),
+        const SizedBox(height: 40),
       ],
+    );
+  }
+
+  Widget _buildVersionComparisonCard(
+    ThemeData theme,
+    String currentVersion,
+    String newVersion,
+  ) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: theme.colorScheme.outline.withOpacity(0.1)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.02),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: _buildVersionColumn(
+              theme,
+              "Current",
+              "v$currentVersion",
+              false,
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.5),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              Icons.arrow_forward_rounded,
+              size: 16,
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          Expanded(
+            child: _buildVersionColumn(theme, "Newest", "v$newVersion", true),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildVersionColumn(
+    ThemeData theme,
+    String label,
+    String version,
+    bool isNew,
+  ) {
+    return Column(
+      children: [
+        Text(
+          label.toUpperCase(),
+          style: theme.textTheme.labelSmall?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant.withOpacity(0.7),
+            fontWeight: FontWeight.bold,
+            letterSpacing: 1.2,
+            fontSize: 10,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          version,
+          style: theme.textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.bold,
+            color: isNew
+                ? theme.colorScheme.primary
+                : theme.colorScheme.onSurface,
+            fontFamily: 'monospace',
+            letterSpacing: -0.5,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildChangelogCard(ThemeData theme, UpdateConfigModel config) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: theme.colorScheme.outline.withOpacity(0.1)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.02),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.primary.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  Icons.auto_awesome_rounded,
+                  size: 20,
+                  color: theme.colorScheme.primary,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "What's New",
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Text(
+                    "See what has changed",
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+
+          if (config.releaseNotes != null) ...[
+            Text(
+              config.releaseNotes!,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+                height: 1.6,
+              ),
+            ),
+            const SizedBox(height: 24),
+          ],
+
+          if (config.features.isNotEmpty) ...[
+            _buildChangelogSectionHeader(
+              theme,
+              "FEATURES",
+              const Color(0xFF4CAF50),
+            ),
+            const SizedBox(height: 12),
+            ...config.features.map(
+              (f) => _buildChangelogItem(
+                theme,
+                f,
+                Icons.star_rounded,
+                const Color(0xFF4CAF50),
+              ),
+            ),
+            const SizedBox(height: 24),
+          ],
+
+          if (config.fixes.isNotEmpty) ...[
+            _buildChangelogSectionHeader(
+              theme,
+              "FIXES",
+              const Color(0xFF2196F3),
+            ),
+            const SizedBox(height: 12),
+            ...config.fixes.map(
+              (f) => _buildChangelogItem(
+                theme,
+                f,
+                Icons.bug_report_rounded,
+                const Color(0xFF2196F3),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildChangelogSectionHeader(
+    ThemeData theme,
+    String title,
+    Color color,
+  ) {
+    return Text(
+      title,
+      style: theme.textTheme.labelSmall?.copyWith(
+        fontWeight: FontWeight.w800,
+        letterSpacing: 1.2,
+        fontSize: 11,
+        color: color,
+      ),
+    );
+  }
+
+  Widget _buildChangelogItem(
+    ThemeData theme,
+    String text,
+    IconData icon,
+    Color color,
+  ) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(2),
+            margin: const EdgeInsets.only(top: 2),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Icon(icon, size: 14, color: color),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              text,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurface,
+                height: 1.4,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -963,374 +1095,6 @@ class _UpdateCheckPageState extends ConsumerState<UpdateCheckPage>
             ],
           ),
         ),
-      ],
-    );
-  }
-
-  Widget _buildVersionColumn(
-    ThemeData theme,
-    String label,
-    String version, {
-    bool isHighlighted = false,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label.toUpperCase(),
-          style: theme.textTheme.labelSmall?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
-            fontWeight: FontWeight.bold,
-            letterSpacing: 1.0,
-            fontSize: 10,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          version,
-          style: theme.textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.bold,
-            color: isHighlighted
-                ? Colors.blueAccent
-                : theme.colorScheme.onSurface,
-            fontFamily: 'monospace',
-          ),
-        ),
-      ],
-    );
-  }
-
-  /// Builds a compact preview of the changelog showing feature/fix counts
-  Widget _buildChangelogPreview(ThemeData theme, UpdateConfigModel config) {
-    return Row(
-      children: [
-        // Features count
-        if (config.features.isNotEmpty) ...[
-          _buildChangelogCountChip(
-            theme,
-            icon: Icons.auto_awesome_rounded,
-            count: config.features.length,
-            label: config.features.length == 1 ? 'Feature' : 'Features',
-            color: const Color(0xFF4CAF50), // Premium green
-          ),
-          const SizedBox(width: 12),
-        ],
-        // Fixes count
-        if (config.fixes.isNotEmpty)
-          _buildChangelogCountChip(
-            theme,
-            icon: Icons.build_circle_rounded,
-            count: config.fixes.length,
-            label: config.fixes.length == 1 ? 'Fix' : 'Fixes',
-            color: const Color(0xFF2196F3), // Premium blue
-          ),
-      ],
-    );
-  }
-
-  Widget _buildChangelogCountChip(
-    ThemeData theme, {
-    required IconData icon,
-    required int count,
-    required String label,
-    required Color color,
-  }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.2), width: 1),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 16, color: color),
-          const SizedBox(width: 6),
-          Text(
-            '$count $label',
-            style: theme.textTheme.labelMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: color,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// Shows a beautiful bottom sheet with the full changelog
-  void _showChangelogBottomSheet(
-    BuildContext context,
-    UpdateConfigModel config,
-    ThemeData theme,
-  ) {
-    final isDark = theme.brightness == Brightness.dark;
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) {
-        return DraggableScrollableSheet(
-          initialChildSize: 0.7,
-          minChildSize: 0.5,
-          maxChildSize: 0.95,
-          builder: (context, scrollController) {
-            return Container(
-              decoration: BoxDecoration(
-                color: theme.colorScheme.surface,
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(28),
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(isDark ? 0.4 : 0.1),
-                    blurRadius: 20,
-                    offset: const Offset(0, -4),
-                  ),
-                ],
-              ),
-              child: Column(
-                children: [
-                  // Drag handle
-                  Container(
-                    width: 40,
-                    height: 4,
-                    margin: const EdgeInsets.only(top: 12, bottom: 8),
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.onSurface.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-
-                  // Header
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(24, 16, 24, 20),
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: theme.colorScheme.primary.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                          child: Icon(
-                            Icons.history_rounded,
-                            color: theme.colorScheme.primary,
-                            size: 24,
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                "What's New",
-                                style: theme.textTheme.titleLarge?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                  letterSpacing: -0.5,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                'Version ${config.latestNativeVersion}',
-                                style: theme.textTheme.bodySmall?.copyWith(
-                                  color: theme.colorScheme.onSurfaceVariant,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        IconButton(
-                          onPressed: () => Navigator.of(context).pop(),
-                          icon: Icon(
-                            Icons.close_rounded,
-                            color: theme.colorScheme.onSurfaceVariant,
-                          ),
-                          style: IconButton.styleFrom(
-                            backgroundColor:
-                                theme.colorScheme.surfaceContainerHighest,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  Divider(
-                    height: 1,
-                    color: theme.colorScheme.outline.withOpacity(0.1),
-                  ),
-
-                  // Scrollable content
-                  Expanded(
-                    child: ListView(
-                      controller: scrollController,
-                      padding: const EdgeInsets.all(24),
-                      children: [
-                        // Release notes (if any)
-                        if (config.releaseNotes != null) ...[
-                          Container(
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: theme.colorScheme.primaryContainer
-                                  .withOpacity(0.2),
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(
-                                color: theme.colorScheme.primary.withOpacity(
-                                  0.1,
-                                ),
-                              ),
-                            ),
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Icon(
-                                  Icons.info_outline_rounded,
-                                  size: 20,
-                                  color: theme.colorScheme.primary,
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Text(
-                                    config.releaseNotes!,
-                                    style: theme.textTheme.bodyMedium?.copyWith(
-                                      color: theme.colorScheme.onSurface,
-                                      height: 1.5,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: 28),
-                        ],
-
-                        // Features section
-                        if (config.features.isNotEmpty) ...[
-                          _buildChangelogSection(
-                            theme: theme,
-                            title: 'New Features',
-                            icon: Icons.auto_awesome_rounded,
-                            color: const Color(0xFF4CAF50),
-                            items: config.features,
-                          ),
-                          const SizedBox(height: 24),
-                        ],
-
-                        // Fixes section
-                        if (config.fixes.isNotEmpty)
-                          _buildChangelogSection(
-                            theme: theme,
-                            title: 'Bug Fixes',
-                            icon: Icons.build_circle_rounded,
-                            color: const Color(0xFF2196F3),
-                            items: config.fixes,
-                          ),
-
-                        const SizedBox(height: 32),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-
-  Widget _buildChangelogSection({
-    required ThemeData theme,
-    required String title,
-    required IconData icon,
-    required Color color,
-    required List<String> items,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Section header
-        Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(icon, size: 18, color: color),
-            ),
-            const SizedBox(width: 12),
-            Text(
-              title,
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-                letterSpacing: -0.3,
-              ),
-            ),
-            const SizedBox(width: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                '${items.length}',
-                style: theme.textTheme.labelSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: color,
-                ),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-
-        // Items list
-        ...items.asMap().entries.map((entry) {
-          final index = entry.key;
-          final item = entry.value;
-          final isLast = index == items.length - 1;
-
-          return Container(
-            margin: EdgeInsets.only(bottom: isLast ? 0 : 12),
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.3),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(
-                color: theme.colorScheme.outline.withOpacity(0.08),
-              ),
-            ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  width: 6,
-                  height: 6,
-                  margin: const EdgeInsets.only(top: 6, right: 12),
-                  decoration: BoxDecoration(
-                    color: color,
-                    shape: BoxShape.circle,
-                  ),
-                ),
-                Expanded(
-                  child: Text(
-                    item,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: theme.colorScheme.onSurface,
-                      height: 1.4,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          );
-        }),
       ],
     );
   }
