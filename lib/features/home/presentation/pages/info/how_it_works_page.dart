@@ -22,7 +22,7 @@ class HowItWorksPage extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    "The real\nTruth",
+                    "Under\nthe Hood",
                     style: theme.textTheme.headlineMedium?.copyWith(
                       fontWeight: FontWeight.w800,
                       height: 1.1,
@@ -31,19 +31,20 @@ class HowItWorksPage extends StatelessWidget {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    "UnFilter uses advanced static analysis to identify technologies without needing to decompile or upload anything.",
+                    "No decompiling. No uploads. Just smart static analysis that reads what's already there and tells you exactly what an app is built with.",
                     style: theme.textTheme.bodyLarge?.copyWith(
                       color: theme.colorScheme.onSurface.withOpacity(0.7),
                       height: 1.5,
                       fontSize: 16,
                     ),
                   ),
+                  const SizedBox(height: 20),
                   const ExternalLinkTile(
                     label: "Open Source",
-                    value: "View Core",
+                    value: "View",
                     url: "https://github.com/r4khul/unfilter",
                   ),
-                  const SizedBox(height: 48),
+                  const SizedBox(height: 30),
 
                   // Steps
                   _buildStepCard(
@@ -51,7 +52,7 @@ class HowItWorksPage extends StatelessWidget {
                     step: "01",
                     title: "Deep Scan",
                     description:
-                        "We scan the publicly available package information and native libraries stored on your device.",
+                        "We dig through each app's package info and native libraries sitting right on your phone. Nothing leaves your device.",
                     icon: Icons.radar_rounded,
                   ),
                   _buildStepCard(
@@ -59,7 +60,7 @@ class HowItWorksPage extends StatelessWidget {
                     step: "02",
                     title: "Signature Matching",
                     description:
-                        "We compare files against our offline database of 50+ frameworks like Flutter, React Native, and Unity.",
+                        "We run those files against a local database of 50+ frameworks—Flutter, React Native, Unity, you name it—to find matches.",
                     icon: Icons.fingerprint_rounded,
                   ),
                   _buildStepCard(
@@ -67,7 +68,7 @@ class HowItWorksPage extends StatelessWidget {
                     step: "03",
                     title: "Zero Cloud",
                     description:
-                        "Everything happens on-device. No data is ever sent to a server. Your privacy is guaranteed by code.",
+                        "Start to finish, every scan happens locally. Your app data stays on your phone—we literally can't see it.",
                     icon: Icons.cloud_off_rounded,
                     isLast: true,
                   ),

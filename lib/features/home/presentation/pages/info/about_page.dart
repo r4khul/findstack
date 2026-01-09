@@ -30,7 +30,7 @@ class AboutPage extends ConsumerWidget {
                   _buildHeroSection(context, isDark, versionAsync),
                   const SizedBox(height: 32),
                   Text(
-                    "UnFilter is a precision tool for the curious mind. It peels back the digital layers of your favorite apps to reveal the technology powering them.",
+                    "Ever wondered what your favorite apps are actually built with? UnFilter cracks them open so you can see the frameworks, engines, and tech stacks under the hood.",
                     style: theme.textTheme.bodyLarge?.copyWith(
                       color: theme.colorScheme.onSurface.withOpacity(0.8),
                       height: 1.6,
@@ -237,7 +237,7 @@ class AboutPage extends ConsumerWidget {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        "Behind the scenes logic",
+                        "See how the magic actually works",
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: theme.colorScheme.onSurfaceVariant,
                         ),

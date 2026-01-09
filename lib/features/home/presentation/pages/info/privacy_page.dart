@@ -32,7 +32,7 @@ class PrivacyPage extends StatelessWidget {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    "We believe privacy is a fundamental right. UnFilter is designed from the ground up to be offline-first and respectful of your data.",
+                    "Privacy isn't a feature we tacked on—it's baked into how this app works. UnFilter runs offline because that's the only way to do this right.",
                     style: theme.textTheme.bodyLarge?.copyWith(
                       color: theme.colorScheme.onSurface.withOpacity(0.8),
                       height: 1.6,
@@ -52,28 +52,28 @@ class PrivacyPage extends StatelessWidget {
                     context,
                     title: "Local Processing",
                     content:
-                        "All app analysis, scanning, and signature matching happens directly on your device. We do not (and cannot) see your apps or data.",
+                        "Every scan, every match, every bit of analysis runs right on your phone. We couldn't peek at your apps even if we wanted to—we built it that way.",
                     icon: Icons.phonelink_lock_rounded,
                   ),
                   _buildPolicySection(
                     context,
                     title: "Minimal Permissions",
                     content:
-                        "We only request permissions strictly necessary for functionality: querying packages to list apps and storage access for deep native scanning.",
+                        "We ask for exactly two things: permission to see what apps you have installed, and storage access for digging into native libraries. That's it.",
                     icon: Icons.verified_user_rounded,
                   ),
                   _buildPolicySection(
                     context,
                     title: "No Tracking",
                     content:
-                        "UnFilter contains zero analytics trackers, ad SDKs, or crash reporters. Your usage habits remain private.",
+                        "No analytics. No ad SDKs. No crash reporters phoning home. What you do inside the app stays between you and your phone.",
                     icon: Icons.do_not_disturb_on_rounded,
                   ),
                   _buildPolicySection(
                     context,
                     title: "Limited Networking",
                     content:
-                        "The app only connects to the internet to check for software updates and to fetch the GitHub star count. No user data is transmitted.",
+                        "The only time we hit the internet? To check for updates and grab the GitHub star count. That's it—nothing about you leaves this app.",
                     icon: Icons.wifi_rounded,
                   ),
 
