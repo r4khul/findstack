@@ -313,6 +313,7 @@ class _UpdateCheckPageState extends ConsumerState<UpdateCheckPage>
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
+      extendBody: true,
       body: CustomScrollView(
         physics: const BouncingScrollPhysics(),
         slivers: [
@@ -320,6 +321,7 @@ class _UpdateCheckPageState extends ConsumerState<UpdateCheckPage>
           SliverFillRemaining(
             hasScrollBody: false,
             child: SafeArea(
+              bottom: false,
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24.0),
                 child: updateAsync.when(
@@ -332,6 +334,140 @@ class _UpdateCheckPageState extends ConsumerState<UpdateCheckPage>
             ),
           ),
         ],
+      ),
+      bottomNavigationBar: updateAsync.when(
+        loading: () => const SizedBox.shrink(),
+        error: (_, __) => _buildBottomActionBar(
+          theme,
+          label: "Try Again",
+          icon: Icons.refresh_rounded,
+          onPressed: _isManuallyChecking ? null : _handleCheckAgain,
+          isLoading: _isManuallyChecking,
+        ),
+        data: (result) {
+          if (result.errorType == UpdateErrorType.offline) {
+            return _buildBottomActionBar(
+              theme,
+              label: "Try Again",
+              icon: Icons.refresh_rounded,
+              onPressed: _isManuallyChecking ? null : _handleCheckAgain,
+              isLoading: _isManuallyChecking,
+            );
+          }
+
+          final isUpdateAvailable =
+              result.status == UpdateStatus.softUpdate ||
+              result.status == UpdateStatus.forceUpdate;
+
+          if (isUpdateAvailable) {
+            return _buildBottomActionBar(
+              theme,
+              child: UpdateDownloadButton(
+                url: result.config?.apkDirectDownloadUrl,
+                version:
+                    result.config?.latestNativeVersion.toString() ?? 'latest',
+                isFullWidth: true,
+              ),
+            );
+          } else {
+            return _buildBottomActionBar(
+              theme,
+              label: _isManuallyChecking ? "Checking..." : "Check Again",
+              icon: Icons.refresh_rounded,
+              onPressed: _isManuallyChecking ? null : _handleCheckAgain,
+              isLoading: _isManuallyChecking,
+              isSecondary: true,
+            );
+          }
+        },
+      ),
+    );
+  }
+
+  Widget _buildBottomActionBar(
+    ThemeData theme, {
+    String? label,
+    IconData? icon,
+    VoidCallback? onPressed,
+    bool isLoading = false,
+    bool isSecondary = false,
+    Widget? child,
+  }) {
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      child: SafeArea(
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(24),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surface.withOpacity(0.8),
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(isDark ? 0.3 : 0.1),
+                    blurRadius: 20,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+                border: Border.all(
+                  color: isDark
+                      ? Colors.white.withOpacity(0.1)
+                      : Colors.black.withOpacity(0.05),
+                ),
+              ),
+              child:
+                  child ??
+                  FilledButton.icon(
+                    onPressed: onPressed,
+                    style: FilledButton.styleFrom(
+                      backgroundColor: isSecondary
+                          ? theme.colorScheme.surfaceContainerHighest
+                                .withOpacity(0.5)
+                          : theme.colorScheme.primary,
+                      foregroundColor: isSecondary
+                          ? theme.colorScheme.onSurface
+                          : theme.colorScheme.onPrimary,
+                      padding: const EdgeInsets.symmetric(vertical: 18),
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        side: isSecondary
+                            ? BorderSide(
+                                color: theme.colorScheme.outline.withOpacity(
+                                  0.1,
+                                ),
+                              )
+                            : BorderSide.none,
+                      ),
+                    ),
+                    icon: isLoading
+                        ? SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: isSecondary
+                                  ? theme.colorScheme.onSurface
+                                  : theme.colorScheme.onPrimary,
+                            ),
+                          )
+                        : Icon(icon, size: 20),
+                    label: Text(
+                      label ?? "",
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ),
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -447,40 +583,10 @@ class _UpdateCheckPageState extends ConsumerState<UpdateCheckPage>
               _buildQuickNetworkTips(theme),
             ],
 
-            const SizedBox(height: 40),
+            // Retry button removed (moved to bottom bar)
 
-            // Retry button
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton.icon(
-                onPressed: _isManuallyChecking ? null : _handleCheckAgain,
-                style: FilledButton.styleFrom(
-                  backgroundColor: theme.colorScheme.primary,
-                  foregroundColor: theme.colorScheme.onPrimary,
-                  padding: const EdgeInsets.symmetric(vertical: 18),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                ),
-                icon: _isManuallyChecking
-                    ? SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: theme.colorScheme.onPrimary,
-                        ),
-                      )
-                    : const Icon(Icons.refresh_rounded, size: 20),
-                label: Text(
-                  _isManuallyChecking ? "Checking..." : "Try Again",
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
-                ),
-              ),
-            ),
+            // Padding for bottom bar
+            const SizedBox(height: 80),
           ],
         ),
       ),
@@ -552,6 +658,7 @@ class _UpdateCheckPageState extends ConsumerState<UpdateCheckPage>
 
     return Column(
       children: [
+        if (!isUpdateAvailable) const Spacer(),
         // Hero Icon
         TweenAnimationBuilder<double>(
           tween: Tween(begin: 0.0, end: 1.0),
@@ -640,53 +747,10 @@ class _UpdateCheckPageState extends ConsumerState<UpdateCheckPage>
           _buildChangelogCard(theme, result.config!),
         ],
 
-        const SizedBox(height: 48),
+        if (!isUpdateAvailable) const Spacer(),
 
-        // Action Button
-        SizedBox(
-          width: double.infinity,
-          child: isUpdateAvailable
-              ? UpdateDownloadButton(
-                  url: result.config?.apkDirectDownloadUrl,
-                  version:
-                      result.config?.latestNativeVersion.toString() ?? 'latest',
-                  isFullWidth: true,
-                )
-              : FilledButton.icon(
-                  onPressed: _isManuallyChecking ? null : _handleCheckAgain,
-                  style: FilledButton.styleFrom(
-                    backgroundColor: theme.colorScheme.surfaceContainerHighest
-                        .withOpacity(0.3),
-                    foregroundColor: theme.colorScheme.onSurface,
-                    padding: const EdgeInsets.symmetric(vertical: 18),
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                      side: BorderSide(
-                        color: theme.colorScheme.outline.withOpacity(0.1),
-                      ),
-                    ),
-                  ),
-                  icon: _isManuallyChecking
-                      ? SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: theme.colorScheme.onSurface,
-                          ),
-                        )
-                      : const Icon(Icons.refresh_rounded, size: 20),
-                  label: Text(
-                    _isManuallyChecking ? "Checking..." : "Check Again",
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                    ),
-                  ),
-                ),
-        ),
-        const SizedBox(height: 40),
+        // Bottom padding to avoid content being hidden behind navbar
+        const SizedBox(height: 120),
       ],
     );
   }
@@ -751,24 +815,47 @@ class _UpdateCheckPageState extends ConsumerState<UpdateCheckPage>
         Text(
           label.toUpperCase(),
           style: theme.textTheme.labelSmall?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant.withOpacity(0.7),
+            color: isNew
+                ? theme.colorScheme.primary
+                : theme.colorScheme.onSurfaceVariant.withOpacity(0.7),
             fontWeight: FontWeight.bold,
             letterSpacing: 1.2,
             fontSize: 10,
           ),
         ),
-        const SizedBox(height: 6),
-        Text(
-          version,
-          style: theme.textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.bold,
-            color: isNew
-                ? theme.colorScheme.primary
-                : theme.colorScheme.onSurface,
-            fontFamily: 'monospace',
-            letterSpacing: -0.5,
-          ),
-        ),
+        const SizedBox(height: 8),
+        isNew
+            ? Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.primary.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: theme.colorScheme.primary.withOpacity(0.2),
+                  ),
+                ),
+                child: Text(
+                  version,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: theme.colorScheme.primary,
+                    fontFamily: 'monospace',
+                    letterSpacing: -0.5,
+                  ),
+                ),
+              )
+            : Text(
+                version,
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: theme.colorScheme.onSurface,
+                  fontFamily: 'monospace',
+                  letterSpacing: -0.5,
+                ),
+              ),
       ],
     );
   }
@@ -1018,38 +1105,7 @@ class _UpdateCheckPageState extends ConsumerState<UpdateCheckPage>
 
             const SizedBox(height: 40),
 
-            // Retry button
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton.icon(
-                onPressed: _isManuallyChecking ? null : _handleCheckAgain,
-                style: FilledButton.styleFrom(
-                  backgroundColor: theme.colorScheme.primary,
-                  foregroundColor: theme.colorScheme.onPrimary,
-                  padding: const EdgeInsets.symmetric(vertical: 18),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                ),
-                icon: _isManuallyChecking
-                    ? SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: theme.colorScheme.onPrimary,
-                        ),
-                      )
-                    : const Icon(Icons.refresh_rounded, size: 20),
-                label: Text(
-                  _isManuallyChecking ? "Checking..." : "Try Again",
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
-                ),
-              ),
-            ),
+            // Retry button removed (moved to bottom bar)
           ],
         ),
       ),

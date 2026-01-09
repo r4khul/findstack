@@ -5,6 +5,9 @@ import '../../domain/entities/device_app.dart';
 final deviceAppsRepositoryProvider = Provider((ref) => DeviceAppsRepository());
 
 class InstalledAppsNotifier extends AsyncNotifier<List<DeviceApp>> {
+  // Prevent concurrent scans from Flutter side
+  bool _isScanInProgress = false;
+
   @override
   Future<List<DeviceApp>> build() async {
     final repository = ref.watch(deviceAppsRepositoryProvider);
@@ -14,41 +17,41 @@ class InstalledAppsNotifier extends AsyncNotifier<List<DeviceApp>> {
       final cached = await repository.getInstalledApps(forceRefresh: false);
       if (cached.isNotEmpty) {
         // Return cached data immediately for instant UI
-        // Trigger background revalidate instead of full fetch for efficiency
-        _backgroundRevalidate(cached);
+        // NOTE: We intentionally do NOT trigger background revalidate here
+        // to prevent race conditions during initial scan. The user can
+        // manually trigger a rescan from the home page if needed.
         return cached;
       }
     } catch (e) {
       // Ignore cache errors
     }
 
-    // 2. No cache, return empty list initially?
-    // If we return empty list, UI shows "no apps".
-    // If we return loading, UI shows skeleton.
-    // We should return empty list but trigger full scan ONLY if we have permission?
-    // Actually, `getInstalledApps(forceRefresh: true)` will invoke method channel.
-    // If permission is missing, it returns empty list quickly anyway?
-    // Wait, `checkUsagePermission` is separate.
-    // Let's just return [] if cache miss, and let HomePage logic trigger fullScan.
-    // returning [] forces UI to show "No apps found" or skeleton?
-    // Ideally we want to stay in "loading" state if we are about to fetch.
+    // 2. No cache, return empty list initially
+    // Let ScanPage or HomePage trigger fullScan explicitly
     return [];
   }
 
-  Future<void> _backgroundRevalidate(List<DeviceApp> cachedApps) async {
-    await Future.delayed(Duration.zero);
-    revalidate(cachedApps: cachedApps);
-  }
-
   Future<void> fullScan() async {
+    // Prevent concurrent scans
+    if (_isScanInProgress) {
+      print("[Unfilter] fullScan: Scan already in progress, skipping");
+      return;
+    }
+
+    _isScanInProgress = true;
     final repository = ref.read(deviceAppsRepositoryProvider);
-    state = const AsyncValue.loading();
-    // Clear cache first
-    await repository.clearCache();
-    // Then fetch fresh
-    state = await AsyncValue.guard(
-      () => repository.getInstalledApps(forceRefresh: true),
-    );
+
+    try {
+      state = const AsyncValue.loading();
+      // Clear cache first
+      await repository.clearCache();
+      // Then fetch fresh
+      state = await AsyncValue.guard(
+        () => repository.getInstalledApps(forceRefresh: true),
+      );
+    } finally {
+      _isScanInProgress = false;
+    }
   }
 
   /// Resync a single app by fetching fresh details.
