@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/navigation/navigation.dart';
-import '../../../../core/navigation/app_routes.dart';
 import '../../../apps/presentation/providers/apps_provider.dart';
 import '../providers/onboarding_provider.dart';
 import '../widgets/onboarding_page_content.dart';
 import '../widgets/permission_card.dart';
+import '../widgets/floating_tech_icons.dart';
 import '../../../scan/presentation/pages/scan_page.dart';
 
 class OnboardingPage extends ConsumerStatefulWidget {
@@ -59,12 +59,8 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage>
   }
 
   Future<void> _completeOnboarding() async {
-    // 1. Capture the notifier before navigation
     final notifier = ref.read(onboardingStateProvider.notifier);
 
-    // 2. Navigate immediately to ScanPage
-    // We do this BEFORE updating state to ensure the navigation happens
-    // smoothly without being interrupted by parent widget rebuilds (VersionCheckGate).
     if (mounted) {
       Navigator.of(context).pushReplacement(
         PremiumPageRoute(
@@ -75,7 +71,6 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage>
       );
     }
 
-    // 3. Mark onboarding as complete (background)
     await notifier.completeOnboarding();
   }
 
@@ -83,11 +78,10 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage>
     if (_currentPage < 2) {
       _pageController.animateToPage(
         _currentPage + 1,
-        duration: const Duration(milliseconds: 600),
-        curve: Curves.easeOutQuart,
+        duration: const Duration(milliseconds: 500),
+        curve: Curves.easeOutCubic,
       );
     } else {
-      // Enforce Permissions on Last Page
       if (!_isUsageGranted || !_isInstallGranted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -117,11 +111,13 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage>
       extendBodyBehindAppBar: true,
       body: Stack(
         children: [
-          // --- Main Content ---
+          // Subtle corner tech icons
+          FloatingTechIcons(isDark: isDark, pageIndex: _currentPage),
+
+          // Main Content
           SafeArea(
             child: Column(
               children: [
-                // Page Content
                 Expanded(
                   child: PageView(
                     controller: _pageController,
@@ -195,13 +191,13 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage>
                   ),
                 ),
 
-                // Footer / Controls
+                // Footer
                 Padding(
                   padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      // Indicators
+                      // Page indicators
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: List.generate(3, (index) {
@@ -210,7 +206,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage>
                             curve: Curves.easeOut,
                             margin: const EdgeInsets.symmetric(horizontal: 4),
                             height: 6,
-                            width: 6, // Circular dots
+                            width: 6,
                             decoration: BoxDecoration(
                               color: _currentPage == index
                                   ? theme.colorScheme.primary
@@ -223,20 +219,17 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage>
                         }),
                       ),
                       const SizedBox(height: 32),
-                      // Main CTA
-                      Container(
+                      // CTA Button
+                      SizedBox(
                         width: double.infinity,
                         height: 56,
-                        // Removed heavy shadow for a cleaner look
                         child: FilledButton(
                           onPressed: _nextPage,
                           style: FilledButton.styleFrom(
                             backgroundColor: theme.colorScheme.primary,
                             foregroundColor: theme.colorScheme.onPrimary,
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(
-                                12,
-                              ), // Sharper radius (Apple-like)
+                              borderRadius: BorderRadius.circular(12),
                             ),
                             elevation: 0,
                           ),
@@ -253,9 +246,8 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage>
                       const SizedBox(height: 20),
                       // Privacy Policy
                       TextButton(
-                        onPressed: () {
-                          _launchURL('https://rakhul.com/privacy');
-                        },
+                        onPressed: () =>
+                            _launchURL('https://rakhul.com/privacy'),
                         style: TextButton.styleFrom(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 16,
@@ -286,14 +278,11 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage>
     );
   }
 
-  // --- Visual Builders ---
-
   Widget _buildBrandingVisual(BuildContext context, bool isDark) {
     final assetName = isDark
         ? 'assets/icons/white-unfilter-nobg.png'
         : 'assets/icons/black-unfilter-nobg.png';
 
-    // Simplified: Just the icon/image, no heavy container
     return SizedBox(
       width: 120,
       height: 120,
@@ -302,7 +291,6 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage>
   }
 
   Widget _buildVisual(BuildContext context, IconData icon, Color color) {
-    // Simplified: Just the icon
     return SizedBox(
       width: 100,
       height: 100,
@@ -324,7 +312,6 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage>
   }
 
   Widget _buildHighlightChip(ThemeData theme, String text, IconData icon) {
-    // Clean Chip
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(

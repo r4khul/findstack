@@ -60,20 +60,35 @@ class MainActivity : FlutterActivity() {
                     val includeDetails = call.argument<Boolean>("includeDetails") ?: true
                     
                     executor.execute {
-                        // Check if we can reuse a recent scan result (within same request batch)
+                        // For lite scans (includeDetails = false), ALWAYS fetch fresh data
+                        // These are used for change detection and must reflect current OS state
+                        if (!includeDetails) {
+                            try {
+                                val apps = appRepository.getInstalledApps(
+                                    includeDetails = false,
+                                    onProgress = { _, _, _ -> }, // No progress for lite scans
+                                    checkScanCancelled = { false }
+                                )
+                                handler.post { result.success(apps) }
+                            } catch (e: Exception) {
+                                handler.post { result.error("ERROR", e.message, null) }
+                            }
+                            return@execute
+                        }
+                        
+                        // For full scans (includeDetails = true), use caching to prevent race conditions
                         scanLock.withLock {
-                            // If a scan with same detail level just completed, reuse it
+                            // If a full scan just completed, reuse it
                             val cachedResult = lastScanResult
-                            if (cachedResult != null && lastScanIncludedDetails == includeDetails) {
+                            if (cachedResult != null && lastScanIncludedDetails) {
                                 handler.post { result.success(cachedResult) }
                                 return@execute
                             }
                             
                             // If a scan is already in progress, wait for it
                             if (scanInProgress) {
-                                // Wait for current scan to complete (poll with small delays)
                                 var waited = 0
-                                while (scanInProgress && waited < 120000) { // Max 2 min wait
+                                while (scanInProgress && waited < 120000) {
                                     try {
                                         Thread.sleep(100)
                                         waited += 100
@@ -81,26 +96,22 @@ class MainActivity : FlutterActivity() {
                                         break
                                     }
                                 }
-                                // Return cached result if available and matching
                                 val resultAfterWait = lastScanResult
-                                if (resultAfterWait != null && lastScanIncludedDetails == includeDetails) {
+                                if (resultAfterWait != null && lastScanIncludedDetails) {
                                     handler.post { result.success(resultAfterWait) }
                                     return@execute
                                 }
                             }
                             
-                            // Mark scan as in progress
                             scanInProgress = true
                             lastScanResult = null
                         }
                         
                         try {
-                            if (includeDetails) {
-                                handler.post { eventSink?.success(mapOf("status" to "Fetching app list...", "percent" to 0)) }
-                            }
+                            handler.post { eventSink?.success(mapOf("status" to "Fetching app list...", "percent" to 0)) }
 
                             val apps = appRepository.getInstalledApps(
-                                includeDetails = includeDetails,
+                                includeDetails = true,
                                 onProgress = { current, total, appName ->
                                     handler.post {
                                         eventSink?.success(mapOf(
@@ -111,18 +122,17 @@ class MainActivity : FlutterActivity() {
                                         ))
                                     }
                                 },
-                                checkScanCancelled = { false } // Never cancel - let it complete
+                                checkScanCancelled = { false }
                             )
 
-                            // Cache the result for concurrent requests
                             scanLock.withLock {
                                 lastScanResult = apps
-                                lastScanIncludedDetails = includeDetails
+                                lastScanIncludedDetails = true
                                 scanInProgress = false
                             }
                             
                             handler.post { 
-                                if (includeDetails) eventSink?.success(mapOf("status" to "Complete", "percent" to 100))
+                                eventSink?.success(mapOf("status" to "Complete", "percent" to 100))
                                 result.success(apps) 
                             }
                         } catch (e: Exception) {
