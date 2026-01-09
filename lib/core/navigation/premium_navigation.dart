@@ -117,7 +117,7 @@ class PremiumNavigation {
         overlayInserted = false;
         debugPrint("[PremiumNavigation] ✨ Transition Complete");
       }
-    } catch (e, stack) {
+    } catch (e) {
       debugPrint("[PremiumNavigation] 🛑 CRITICAL ERROR: $e");
       if (overlayInserted) {
         entry.remove();

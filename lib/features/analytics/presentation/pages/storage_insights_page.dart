@@ -6,7 +6,6 @@ import '../../../../core/navigation/navigation.dart';
 import '../../../home/presentation/widgets/premium_sliver_app_bar.dart';
 import '../../../apps/domain/entities/device_app.dart';
 import '../../../apps/presentation/providers/apps_provider.dart';
-import '../widgets/storage_breakdown_dialog.dart';
 
 class StorageInsightsPage extends ConsumerStatefulWidget {
   const StorageInsightsPage({super.key});
@@ -140,7 +139,6 @@ class _StorageInsightsPageState extends ConsumerState<StorageInsightsPage> {
               ),
 
               const SliverToBoxAdapter(child: SizedBox(height: 24)),
-
 
               // List
               SliverPadding(
