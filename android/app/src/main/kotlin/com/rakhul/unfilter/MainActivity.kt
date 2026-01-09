@@ -9,6 +9,8 @@ import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.EventChannel
 import io.flutter.plugin.common.MethodChannel
 import java.util.concurrent.Executors
+import java.util.concurrent.locks.ReentrantLock
+import kotlin.concurrent.withLock
 
 class MainActivity : FlutterActivity() {
     private val CHANNEL = "com.rakhul.unfilter/apps"
@@ -17,7 +19,12 @@ class MainActivity : FlutterActivity() {
     private val executor = Executors.newFixedThreadPool(4) 
     private val handler = Handler(Looper.getMainLooper())
     private var eventSink: EventChannel.EventSink? = null
-    @Volatile private var currentScanId = 0L
+    
+    // Scan synchronization - prevents race conditions
+    private val scanLock = ReentrantLock()
+    @Volatile private var scanInProgress = false
+    @Volatile private var lastScanResult: List<Map<String, Any?>>? = null
+    @Volatile private var lastScanIncludedDetails = false
 
     private lateinit var appRepository: AppRepository
 
@@ -51,41 +58,78 @@ class MainActivity : FlutterActivity() {
                 }
                 "getInstalledApps" -> {
                     val includeDetails = call.argument<Boolean>("includeDetails") ?: true
-                    currentScanId++
-                    val myScanId = currentScanId
                     
                     executor.execute {
+                        // Check if we can reuse a recent scan result (within same request batch)
+                        scanLock.withLock {
+                            // If a scan with same detail level just completed, reuse it
+                            val cachedResult = lastScanResult
+                            if (cachedResult != null && lastScanIncludedDetails == includeDetails) {
+                                handler.post { result.success(cachedResult) }
+                                return@execute
+                            }
+                            
+                            // If a scan is already in progress, wait for it
+                            if (scanInProgress) {
+                                // Wait for current scan to complete (poll with small delays)
+                                var waited = 0
+                                while (scanInProgress && waited < 120000) { // Max 2 min wait
+                                    try {
+                                        Thread.sleep(100)
+                                        waited += 100
+                                    } catch (e: InterruptedException) {
+                                        break
+                                    }
+                                }
+                                // Return cached result if available and matching
+                                val resultAfterWait = lastScanResult
+                                if (resultAfterWait != null && lastScanIncludedDetails == includeDetails) {
+                                    handler.post { result.success(resultAfterWait) }
+                                    return@execute
+                                }
+                            }
+                            
+                            // Mark scan as in progress
+                            scanInProgress = true
+                            lastScanResult = null
+                        }
+                        
                         try {
-                            if (myScanId == currentScanId && includeDetails) {
+                            if (includeDetails) {
                                 handler.post { eventSink?.success(mapOf("status" to "Fetching app list...", "percent" to 0)) }
                             }
 
                             val apps = appRepository.getInstalledApps(
                                 includeDetails = includeDetails,
                                 onProgress = { current, total, appName ->
-                                    if (myScanId == currentScanId) {
-                                        handler.post {
-                                            eventSink?.success(mapOf(
-                                                "status" to "Scanning $appName", 
-                                                "percent" to ((current.toDouble() / total) * 100).toInt(),
-                                                "current" to current,
-                                                "total" to total
-                                            ))
-                                        }
+                                    handler.post {
+                                        eventSink?.success(mapOf(
+                                            "status" to "Scanning $appName", 
+                                            "percent" to ((current.toDouble() / total) * 100).toInt(),
+                                            "current" to current,
+                                            "total" to total
+                                        ))
                                     }
                                 },
-                                checkScanCancelled = { myScanId != currentScanId }
+                                checkScanCancelled = { false } // Never cancel - let it complete
                             )
 
-                            if (myScanId == currentScanId) {
-                                handler.post { 
-                                     if (includeDetails) eventSink?.success(mapOf("status" to "Complete", "percent" to 100))
-                                     result.success(apps) 
-                                }
-                            } else {
-                                handler.post { result.error("ABORTED", "Scan superseded by new request", null) }
+                            // Cache the result for concurrent requests
+                            scanLock.withLock {
+                                lastScanResult = apps
+                                lastScanIncludedDetails = includeDetails
+                                scanInProgress = false
+                            }
+                            
+                            handler.post { 
+                                if (includeDetails) eventSink?.success(mapOf("status" to "Complete", "percent" to 100))
+                                result.success(apps) 
                             }
                         } catch (e: Exception) {
+                            scanLock.withLock {
+                                scanInProgress = false
+                                lastScanResult = null
+                            }
                             handler.post { result.error("ERROR", e.message, null) }
                         }
                     }

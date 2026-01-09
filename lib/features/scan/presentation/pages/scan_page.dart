@@ -101,46 +101,101 @@ class _ScanPageState extends ConsumerState<ScanPage>
     }
   }
 
+  int _retryCount = 0;
+  static const int _maxRetries = 3;
+
   void _startScan() {
     if (_hasStartedScan) return;
     setState(() => _hasStartedScan = true);
 
-    ref.read(installedAppsProvider.notifier).fullScan().then((_) {
-      // give users a moment to see "100%"
-      Future.delayed(const Duration(milliseconds: 800), () {
-        if (!mounted) return;
+    ref
+        .read(installedAppsProvider.notifier)
+        .fullScan()
+        .then((_) {
+          // give users a moment to see "100%"
+          Future.delayed(const Duration(milliseconds: 800), () {
+            if (!mounted) return;
 
-        // Verify we actually have data before navigating
-        final apps = ref.read(installedAppsProvider).value;
-        final hasData = apps != null && apps.isNotEmpty;
+            // Verify we actually have data before navigating
+            final apps = ref.read(installedAppsProvider).value;
+            final hasData = apps != null && apps.isNotEmpty;
 
-        if (hasData) {
-          if (widget.fromOnboarding) {
-            AppRouteFactory.toHome(context);
-          } else if (Navigator.canPop(context)) {
-            Navigator.pop(context);
+            if (hasData) {
+              // Success! Reset retry count and navigate
+              _retryCount = 0;
+              if (widget.fromOnboarding) {
+                AppRouteFactory.toHome(context);
+              } else if (Navigator.canPop(context)) {
+                Navigator.pop(context);
+              }
+            } else {
+              // Scan returned empty - could be transient, try auto-retry
+              if (_retryCount < _maxRetries) {
+                _retryCount++;
+                print(
+                  "[Unfilter] ScanPage: Auto-retry attempt $_retryCount/$_maxRetries",
+                );
+                setState(() => _hasStartedScan = false);
+                // Small delay before retry
+                Future.delayed(const Duration(milliseconds: 500), () {
+                  if (mounted) _startScan();
+                });
+              } else {
+                // Max retries reached - show error to user
+                setState(() => _hasStartedScan = false);
+                _retryCount = 0; // Reset for manual retry
+
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: const Text(
+                      'Scan failed to retrieve apps. Please try again.',
+                    ),
+                    backgroundColor: Theme.of(context).colorScheme.error,
+                    behavior: SnackBarBehavior.floating,
+                    duration: const Duration(seconds: 5),
+                    action: SnackBarAction(
+                      label: 'Retry',
+                      textColor: Colors.white,
+                      onPressed: _startScan,
+                    ),
+                  ),
+                );
+              }
+            }
+          });
+        })
+        .catchError((error) {
+          // Handle any uncaught errors from fullScan
+          if (!mounted) return;
+          print("[Unfilter] ScanPage: Scan error: $error");
+
+          if (_retryCount < _maxRetries) {
+            _retryCount++;
+            setState(() => _hasStartedScan = false);
+            Future.delayed(const Duration(milliseconds: 500), () {
+              if (mounted) _startScan();
+            });
+          } else {
+            setState(() => _hasStartedScan = false);
+            _retryCount = 0;
+
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: const Text(
+                  'Something went wrong during scan. Please try again.',
+                ),
+                backgroundColor: Theme.of(context).colorScheme.error,
+                behavior: SnackBarBehavior.floating,
+                duration: const Duration(seconds: 5),
+                action: SnackBarAction(
+                  label: 'Retry',
+                  textColor: Colors.white,
+                  onPressed: _startScan,
+                ),
+              ),
+            );
           }
-        } else {
-          // Scan failed or returned no data - prevent navigation loop
-          setState(() => _hasStartedScan = false); // Allow retry
-
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Text(
-                'Scan failed to retrieve apps. Please try again.',
-              ),
-              backgroundColor: Theme.of(context).colorScheme.error,
-              behavior: SnackBarBehavior.floating,
-              action: SnackBarAction(
-                label: 'Retry',
-                textColor: Colors.white,
-                onPressed: _startScan,
-              ),
-            ),
-          );
-        }
-      });
-    });
+        });
   }
 
   @override
