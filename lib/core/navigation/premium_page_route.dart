@@ -1,16 +1,8 @@
 import 'package:flutter/material.dart';
 import 'motion_tokens.dart';
 
-/// Transition types.
 enum TransitionType { slideRight, slideUp, fade, scale }
 
-/// Apple-grade page route with continuous motion.
-///
-/// Motion principles:
-/// - Pages arrive with momentum (never start at rest)
-/// - Early opacity ramp masks first-frame latency
-/// - Background loses depth, foreground gains clarity
-/// - Motion completes just before user expects it
 class PremiumPageRoute<T> extends PageRoute<T> {
   final Widget page;
   final TransitionType transitionType;
@@ -81,7 +73,6 @@ class PremiumPageRoute<T> extends PageRoute<T> {
   }
 }
 
-/// iOS-style slide from right with momentum and depth
 class _SlideRightTransition extends StatelessWidget {
   final Animation<double> animation;
   final Animation<double> secondaryAnimation;
@@ -102,36 +93,27 @@ class _SlideRightTransition extends StatelessWidget {
       animation: Listenable.merge([animation, secondaryAnimation]),
       child: child,
       builder: (context, staticChild) {
-        // Primary animation value with Apple curve
         final primaryValue = MotionTokens.pageEnter.transform(
           animation.value.clamp(0.0, 1.0),
         );
 
-        // Secondary animation for background effects
         final secondaryValue = MotionTokens.pageEnter.transform(
           secondaryAnimation.value.clamp(0.0, 1.0),
         );
 
-        // Is this the background page being pushed over?
         final isBackground = secondaryAnimation.value > 0.001;
 
-        // Is this the entering page?
         final isEntering = animation.value < 0.999;
 
-        // ====== BACKGROUND PAGE (being pushed over) ======
         if (isBackground) {
-          // Parallax slide left
           final slideX =
               -size.width * MotionTokens.parallaxOffset * secondaryValue;
 
-          // Scale down for depth
           final scale =
               1.0 - (secondaryValue * (1.0 - MotionTokens.backgroundScale));
 
-          // Dim overlay (subtle)
           final dim = secondaryValue * MotionTokens.backgroundDimOpacity;
 
-          // Border radius for "card" effect
           final radius = MotionTokens.cardBorderRadius * secondaryValue;
 
           return Transform(
@@ -169,9 +151,7 @@ class _SlideRightTransition extends StatelessWidget {
           );
         }
 
-        // ====== ENTERING PAGE (with momentum) ======
         if (isEntering) {
-          // Early opacity ramp (completes at 35% of animation)
           final opacityProgress =
               (animation.value / MotionTokens.opacityCompletionPoint).clamp(
                 0.0,
@@ -179,18 +159,14 @@ class _SlideRightTransition extends StatelessWidget {
               );
           final opacity = Curves.easeOut.transform(opacityProgress);
 
-          // Slide from right with momentum
           final slideX = size.width * (1.0 - primaryValue);
 
-          // Subtle scale for "already moving" feel
           final scale =
               MotionTokens.foregroundStartScale +
               ((1.0 - MotionTokens.foregroundStartScale) * primaryValue);
 
-          // Micro vertical parallax (barely perceptible)
           final slideY = MotionTokens.verticalParallax * (1.0 - primaryValue);
 
-          // Elevation
           final elevation = MotionTokens.pageElevation * primaryValue;
 
           return Opacity(
@@ -217,7 +193,6 @@ class _SlideRightTransition extends StatelessWidget {
     );
   }
 
-  /// Creates a desaturation matrix for background depth
   List<double> _desaturateMatrix(double amount) {
     final s = 1.0 - amount;
     return [
@@ -245,7 +220,6 @@ class _SlideRightTransition extends StatelessWidget {
   }
 }
 
-/// Slide from bottom for fullscreen dialogs
 class _SlideUpTransition extends StatelessWidget {
   final Animation<double> animation;
   final Animation<double> secondaryAnimation;
@@ -267,7 +241,6 @@ class _SlideUpTransition extends StatelessWidget {
       builder: (context, staticChild) {
         final value = MotionTokens.settle.transform(animation.value);
 
-        // Early opacity ramp
         final opacityProgress =
             (animation.value / MotionTokens.opacityCompletionPoint).clamp(
               0.0,
@@ -275,10 +248,8 @@ class _SlideUpTransition extends StatelessWidget {
             );
         final opacity = Curves.easeOut.transform(opacityProgress);
 
-        // Slide up with momentum
         final slideY = size.height * (1.0 - value);
 
-        // Subtle scale for flow feel
         final scale = 0.98 + (0.02 * value);
 
         return Opacity(
@@ -296,7 +267,6 @@ class _SlideUpTransition extends StatelessWidget {
   }
 }
 
-/// Fade transition with subtle scale
 class _FadeTransition extends StatelessWidget {
   final Animation<double> animation;
   final Widget child;
@@ -321,7 +291,6 @@ class _FadeTransition extends StatelessWidget {
   }
 }
 
-/// Scale transition with soft overshoot
 class _ScaleTransition extends StatelessWidget {
   final Animation<double> animation;
   final Widget child;
@@ -339,7 +308,6 @@ class _ScaleTransition extends StatelessWidget {
             MotionTokens.modalStartScale +
             ((1.0 - MotionTokens.modalStartScale) * scaleValue);
 
-        // Early opacity
         final opacityProgress = (animation.value / 0.4).clamp(0.0, 1.0);
 
         return Opacity(

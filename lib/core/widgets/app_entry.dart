@@ -5,8 +5,6 @@ import '../../features/onboarding/presentation/providers/onboarding_provider.dar
 import '../../features/home/presentation/pages/home_page.dart';
 import '../../features/onboarding/presentation/pages/onboarding_page.dart';
 
-/// Entry point widget that decides which screen to show based on application state.
-/// It also handles the removal of the native splash screen.
 class AppEntry extends ConsumerWidget {
   const AppEntry({super.key});
 
@@ -14,7 +12,6 @@ class AppEntry extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final hasCompletedOnboarding = ref.watch(onboardingStateProvider);
 
-    // Remove splash screen immediately after first build
     WidgetsBinding.instance.addPostFrameCallback((_) {
       FlutterNativeSplash.remove();
     });

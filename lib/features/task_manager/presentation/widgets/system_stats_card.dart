@@ -1,10 +1,3 @@
-/// A card widget displaying device system statistics.
-///
-/// This card shows real-time system information including:
-/// - Device model and kernel version
-/// - RAM usage with progress bar
-/// - Battery level with charging indicator
-/// - GPU, thermal, and Android version stats
 library;
 
 import 'package:battery_plus/battery_plus.dart';
@@ -14,43 +7,19 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/process_provider.dart';
 import 'constants.dart';
 
-/// A card displaying comprehensive system statistics.
-///
-/// Shows real-time device information organized in two sections:
-/// - Main content: Device info, RAM usage, battery power
-/// - Bottom stats grid: GPU, thermal, and Android version
-///
-/// ## Usage
-/// ```dart
-/// SystemStatsCard(
-///   deviceModel: "Samsung Galaxy S21",
-///   androidVersion: "Android 13",
-///   totalRam: 8192,
-///   freeRam: 2048,
-///   batteryLevel: 75,
-///   batteryState: BatteryState.discharging,
-/// )
-/// ```
 class SystemStatsCard extends ConsumerWidget {
-  /// Device model name (e.g., "Samsung Galaxy S21").
   final String deviceModel;
 
-  /// Android version string (e.g., "Android 13").
   final String androidVersion;
 
-  /// Total RAM in megabytes.
   final int totalRam;
 
-  /// Free RAM in megabytes.
   final int freeRam;
 
-  /// Current battery level (0-100).
   final int batteryLevel;
 
-  /// Current battery charging state.
   final BatteryState batteryState;
 
-  /// Creates a system stats card.
   const SystemStatsCard({
     super.key,
     required this.deviceModel,
@@ -95,7 +64,6 @@ class SystemStatsCard extends ConsumerWidget {
       ),
       child: Column(
         children: [
-          // Main Card Content
           Padding(
             padding: const EdgeInsets.all(TaskManagerSpacing.xl),
             child: Column(
@@ -116,7 +84,6 @@ class SystemStatsCard extends ConsumerWidget {
               TaskManagerOpacity.mediumLight,
             ),
           ),
-          // Bottom Stats Grid
           Padding(
             padding: const EdgeInsets.all(TaskManagerSpacing.lg),
             child: _buildBottomStatsGrid(theme, gpuUsage, cpuTemp),
@@ -126,7 +93,6 @@ class SystemStatsCard extends ConsumerWidget {
     );
   }
 
-  /// Builds the device header with model name and kernel version.
   Widget _buildDeviceHeader(ThemeData theme, String kernelVer) {
     final displayKernel = kernelVer.length > 20
         ? "${kernelVer.substring(0, 20)}..."
@@ -168,7 +134,6 @@ class SystemStatsCard extends ConsumerWidget {
     );
   }
 
-  /// Builds the RAM usage section with progress bar.
   Widget _buildRamUsage(ThemeData theme, int usedRam, double ramPercent) {
     return Column(
       children: [
@@ -203,7 +168,6 @@ class SystemStatsCard extends ConsumerWidget {
     );
   }
 
-  /// Builds the cached RAM indicator.
   Widget _buildCachedRamIndicator(ThemeData theme, int cachedMb) {
     return Padding(
       padding: const EdgeInsets.only(top: TaskManagerSpacing.sm),
@@ -230,7 +194,6 @@ class SystemStatsCard extends ConsumerWidget {
     );
   }
 
-  /// Builds the battery usage section with progress bar.
   Widget _buildBatteryUsage(ThemeData theme) {
     final isCharging = batteryState == BatteryState.charging;
 
@@ -284,7 +247,6 @@ class SystemStatsCard extends ConsumerWidget {
     );
   }
 
-  /// Builds the bottom stats grid with GPU, thermal, and Android version.
   Widget _buildBottomStatsGrid(
     ThemeData theme,
     String gpuUsage,
@@ -310,7 +272,6 @@ class SystemStatsCard extends ConsumerWidget {
   }
 }
 
-/// A mini stat display for the bottom grid.
 class _MiniStat extends StatelessWidget {
   final String label;
   final String value;
@@ -355,7 +316,6 @@ class _MiniStat extends StatelessWidget {
   }
 }
 
-/// A vertical divider for the stats grid.
 class _StatDivider extends StatelessWidget {
   @override
   Widget build(BuildContext context) {

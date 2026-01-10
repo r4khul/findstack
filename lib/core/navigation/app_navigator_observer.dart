@@ -3,17 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'active_route_provider.dart';
 
-/// A custom NavigatorObserver for debugging and analytics.
-///
-/// This observer:
-/// - Logs navigation events in debug mode
-/// - Can be extended for analytics (Firebase, etc.)
-/// - Helps identify navigation issues during development
 class AppNavigatorObserver extends NavigatorObserver {
-  /// Reference to Riverpod container for updating tracking state
   final WidgetRef? ref;
 
-  /// Enable verbose logging (set to false for release)
   final bool enableLogging;
 
   AppNavigatorObserver({this.ref, this.enableLogging = kDebugMode});
@@ -59,10 +51,8 @@ class AppNavigatorObserver extends NavigatorObserver {
 
   void _updateActiveRoute(Route<dynamic> route) {
     if (ref != null) {
-      // Use microtask to avoid modifying provider during build phase if that ever happens
       Future.microtask(() {
         final name = route.settings.name;
-        // Check if tracker exists and update it
         ref!.read(activeRouteProvider.notifier).update(name);
       });
     }
@@ -88,12 +78,6 @@ class AppNavigatorObserver extends NavigatorObserver {
     debugPrint('$emoji $action: $routeName (from: $previousName)');
   }
 
-  // ============================================================
-  // ANALYTICS HOOKS (extend for your analytics provider)
-  // ============================================================
-
-  /// Override this to send screen view events to analytics
   void onScreenView(String screenName) {
-    // Example: FirebaseAnalytics.instance.logScreenView(screenName: screenName);
   }
 }

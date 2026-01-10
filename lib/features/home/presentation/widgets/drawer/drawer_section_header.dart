@@ -1,14 +1,8 @@
 import 'package:flutter/material.dart';
 
-/// Section header widget for drawer content groups.
-///
-/// Displays an uppercase label with primary color styling.
-/// Used to visually separate different sections in the drawer.
 class DrawerSectionHeader extends StatelessWidget {
-  /// The title text to display.
   final String title;
 
-  /// Creates a drawer section header.
   const DrawerSectionHeader({super.key, required this.title});
 
   @override

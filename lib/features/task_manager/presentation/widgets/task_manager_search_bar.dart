@@ -1,34 +1,16 @@
-/// A search bar widget for filtering processes in the task manager.
 library;
 
 import 'package:flutter/material.dart';
 
 import 'constants.dart';
 
-/// A styled search bar for process filtering.
-///
-/// Provides a text input with search icon and clear button,
-/// styled with the task manager's visual theme.
-///
-/// ## Usage
-/// ```dart
-/// TaskManagerSearchBar(
-///   controller: _searchController,
-///   onChanged: (query) => setState(() => _searchQuery = query),
-///   searchQuery: _searchQuery,
-/// )
-/// ```
 class TaskManagerSearchBar extends StatelessWidget {
-  /// Controller for the text field.
   final TextEditingController controller;
 
-  /// Callback when the search query changes.
   final ValueChanged<String> onChanged;
 
-  /// Current search query for showing clear button.
   final String searchQuery;
 
-  /// Creates a task manager search bar.
   const TaskManagerSearchBar({
     super.key,
     required this.controller,

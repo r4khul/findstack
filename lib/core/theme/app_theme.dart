@@ -15,7 +15,7 @@ class AppTheme {
     colorScheme: const ColorScheme.light(
       primary: AppColors.lightPrimary,
       onPrimary: AppColors.lightOnPrimary,
-      secondary: AppColors.lightPrimary, // Monochromatic
+      secondary: AppColors.lightPrimary,
       onSecondary: AppColors.lightOnPrimary,
       surface: AppColors.lightSurface,
       onSurface: AppColors.lightTextPrimary,
@@ -31,7 +31,7 @@ class AppTheme {
       systemOverlayStyle: SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
         statusBarIconBrightness:
-            Brightness.dark, // Dark icons for light background
+            Brightness.dark,
         statusBarBrightness: Brightness.light,
       ),
       titleTextStyle: TextStyle(
@@ -172,7 +172,7 @@ class AppTheme {
       systemOverlayStyle: SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
         statusBarIconBrightness:
-            Brightness.light, // Light icons for dark background
+            Brightness.light,
         statusBarBrightness: Brightness.dark,
       ),
       titleTextStyle: TextStyle(
@@ -183,7 +183,7 @@ class AppTheme {
       ),
     ),
     bottomSheetTheme: const BottomSheetThemeData(
-      backgroundColor: AppColors.darkSurface, // Dark Grey
+      backgroundColor: AppColors.darkSurface,
       modalBackgroundColor: AppColors.darkSurface,
       surfaceTintColor: Colors.transparent,
       shape: RoundedRectangleBorder(

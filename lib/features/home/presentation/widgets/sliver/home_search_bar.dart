@@ -3,12 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../../core/navigation/navigation.dart';
 import '../../../../search/presentation/widgets/tech_stack_filter.dart';
 
-/// Search bar widget for the home page header.
-///
-/// A tappable container that navigates to the full search page.
-/// Part of the collapsible home header and remains pinned when collapsed.
 class HomeSearchBar extends StatelessWidget {
-  /// Creates a home search bar.
   const HomeSearchBar({super.key});
 
   @override

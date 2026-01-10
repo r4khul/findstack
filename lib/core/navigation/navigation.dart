@@ -1,6 +1,3 @@
-// Global Navigation & Transition System
-//
-// This barrel file exports all navigation-related utilities.
 
 export 'motion_tokens.dart';
 export 'app_routes.dart';

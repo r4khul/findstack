@@ -5,10 +5,8 @@ import '../../domain/entities/device_app.dart';
 final deviceAppsRepositoryProvider = Provider((ref) => DeviceAppsRepository());
 
 class InstalledAppsNotifier extends AsyncNotifier<List<DeviceApp>> {
-  // Prevent concurrent scans from Flutter side
   bool _isScanInProgress = false;
 
-  // Background revalidation throttling
   bool _isRevalidating = false;
   DateTime? _lastRevalidationTime;
   static const Duration _revalidationCooldown = Duration(seconds: 30);
@@ -17,27 +15,18 @@ class InstalledAppsNotifier extends AsyncNotifier<List<DeviceApp>> {
   Future<List<DeviceApp>> build() async {
     final repository = ref.watch(deviceAppsRepositoryProvider);
 
-    // 1. Try Cache
     try {
       final cached = await repository.getInstalledApps(forceRefresh: false);
       if (cached.isNotEmpty) {
-        // Return cached data immediately for instant UI
-        // NOTE: We intentionally do NOT trigger background revalidate here
-        // to prevent race conditions during initial scan. The user can
-        // manually trigger a rescan from the home page if needed.
         return cached;
       }
     } catch (e) {
-      // Ignore cache errors
     }
 
-    // 2. No cache, return empty list initially
-    // Let ScanPage or HomePage trigger fullScan explicitly
     return [];
   }
 
   Future<void> fullScan() async {
-    // Prevent concurrent scans
     if (_isScanInProgress) {
       print("[Unfilter] fullScan: Scan already in progress, skipping");
       return;
@@ -48,36 +37,27 @@ class InstalledAppsNotifier extends AsyncNotifier<List<DeviceApp>> {
 
     try {
       state = const AsyncValue.loading();
-      // Clear cache first
       await repository.clearCache();
-      // Then fetch fresh
       state = await AsyncValue.guard(
         () => repository.getInstalledApps(forceRefresh: true),
       );
-      // Update last revalidation time since we just did a full scan
       _lastRevalidationTime = DateTime.now();
     } finally {
       _isScanInProgress = false;
     }
   }
 
-  /// Safe background revalidation with throttling.
-  /// Call this when the app resumes to detect newly installed/uninstalled apps.
-  /// This method is safe to call frequently - it has built-in cooldown and conflict prevention.
   Future<void> backgroundRevalidate() async {
-    // Safety check 1: Don't revalidate if a full scan is in progress
     if (_isScanInProgress) {
       print("[Unfilter] backgroundRevalidate: Full scan in progress, skipping");
       return;
     }
 
-    // Safety check 2: Don't revalidate if already revalidating
     if (_isRevalidating) {
       print("[Unfilter] backgroundRevalidate: Already revalidating, skipping");
       return;
     }
 
-    // Safety check 3: Cooldown - don't revalidate too frequently
     if (_lastRevalidationTime != null) {
       final elapsed = DateTime.now().difference(_lastRevalidationTime!);
       if (elapsed < _revalidationCooldown) {
@@ -88,7 +68,6 @@ class InstalledAppsNotifier extends AsyncNotifier<List<DeviceApp>> {
       }
     }
 
-    // Safety check 4: Only revalidate if we have existing data
     final currentApps = switch (state) {
       AsyncData(:final value) => value,
       _ => <DeviceApp>[],
@@ -109,21 +88,17 @@ class InstalledAppsNotifier extends AsyncNotifier<List<DeviceApp>> {
       print("[Unfilter] backgroundRevalidate: Complete");
     } catch (e) {
       print("[Unfilter] backgroundRevalidate: Failed - $e");
-      // Silently fail - don't disrupt user experience
     } finally {
       _isRevalidating = false;
     }
   }
 
-  /// Resync a single app by fetching fresh details.
-  /// Returns the updated app data, or null if failed.
   Future<DeviceApp?> resyncApp(String packageName) async {
     final repository = ref.read(deviceAppsRepositoryProvider);
 
     try {
       print("[Unfilter] ResyncApp: Fetching details for $packageName");
 
-      // Fetch fresh details for this single app
       final details = await repository.getAppsDetails([packageName]);
 
       if (details.isEmpty) {
@@ -136,7 +111,6 @@ class InstalledAppsNotifier extends AsyncNotifier<List<DeviceApp>> {
         "[Unfilter] ResyncApp: Got updated details for ${updatedApp.appName}",
       );
 
-      // Update the state with the new app data
       final currentApps = switch (state) {
         AsyncData(:final value) => value,
         _ => <DeviceApp>[],
@@ -148,7 +122,6 @@ class InstalledAppsNotifier extends AsyncNotifier<List<DeviceApp>> {
         return app;
       }).toList();
 
-      // Update cache and state
       await repository.updateCache(updatedApps);
       state = AsyncValue.data(updatedApps);
 
@@ -165,13 +138,11 @@ class InstalledAppsNotifier extends AsyncNotifier<List<DeviceApp>> {
 
     try {
       print("[Unfilter] Revalidate: Start");
-      // 1. Get cached apps (if not provided)
       final appsToCheck =
           cachedApps ?? await repository.getInstalledApps(forceRefresh: false);
       final cachedMap = {for (var app in appsToCheck) app.packageName: app};
       print("[Unfilter] Revalidate: Cached apps count: ${appsToCheck.length}");
 
-      // 2. Get fresh "lite" list (fast)
       print("[Unfilter] Revalidate: Fetching lite apps...");
       final liteApps = await repository.getInstalledApps(
         forceRefresh: true,
@@ -184,39 +155,22 @@ class InstalledAppsNotifier extends AsyncNotifier<List<DeviceApp>> {
 
       for (var liteApp in liteApps) {
         final cached = cachedMap[liteApp.packageName];
-        // Check update time.
         if (cached != null && cached.updateDate == liteApp.updateDate) {
           finalApps.add(cached);
         } else {
-          // New or Updated app
           appsToResolve.add(liteApp.packageName);
         }
       }
 
-      // 3. Resolve missing details
       print(
         "[Unfilter] Revalidate: Need to resolve ${appsToResolve.length} apps",
       );
       if (appsToResolve.isNotEmpty) {
-        // Fetch details for new/updated apps
-        // If list is huge (e.g. first run after clear cache?), this falls back to batch fetch.
-        // Ideally we batch this if too large, but for now just one call.
         final details = await repository.getAppsDetails(appsToResolve);
         finalApps.addAll(details);
         print("[Unfilter] Revalidate: Resolved details");
       }
 
-      // 4. Update Cache & State
-      // We manually cache here because `getInstalledApps` only caches during full detail fetch.
-      // We need to access the local data source directly or expose a cache method?
-      // Repository `getInstalledApps` calls `cacheApps` if `includeDetails` is true.
-      // But we constructed `finalApps` manually.
-      // We should add a `saveToCache` method to repository or just call a method.
-      // Let's modify repository to allow saving?
-      // Actually `DeviceAppsRepository` has `_localDataSource` private.
-      // Let's just assume for now we don't save to file?
-      // No, we MUST save to file otherwise next load is empty.
-      // I will add `updateCache` to repository in next step.
       print("[Unfilter] Revalidate: Updating cache and state");
       await repository.updateCache(finalApps);
 
@@ -224,8 +178,6 @@ class InstalledAppsNotifier extends AsyncNotifier<List<DeviceApp>> {
       print("[Unfilter] Revalidate: Done");
     } catch (e) {
       print("Revalidate failed: $e");
-      // Fallback to full refresh if smart revalidate fails?
-      // state = await AsyncValue.guard(() => repository.getInstalledApps(forceRefresh: true));
     }
   }
 }

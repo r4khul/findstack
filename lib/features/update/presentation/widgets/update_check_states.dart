@@ -1,7 +1,3 @@
-/// Widgets for displaying update check states.
-///
-/// This file contains widgets for loading, error, and result states
-/// shown during the update check process.
 library;
 
 import 'package:flutter/material.dart';
@@ -10,19 +6,9 @@ import '../../data/models/update_config_model.dart';
 import '../../domain/update_service.dart';
 import 'constants.dart';
 
-// =============================================================================
-// LOADING STATE
-// =============================================================================
-
-/// A widget displaying the loading state during update check.
-///
-/// Shows an animated pulsing circle with a progress indicator
-/// and "Checking for updates..." message.
 class UpdateCheckLoadingState extends StatelessWidget {
-  /// The animation controller for the pulse effect.
   final AnimationController pulseController;
 
-  /// Creates an update check loading state widget.
   const UpdateCheckLoadingState({super.key, required this.pulseController});
 
   @override
@@ -85,19 +71,9 @@ class UpdateCheckLoadingState extends StatelessWidget {
   }
 }
 
-// =============================================================================
-// ERROR STATE
-// =============================================================================
-
-/// A widget displaying the error state when update check fails.
-///
-/// Shows an appropriate icon based on error type (network vs general)
-/// with helpful tips for network errors.
 class UpdateCheckErrorState extends StatelessWidget {
-  /// The error message to display.
   final String error;
 
-  /// Creates an update check error state widget.
   const UpdateCheckErrorState({super.key, required this.error});
 
   @override
@@ -235,19 +211,9 @@ class _NetworkTipRow extends StatelessWidget {
   }
 }
 
-// =============================================================================
-// OFFLINE STATE
-// =============================================================================
-
-/// A widget displaying the offline state with network tips.
-///
-/// Similar to error state but specifically for offline scenarios
-/// with more detailed connectivity options.
 class UpdateCheckOfflineState extends StatelessWidget {
-  /// The animation controller for the pulse effect.
   final AnimationController pulseController;
 
-  /// Creates an update check offline state widget.
   const UpdateCheckOfflineState({super.key, required this.pulseController});
 
   @override
@@ -405,19 +371,9 @@ class _NetworkOptionItem extends StatelessWidget {
   }
 }
 
-// =============================================================================
-// RESULT STATE (UP TO DATE / UPDATE AVAILABLE)
-// =============================================================================
-
-/// A widget displaying the update check result.
-///
-/// Shows either "You're up to date" or "Update Available" with
-/// version comparison and changelog if applicable.
 class UpdateCheckResultState extends StatelessWidget {
-  /// The result of the update check.
   final UpdateCheckResult result;
 
-  /// Creates an update check result state widget.
   const UpdateCheckResultState({super.key, required this.result});
 
   @override
@@ -537,11 +493,6 @@ class UpdateCheckResultState extends StatelessWidget {
   }
 }
 
-// =============================================================================
-// VERSION COMPARISON CARD
-// =============================================================================
-
-/// A card showing current vs new version comparison.
 class _VersionComparisonCard extends StatelessWidget {
   final String currentVersion;
   final String newVersion;
@@ -680,11 +631,6 @@ class _VersionColumn extends StatelessWidget {
   }
 }
 
-// =============================================================================
-// CHANGELOG CARD
-// =============================================================================
-
-/// A card displaying release notes and changelog.
 class _ChangelogCard extends StatelessWidget {
   final UpdateConfigModel config;
 

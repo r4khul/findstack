@@ -7,12 +7,7 @@ import '../../widgets/external_link_tile.dart';
 import '../../widgets/github_cta_card.dart';
 import '../../widgets/premium_sliver_app_bar.dart';
 
-/// About page displaying app information and credits.
-///
-/// Shows app branding, version info, description, credits, and social links.
-/// Provides navigation to the "How it works" page for technical details.
 class AboutPage extends ConsumerWidget {
-  /// Creates the about page.
   const AboutPage({super.key});
 
   @override
@@ -85,11 +80,6 @@ class AboutPage extends ConsumerWidget {
   }
 }
 
-// -----------------------------------------------------------------------------
-// Private Widgets
-// -----------------------------------------------------------------------------
-
-/// Hero section with app logo and version.
 class _HeroSection extends StatelessWidget {
   final bool isDark;
   final AsyncValue<dynamic> versionAsync;
@@ -200,7 +190,6 @@ class _HeroSection extends StatelessWidget {
   }
 }
 
-/// Card linking to the How It Works page.
 class _HowItWorksCard extends StatelessWidget {
   const _HowItWorksCard();
 
@@ -287,7 +276,6 @@ class _HowItWorksCard extends StatelessWidget {
   }
 }
 
-/// Credits section with developer and license info.
 class _CreditsSection extends StatelessWidget {
   const _CreditsSection();
 
@@ -305,7 +293,6 @@ class _CreditsSection extends StatelessWidget {
   }
 }
 
-/// Connect section with social links.
 class _ConnectSection extends StatelessWidget {
   const _ConnectSection();
 
@@ -331,7 +318,6 @@ class _ConnectSection extends StatelessWidget {
   }
 }
 
-/// Section header widget.
 class _SectionHeader extends StatelessWidget {
   final String title;
 
@@ -353,7 +339,6 @@ class _SectionHeader extends StatelessWidget {
   }
 }
 
-/// Info row displaying label and value.
 class _InfoRow extends StatelessWidget {
   final String label;
   final String value;

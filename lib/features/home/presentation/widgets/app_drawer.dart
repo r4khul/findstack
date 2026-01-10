@@ -10,25 +10,11 @@ import 'drawer/drawer_nav_tile.dart';
 import 'drawer/drawer_theme_switcher.dart';
 import 'drawer/drawer_open_source_card.dart';
 
-/// Main application drawer widget.
-///
-/// Provides navigation to app features, theme switching, and settings.
-/// This drawer is displayed from the end (right) side of the screen.
-///
-/// ## Structure
-/// - Header with title and close button
-/// - Appearance section with theme switcher
-/// - Insights section with navigation tiles
-/// - Information section with update status
-/// - Community section with GitHub link
 class AppDrawer extends ConsumerWidget {
-  /// Creates the main app drawer.
   const AppDrawer({super.key});
 
-  /// Maximum drawer width for wide screens.
   static const double _maxWidth = 400.0;
 
-  /// Drawer width factor for narrow screens.
   static const double _widthFactor = 0.85;
 
   @override
@@ -84,7 +70,6 @@ class AppDrawer extends ConsumerWidget {
     );
   }
 
-  /// Builds the Insights section with analytics and storage tiles.
   Widget _buildInsightsSection(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -122,7 +107,6 @@ class AppDrawer extends ConsumerWidget {
     );
   }
 
-  /// Builds the Information section with privacy, updates, and about tiles.
   Widget _buildInformationSection(BuildContext context, WidgetRef ref) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -144,7 +128,6 @@ class AppDrawer extends ConsumerWidget {
     );
   }
 
-  /// Builds the update check navigation tile with dynamic status.
   Widget _buildUpdateCheckTile(BuildContext context, WidgetRef ref) {
     final updateAsync = ref.watch(updateCheckProvider);
 
@@ -175,7 +158,6 @@ class AppDrawer extends ConsumerWidget {
     );
   }
 
-  /// Builds the about navigation tile with version info.
   Widget _buildAboutTile(BuildContext context, WidgetRef ref) {
     final versionAsync = ref.watch(currentVersionProvider);
     final updateAsync = ref.watch(updateCheckProvider);

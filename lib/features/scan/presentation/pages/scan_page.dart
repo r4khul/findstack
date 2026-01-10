@@ -24,7 +24,6 @@ class _ScanPageState extends ConsumerState<ScanPage>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    // Defer check to next frame
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkPermissionAndStart();
     });
@@ -39,11 +38,10 @@ class _ScanPageState extends ConsumerState<ScanPage>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed && _isRequestingPermission) {
-      _isRequestingPermission = false; // Reset flag
-      // Small delay to ensure permission status is updated by OS
+      _isRequestingPermission = false;
       Future.delayed(const Duration(milliseconds: 500), () {
         if (mounted) {
-          Navigator.of(context).pop(); // Close the dialog if open
+          Navigator.of(context).pop();
           _checkPermissionAndStart();
         }
       });
@@ -56,18 +54,13 @@ class _ScanPageState extends ConsumerState<ScanPage>
     final repo = ref.read(deviceAppsRepositoryProvider);
     final hasPermission = await repo.checkUsagePermission();
 
-    // If coming from onboarding, we assume permission is granted or dealt with.
-    // But explicit check is safer.
     if (hasPermission) {
       _startScan();
     } else {
       if (!mounted) return;
-      // Show Permission Dialog
-      // We use showGeneralDialog for the premium feel same as Home
       await showGeneralDialog(
         context: context,
-        barrierDismissible: false, // Force choice? Or allow dismiss.
-        // Let's allow dismiss to mean "Scan without permission" (Fallback)
+        barrierDismissible: false,
         barrierLabel: "Permission",
         transitionDuration: const Duration(milliseconds: 300),
         pageBuilder: (_, __, ___) => const SizedBox(),
@@ -84,7 +77,6 @@ class _ScanPageState extends ConsumerState<ScanPage>
                 onGrantPressed: () async {
                   _isRequestingPermission = true;
                   await repo.requestUsagePermission();
-                  // We wait for didChangeAppLifecycleState
                 },
               ),
             ),
@@ -92,9 +84,6 @@ class _ScanPageState extends ConsumerState<ScanPage>
         },
       );
 
-      // If dialog returns (dismissed via "Maybe Later" or pop), we start scan anyway
-      // This is the fallback: User voluntarily triggers scan but denies permission.
-      // We proceed with what we can get.
       if (mounted && !_hasStartedScan) {
         _startScan();
       }
@@ -112,16 +101,13 @@ class _ScanPageState extends ConsumerState<ScanPage>
         .read(installedAppsProvider.notifier)
         .fullScan()
         .then((_) {
-          // give users a moment to see "100%"
           Future.delayed(const Duration(milliseconds: 800), () {
             if (!mounted) return;
 
-            // Verify we actually have data before navigating
             final apps = ref.read(installedAppsProvider).value;
             final hasData = apps != null && apps.isNotEmpty;
 
             if (hasData) {
-              // Success! Reset retry count and navigate
               _retryCount = 0;
               if (widget.fromOnboarding) {
                 AppRouteFactory.toHome(context);
@@ -129,21 +115,18 @@ class _ScanPageState extends ConsumerState<ScanPage>
                 Navigator.pop(context);
               }
             } else {
-              // Scan returned empty - could be transient, try auto-retry
               if (_retryCount < _maxRetries) {
                 _retryCount++;
                 print(
                   "[Unfilter] ScanPage: Auto-retry attempt $_retryCount/$_maxRetries",
                 );
                 setState(() => _hasStartedScan = false);
-                // Small delay before retry
                 Future.delayed(const Duration(milliseconds: 500), () {
                   if (mounted) _startScan();
                 });
               } else {
-                // Max retries reached - show error to user
                 setState(() => _hasStartedScan = false);
-                _retryCount = 0; // Reset for manual retry
+                _retryCount = 0;
 
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
@@ -165,7 +148,6 @@ class _ScanPageState extends ConsumerState<ScanPage>
           });
         })
         .catchError((error) {
-          // Handle any uncaught errors from fullScan
           if (!mounted) return;
           print("[Unfilter] ScanPage: Scan error: $error");
 
@@ -212,7 +194,7 @@ class _ScanPageState extends ConsumerState<ScanPage>
           status: "Initializing...",
           percent: 0,
           processedCount: 0,
-          totalCount: 1, // Avoid divide by zero
+          totalCount: 1,
         ),
         builder: (context, snapshot) {
           final progress = snapshot.data!;

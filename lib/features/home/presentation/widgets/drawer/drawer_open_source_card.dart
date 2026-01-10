@@ -5,18 +5,11 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../providers/github_stars_provider.dart';
 
-/// GitHub open source card widget for the drawer.
-///
-/// Displays a tappable card that links to the project's GitHub repository.
-/// Shows the current star count fetched from the GitHub API.
 class DrawerOpenSourceCard extends ConsumerWidget {
-  /// Creates a drawer open source card.
   const DrawerOpenSourceCard({super.key});
 
-  /// GitHub repository URL.
   static const _repoUrl = 'https://github.com/r4khul/unfilter';
 
-  /// GitHub star icon color (gold).
   static const _starColor = Color(0xFFFFD700);
 
   @override

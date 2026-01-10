@@ -3,12 +3,7 @@ import 'package:flutter/material.dart';
 import '../../widgets/external_link_tile.dart';
 import '../../widgets/premium_sliver_app_bar.dart';
 
-/// How It Works page explaining the app's technology.
-///
-/// Displays a step-by-step explanation of how the app analyzes
-/// installed applications to detect their tech stacks.
 class HowItWorksPage extends StatelessWidget {
-  /// Creates the how it works page.
   const HowItWorksPage({super.key});
 
   @override
@@ -98,11 +93,6 @@ class HowItWorksPage extends StatelessWidget {
   }
 }
 
-// -----------------------------------------------------------------------------
-// Private Widgets
-// -----------------------------------------------------------------------------
-
-/// Step card widget with timeline indicator.
 class _StepCard extends StatelessWidget {
   final String step;
   final String title;

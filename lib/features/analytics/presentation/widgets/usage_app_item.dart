@@ -4,30 +4,19 @@ import '../../../../core/navigation/navigation.dart';
 import '../../../apps/domain/entities/device_app.dart';
 import 'analytics_app_icon.dart';
 
-/// App item widget for usage statistics list.
-///
-/// Displays an app with its usage percentage, progress bar, and duration.
-/// Supports touch interaction to sync with the pie chart.
 class UsageAppItem extends StatelessWidget {
-  /// The app to display.
   final DeviceApp app;
 
-  /// Usage percentage (0.0 to 1.0).
   final double percent;
 
-  /// Index in the list.
   final int index;
 
-  /// Whether this item is currently selected/touched.
   final bool isTouched;
 
-  /// Callback when item is tapped down.
   final VoidCallback onTapDown;
 
-  /// Callback when tap is cancelled.
   final VoidCallback onTapCancel;
 
-  /// Creates a usage app item.
   const UsageAppItem({
     super.key,
     required this.app,

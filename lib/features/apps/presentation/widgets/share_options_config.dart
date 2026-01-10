@@ -1,7 +1,5 @@
 import 'package:flutter/foundation.dart';
 
-/// Configuration model for customizable share poster options.
-/// Uses value semantics for efficient comparison and immutability.
 @immutable
 class ShareOptionsConfig {
   final bool showVersion;
@@ -54,7 +52,6 @@ class ShareOptionsConfig {
     );
   }
 
-  /// Count of enabled options for UI feedback
   int get enabledCount {
     int count = 0;
     if (showVersion) count++;

@@ -1,10 +1,3 @@
-/// A stateful button for downloading and installing app updates.
-///
-/// This button handles the complete download flow including:
-/// - Connectivity checks before download
-/// - Progress indication during download
-/// - Error handling with appropriate UI feedback
-/// - Installation trigger when download completes
 library;
 
 import 'dart:io';
@@ -16,46 +9,15 @@ import '../providers/update_provider.dart';
 import '../../../../core/services/connectivity_service.dart';
 import 'constants.dart';
 
-/// A button that manages the update download and installation flow.
-///
-/// The button displays different states:
-/// - **Idle**: "Update Now" - ready to start download
-/// - **Checking**: Shows spinner while checking connectivity
-/// - **Downloading**: Shows progress percentage
-/// - **Done**: "Install Update" - ready to install
-/// - **Error**: Shows retry option with appropriate messaging
-///
-/// ## Usage
-/// ```dart
-/// UpdateDownloadButton(
-///   url: 'https://example.com/app.apk',
-///   version: '1.2.0',
-///   isFullWidth: true,
-/// )
-/// ```
-///
-/// ## Error Handling
-/// The button automatically shows snackbars for network errors and
-/// provides contextual retry options based on the error type.
 class UpdateDownloadButton extends ConsumerStatefulWidget {
-  /// The URL to download the APK from.
   final String? url;
 
-  /// The version string for display and file naming.
   final String version;
 
-  /// Whether to use compact styling (smaller height).
   final bool isCompact;
 
-  /// Whether the button should expand to full width.
   final bool isFullWidth;
 
-  /// Creates an update download button.
-  ///
-  /// [url] is the download URL for the APK.
-  /// [version] is the version string to display.
-  /// [isCompact] uses smaller button height when true.
-  /// [isFullWidth] expands button to full width when true.
   const UpdateDownloadButton({
     super.key,
     this.url,
@@ -77,7 +39,6 @@ class _UpdateDownloadButtonState extends ConsumerState<UpdateDownloadButton> {
     final downloadState = ref.watch(updateDownloadProvider);
     final theme = Theme.of(context);
 
-    // Listen for error state changes to show snackbar
     ref.listen<DownloadState>(updateDownloadProvider, (prev, next) {
       if (next.error != null && prev?.error == null) {
         _showNetworkErrorSnackbar(context, theme, next.errorType);
@@ -100,7 +61,6 @@ class _UpdateDownloadButtonState extends ConsumerState<UpdateDownloadButton> {
             child: _buildButtonContent(theme, downloadState),
           ),
         ),
-        // Subtle error message below button
         if (downloadState.error != null && !downloadState.isDownloading) ...[
           const SizedBox(height: UpdateSpacing.md),
           Text(
@@ -119,7 +79,6 @@ class _UpdateDownloadButtonState extends ConsumerState<UpdateDownloadButton> {
     );
   }
 
-  /// Builds the button style based on current download state.
   ButtonStyle _buildButtonStyle(ThemeData theme, DownloadState downloadState) {
     final bgColor = _getBackgroundColor(theme, downloadState);
 
@@ -141,7 +100,6 @@ class _UpdateDownloadButtonState extends ConsumerState<UpdateDownloadButton> {
     );
   }
 
-  /// Gets the appropriate background color based on state.
   Color _getBackgroundColor(ThemeData theme, DownloadState downloadState) {
     if (downloadState.isDone) {
       return UpdateColors.installGreen;
@@ -153,7 +111,6 @@ class _UpdateDownloadButtonState extends ConsumerState<UpdateDownloadButton> {
     return theme.colorScheme.primary;
   }
 
-  /// Builds the button content based on current state.
   Widget _buildButtonContent(ThemeData theme, DownloadState downloadState) {
     if (_isCheckingConnectivity) {
       return _buildCheckingContent(theme);
@@ -167,7 +124,6 @@ class _UpdateDownloadButtonState extends ConsumerState<UpdateDownloadButton> {
     return _buildIdleContent(theme);
   }
 
-  /// Builds content for connectivity checking state.
   Widget _buildCheckingContent(ThemeData theme) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
@@ -193,7 +149,6 @@ class _UpdateDownloadButtonState extends ConsumerState<UpdateDownloadButton> {
     );
   }
 
-  /// Builds content for downloading state with progress.
   Widget _buildDownloadingContent(
     ThemeData theme,
     DownloadState downloadState,
@@ -226,7 +181,6 @@ class _UpdateDownloadButtonState extends ConsumerState<UpdateDownloadButton> {
     );
   }
 
-  /// Builds content for download complete state.
   Widget _buildDoneContent(ThemeData theme) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
@@ -248,7 +202,6 @@ class _UpdateDownloadButtonState extends ConsumerState<UpdateDownloadButton> {
     );
   }
 
-  /// Builds content for error state.
   Widget _buildErrorContent(ThemeData theme, DownloadState downloadState) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
@@ -272,7 +225,6 @@ class _UpdateDownloadButtonState extends ConsumerState<UpdateDownloadButton> {
     );
   }
 
-  /// Builds content for idle state.
   Widget _buildIdleContent(ThemeData theme) {
     return Text(
       'Update Now',
@@ -284,21 +236,18 @@ class _UpdateDownloadButtonState extends ConsumerState<UpdateDownloadButton> {
     );
   }
 
-  /// Handles the download button press.
   Future<void> _handleDownload() async {
     if (widget.url == null) return;
 
     final notifier = ref.read(updateDownloadProvider.notifier);
     final downloadState = ref.read(updateDownloadProvider);
 
-    // If already done, just install
     if (downloadState.isDone && downloadState.filePath != null) {
       final file = File(downloadState.filePath!);
       ref.read(updateServiceFutureProvider).value?.installApk(file);
       return;
     }
 
-    // If had an error, check connectivity first before retrying
     if (downloadState.error != null) {
       setState(() => _isCheckingConnectivity = true);
 
@@ -319,11 +268,9 @@ class _UpdateDownloadButtonState extends ConsumerState<UpdateDownloadButton> {
       notifier.reset();
     }
 
-    // Start download
     notifier.downloadAndInstall(widget.url!, widget.version);
   }
 
-  /// Shows a styled snackbar for network errors.
   void _showNetworkErrorSnackbar(
     BuildContext context,
     ThemeData theme,
@@ -418,7 +365,6 @@ class _UpdateDownloadButtonState extends ConsumerState<UpdateDownloadButton> {
     );
   }
 
-  /// Gets the error title based on error type.
   String _getErrorTitle(UpdateErrorType? errorType) {
     switch (errorType) {
       case UpdateErrorType.offline:
@@ -436,7 +382,6 @@ class _UpdateDownloadButtonState extends ConsumerState<UpdateDownloadButton> {
     }
   }
 
-  /// Gets the error message based on error type.
   String _getErrorMessage(UpdateErrorType? errorType) {
     switch (errorType) {
       case UpdateErrorType.offline:
@@ -454,7 +399,6 @@ class _UpdateDownloadButtonState extends ConsumerState<UpdateDownloadButton> {
     }
   }
 
-  /// Gets the appropriate icon based on error type.
   IconData _getErrorIcon(UpdateErrorType? errorType) {
     switch (errorType) {
       case UpdateErrorType.offline:

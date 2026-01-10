@@ -2,45 +2,30 @@ import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 
-/// Connectivity states for network-dependent operations
 enum ConnectivityStatus {
-  /// Device is connected to the internet
   connected,
 
-  /// Device is offline (no network)
   offline,
 
-  /// Network is available but server is unreachable
   serverUnreachable,
 
-  /// Unknown connectivity status
   unknown,
 }
 
-/// A lightweight connectivity service that checks actual internet access
-/// without requiring additional dependencies.
 class ConnectivityService {
   ConnectivityService._();
   static final ConnectivityService instance = ConnectivityService._();
 
-  /// Primary hosts to check for connectivity
   static const List<String> _primaryHosts = [
-    'raw.githubusercontent.com', // Our update config host
+    'raw.githubusercontent.com',
     'google.com',
     'cloudflare.com',
   ];
 
-  /// Timeout for connectivity checks
   static const Duration _timeout = Duration(seconds: 5);
 
-  /// Checks if the device has internet connectivity by attempting to reach
-  /// reliable external hosts.
-  ///
-  /// Returns [ConnectivityStatus.connected] if at least one host is reachable.
-  /// Returns [ConnectivityStatus.offline] if no hosts are reachable.
   Future<ConnectivityStatus> checkConnectivity() async {
     try {
-      // Try to lookup DNS for multiple hosts
       for (final host in _primaryHosts) {
         try {
           final result = await InternetAddress.lookup(host).timeout(_timeout);
@@ -48,10 +33,8 @@ class ConnectivityService {
             return ConnectivityStatus.connected;
           }
         } on SocketException catch (_) {
-          // Host unreachable, try next
           continue;
         } on TimeoutException catch (_) {
-          // Timeout, try next
           continue;
         }
       }
@@ -62,8 +45,6 @@ class ConnectivityService {
     }
   }
 
-  /// Checks if the update server specifically is reachable.
-  /// This is useful for distinguishing between "no internet" and "server down".
   Future<ConnectivityStatus> checkUpdateServerConnectivity() async {
     try {
       final result = await InternetAddress.lookup(
@@ -74,7 +55,6 @@ class ConnectivityService {
       }
       return ConnectivityStatus.serverUnreachable;
     } on SocketException catch (_) {
-      // Check if it's a general network issue or server-specific
       final generalStatus = await checkConnectivity();
       if (generalStatus == ConnectivityStatus.connected) {
         return ConnectivityStatus.serverUnreachable;
@@ -88,7 +68,6 @@ class ConnectivityService {
     }
   }
 
-  /// Returns a human-readable message for each connectivity status
   static String getStatusMessage(ConnectivityStatus status) {
     switch (status) {
       case ConnectivityStatus.connected:
@@ -102,7 +81,6 @@ class ConnectivityService {
     }
   }
 
-  /// Returns the recovery action message for each connectivity status
   static String getRecoveryMessage(ConnectivityStatus status) {
     switch (status) {
       case ConnectivityStatus.connected:

@@ -2,29 +2,15 @@ import 'package:flutter/material.dart';
 
 import '../../../apps/domain/entities/device_app.dart';
 
-/// Share poster widget for usage statistics.
-///
-/// Renders a visually appealing poster image showing:
-/// - Total screen time
-/// - Top apps by usage
-/// - Optional "roast" content showing lifespan consumed
-///
-/// This widget is designed for screenshot/export and uses a fixed
-/// width for consistent rendering across devices.
 class UsageStatsSharePoster extends StatelessWidget {
-  /// Top apps sorted by usage time.
   final List<DeviceApp> topApps;
 
-  /// Total usage duration to display.
   final Duration totalUsage;
 
-  /// Date string to show on the poster.
   final String date;
 
-  /// Optional roast text about lifespan consumed.
   final String? roastContent;
 
-  /// Creates a usage stats share poster.
   const UsageStatsSharePoster({
     super.key,
     required this.topApps,
@@ -33,7 +19,6 @@ class UsageStatsSharePoster extends StatelessWidget {
     this.roastContent,
   });
 
-  /// Fixed poster width for consistent export sizing.
   static const double _posterWidth = 400.0;
 
   @override
@@ -46,8 +31,8 @@ class UsageStatsSharePoster extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            Color(0xFF1A1A1A), // Dark Grey
-            Color(0xFF000000), // Black
+            Color(0xFF1A1A1A),
+            Color(0xFF000000),
           ],
         ),
       ),
@@ -73,11 +58,6 @@ class UsageStatsSharePoster extends StatelessWidget {
   }
 }
 
-// -----------------------------------------------------------------------------
-// Private Widgets
-// -----------------------------------------------------------------------------
-
-/// Header section with branding.
 class _PosterHeader extends StatelessWidget {
   const _PosterHeader();
 
@@ -132,7 +112,6 @@ class _PosterHeader extends StatelessWidget {
   }
 }
 
-/// Hero stat card showing total screen time.
 class _HeroStatCard extends StatelessWidget {
   final Duration totalUsage;
   final String date;
@@ -192,7 +171,6 @@ class _HeroStatCard extends StatelessWidget {
   }
 }
 
-/// Roast card showing lifespan consumed message.
 class _RoastCard extends StatelessWidget {
   final String content;
 
@@ -238,7 +216,6 @@ class _RoastCard extends StatelessWidget {
   }
 }
 
-/// Section showing top apps by usage.
 class _TopAppsSection extends StatelessWidget {
   final List<DeviceApp> topApps;
   final Duration totalUsage;
@@ -266,7 +243,6 @@ class _TopAppsSection extends StatelessWidget {
   }
 }
 
-/// Single app row showing usage details.
 class _AppUsageRow extends StatelessWidget {
   final DeviceApp app;
   final Duration totalUsage;
@@ -379,7 +355,6 @@ class _AppUsageRow extends StatelessWidget {
   }
 }
 
-/// Footer with signature.
 class _PosterFooter extends StatelessWidget {
   const _PosterFooter();
 

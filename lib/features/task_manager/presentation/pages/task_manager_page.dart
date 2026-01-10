@@ -1,9 +1,3 @@
-/// The main Task Manager page for viewing system and app processes.
-///
-/// This page displays:
-/// - Real-time system statistics (RAM, battery, GPU, thermal)
-/// - Kernel/system processes
-/// - Active user applications with recent usage
 library;
 
 import 'dart:async';
@@ -24,31 +18,7 @@ import '../widgets/system_stats_card.dart';
 import '../widgets/task_manager_search_bar.dart';
 import '../widgets/task_manager_stage.dart';
 
-/// The main Task Manager page that displays system info and running processes.
-///
-/// This page provides a real-time view of:
-/// - Device information and kernel version
-/// - Memory (RAM) and battery usage
-/// - GPU, thermal, and Android version stats
-/// - Shell/kernel processes
-/// - Active user applications
-///
-/// ## Features
-/// - Auto-refresh of stats every 5 seconds
-/// - Search/filter functionality for processes
-/// - Tap user apps to navigate to app details
-/// - Live indicators for active processes
-///
-/// ## Usage
-/// Navigate to this page from the drawer or app bar:
-/// ```dart
-/// Navigator.push(
-///   context,
-///   MaterialPageRoute(builder: (_) => const TaskManagerPage()),
-/// );
-/// ```
 class TaskManagerPage extends ConsumerStatefulWidget {
-  /// Creates a task manager page.
   const TaskManagerPage({super.key});
 
   @override
@@ -59,11 +29,9 @@ class _TaskManagerPageState extends ConsumerState<TaskManagerPage> {
   final Battery _battery = Battery();
   Timer? _refreshTimer;
 
-  // Search state
   String _searchQuery = "";
   final TextEditingController _searchController = TextEditingController();
 
-  // System stats state
   int _totalRam = 0;
   int _freeRam = 0;
   int _batteryLevel = 0;
@@ -72,10 +40,6 @@ class _TaskManagerPageState extends ConsumerState<TaskManagerPage> {
   String _androidVersion = "";
 
   bool _isLoadingStats = true;
-
-  // ===========================================================================
-  // LIFECYCLE
-  // ===========================================================================
 
   @override
   void initState() {
@@ -91,7 +55,6 @@ class _TaskManagerPageState extends ConsumerState<TaskManagerPage> {
     super.dispose();
   }
 
-  /// Starts the periodic refresh timer for system stats.
   void _startRefreshTimer() {
     _refreshTimer = Timer.periodic(TaskManagerDurations.refreshInterval, (
       timer,
@@ -101,9 +64,7 @@ class _TaskManagerPageState extends ConsumerState<TaskManagerPage> {
     });
   }
 
-  /// Initializes all system stats with a minimum loading delay.
   Future<void> _initSystemStats() async {
-    // Artificial delay for premium scanning animation
     final minWait = Future.delayed(TaskManagerDurations.minLoadingWait);
     final fetchTask = Future.wait([
       _refreshRam(),
@@ -118,7 +79,6 @@ class _TaskManagerPageState extends ConsumerState<TaskManagerPage> {
     }
   }
 
-  /// Refreshes RAM statistics from system info.
   Future<void> _refreshRam() async {
     try {
       const int mb = 1024 * 1024;
@@ -126,11 +86,9 @@ class _TaskManagerPageState extends ConsumerState<TaskManagerPage> {
       _freeRam = SysInfo.getFreePhysicalMemory() ~/ mb;
       if (mounted) setState(() {});
     } catch (e) {
-      // Graceful fallback - keep previous values
     }
   }
 
-  /// Refreshes battery level and state.
   Future<void> _refreshBattery() async {
     try {
       final level = await _battery.batteryLevel;
@@ -142,11 +100,9 @@ class _TaskManagerPageState extends ConsumerState<TaskManagerPage> {
         });
       }
     } catch (e) {
-      // Graceful fallback - keep previous values
     }
   }
 
-  /// Gets device information (model and Android version).
   Future<void> _getDeviceInfo() async {
     try {
       final deviceInfo = DeviceInfoPlugin();
@@ -158,13 +114,8 @@ class _TaskManagerPageState extends ConsumerState<TaskManagerPage> {
         });
       }
     } catch (e) {
-      // Graceful fallback - keep default values
     }
   }
-
-  // ===========================================================================
-  // BUILD METHOD
-  // ===========================================================================
 
   @override
   Widget build(BuildContext context) {
@@ -180,7 +131,6 @@ class _TaskManagerPageState extends ConsumerState<TaskManagerPage> {
           slivers: [
             const PremiumSliverAppBar(title: "Task Manager"),
 
-            // System Stats Card
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.all(TaskManagerSpacing.lg),
@@ -197,7 +147,6 @@ class _TaskManagerPageState extends ConsumerState<TaskManagerPage> {
 
             const SliverToBoxAdapter(child: SizedBox(height: 10)),
 
-            // Search Bar
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.symmetric(
@@ -211,7 +160,6 @@ class _TaskManagerPageState extends ConsumerState<TaskManagerPage> {
               ),
             ),
 
-            // Process List
             _buildProcessList(viewModelState, theme),
 
             const SliverPadding(
@@ -223,7 +171,6 @@ class _TaskManagerPageState extends ConsumerState<TaskManagerPage> {
     );
   }
 
-  /// Builds the process list based on the view model state.
   Widget _buildProcessList(
     AsyncValue<TaskManagerData> viewModelState,
     ThemeData theme,
@@ -237,9 +184,7 @@ class _TaskManagerPageState extends ConsumerState<TaskManagerPage> {
     );
   }
 
-  /// Builds the process list content with filtered data.
   Widget _buildProcessListContent(TaskManagerData data, ThemeData theme) {
-    // Apply search filter
     var shellProcesses = data.shellProcesses;
     var activeApps = data.activeApps;
     final matches = data.matches;
@@ -252,7 +197,6 @@ class _TaskManagerPageState extends ConsumerState<TaskManagerPage> {
 
     final List<Widget> listItems = [];
 
-    // Add kernel/system section
     if (shellProcesses.isNotEmpty) {
       listItems.add(
         ProcessSectionHeader(
@@ -265,7 +209,6 @@ class _TaskManagerPageState extends ConsumerState<TaskManagerPage> {
       }
     }
 
-    // Add user apps section
     if (activeApps.isNotEmpty) {
       listItems.add(
         UserSpaceSectionHeader(
@@ -280,7 +223,6 @@ class _TaskManagerPageState extends ConsumerState<TaskManagerPage> {
       }
     }
 
-    // Handle empty state
     if (listItems.isEmpty) {
       return _buildEmptyState(theme);
     }
@@ -293,7 +235,6 @@ class _TaskManagerPageState extends ConsumerState<TaskManagerPage> {
     );
   }
 
-  /// Filters shell processes by search query.
   List<AndroidProcess> _filterShellProcesses(
     List<AndroidProcess> processes,
     String query,
@@ -305,7 +246,6 @@ class _TaskManagerPageState extends ConsumerState<TaskManagerPage> {
     }).toList();
   }
 
-  /// Filters active apps by search query.
   List<DeviceApp> _filterActiveApps(List<DeviceApp> apps, String query) {
     return apps.where((app) {
       return app.appName.toLowerCase().contains(query) ||
@@ -313,7 +253,6 @@ class _TaskManagerPageState extends ConsumerState<TaskManagerPage> {
     }).toList();
   }
 
-  /// Builds the empty state for when no processes match.
   Widget _buildEmptyState(ThemeData theme) {
     final message = _searchQuery.isNotEmpty
         ? "No processes match your search"

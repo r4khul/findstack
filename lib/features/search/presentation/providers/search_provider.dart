@@ -50,13 +50,7 @@ final filteredAppsProvider = Provider<List<DeviceApp>>((ref) {
 
         bool matchesStack = true;
         if (techStack != null && techStack != 'All') {
-          // "Android" is strict mismatch if the stack is different?
-          // Or does "Android" native map to Java/Kotlin?
-          // For now, let's assume strict string match on the stack field we have on DeviceApp
-          // But wait, DeviceApp.stack might be 'Native (Kotlin)' or just 'Kotlin'.
-          // Let's assume the detector returns simple strings like 'Flutter', 'React Native'.
           if (techStack == 'Android') {
-            // Match Native Default
             matchesStack = ['Java', 'Kotlin', 'Android'].contains(app.stack);
           } else {
             matchesStack = app.stack.toLowerCase() == techStack.toLowerCase();

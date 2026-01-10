@@ -9,7 +9,6 @@ class ScanProgressWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    // Extract package name safely
     final packageName = progress.status.startsWith("Scanning")
         ? progress.status.replaceFirst("Scanning ", "")
         : "";
@@ -18,8 +17,6 @@ class ScanProgressWidget extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          // Smooth Progress Circle
-          // Smooth Progress Circle
           SizedBox(
             width: 220,
             height: 220,
@@ -31,7 +28,6 @@ class ScanProgressWidget extends StatelessWidget {
                 return Stack(
                   alignment: Alignment.center,
                   children: [
-                    // Background ring
                     SizedBox.expand(
                       child: CircularProgressIndicator(
                         value: 1,
@@ -41,7 +37,6 @@ class ScanProgressWidget extends StatelessWidget {
                         ),
                       ),
                     ),
-                    // Foreground value
                     SizedBox.expand(
                       child: CircularProgressIndicator(
                         value: value,
@@ -85,7 +80,6 @@ class ScanProgressWidget extends StatelessWidget {
 
           const SizedBox(height: 48),
 
-          // Status & Count
           Text(
             progress.status.startsWith("Scanning")
                 ? "Deep System Scan"
@@ -107,8 +101,6 @@ class ScanProgressWidget extends StatelessWidget {
 
           const SizedBox(height: 32),
 
-          // Terminal / Log View
-          // Fixed height container to prevent layout jumping
           Container(
             height: 48,
             margin: const EdgeInsets.symmetric(horizontal: 32),
@@ -146,16 +138,15 @@ class ScanProgressWidget extends StatelessWidget {
                             ),
                           );
                         },
-                    // Use Key to force consistency even if text is empty
                     child: Text(
                       packageName.isNotEmpty ? packageName : "Initializing...",
                       key: ValueKey<String>(
                         packageName,
-                      ), // Crucial for AnimatedSwitcher
+                      ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        fontFamily: 'Courier', // Monospace for tech feel
+                        fontFamily: 'Courier',
                         color: theme.colorScheme.onSurface.withOpacity(0.8),
                         fontSize: 13,
                         height: 1.0,

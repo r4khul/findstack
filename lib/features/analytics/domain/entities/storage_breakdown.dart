@@ -1,74 +1,44 @@
 import 'package:equatable/equatable.dart';
 
-/// Comprehensive storage breakdown for an application.
-/// Provides granular insight into where storage is consumed.
 class StorageBreakdown extends Equatable {
-  /// Package name this breakdown belongs to
   final String packageName;
 
-  // ===== EXACT MEASUREMENTS (from StorageStatsManager) =====
-
-  /// APK file size + split APKs
   final int apkSize;
 
-  /// Code size (DEX, native libs inside APK)
   final int codeSize;
 
-  /// Internal app data (databases, shared_prefs, etc.)
   final int appDataInternal;
 
-  /// Internal cache directory
   final int cacheInternal;
 
-  /// External cache directory
   final int cacheExternal;
 
-  // ===== DISCOVERABLE (via file analysis) =====
-
-  /// OBB files size (Android/obb/{package})
   final int obbSize;
 
-  /// External app data (Android/data/{package})
   final int externalDataSize;
 
-  /// Media files owned/created by app
   final int mediaSize;
 
-  /// Database files total size
   final int databasesSize;
 
-  /// Log files (.log, .txt logs)
   final int logsSize;
 
-  /// Other discoverable files not categorized
   final int residualSize;
 
-  // ===== DETAILED BREAKDOWNS =====
-
-  /// Media breakdown by type
   final MediaBreakdown mediaBreakdown;
 
-  /// Individual database files
   final Map<String, int> databaseBreakdown;
 
-  // ===== METADATA =====
-
-  /// Sum of exact measurements from official APIs
   final int totalExact;
 
-  /// Sum of estimated/discovered measurements
   final int totalEstimated;
 
-  /// Grand total (exact + estimated)
   final int totalCombined;
 
-  /// When this breakdown was computed
   final DateTime scanTimestamp;
 
-  /// Confidence level (0.0 - 1.0)
   final double confidenceLevel;
 
-  /// List of limitations encountered during analysis
   final List<String> limitations;
 
   const StorageBreakdown({
@@ -134,13 +104,10 @@ class StorageBreakdown extends Equatable {
     );
   }
 
-  /// Get total cache size
   int get totalCache => cacheInternal + cacheExternal;
 
-  /// Check if this is a detailed scan
   bool get isDetailed => totalEstimated > 0 || limitations.isNotEmpty;
 
-  /// Check if scan is recent (within 5 minutes)
   bool get isRecent {
     final age = DateTime.now().difference(scanTimestamp);
     return age.inMinutes < 5;
@@ -171,7 +138,6 @@ class StorageBreakdown extends Equatable {
   ];
 }
 
-/// Media storage breakdown by type
 class MediaBreakdown extends Equatable {
   final int images;
   final int videos;

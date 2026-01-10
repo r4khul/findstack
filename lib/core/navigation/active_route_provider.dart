@@ -1,6 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-/// Notifier that holds the name of the currently active route.
 class ActiveRouteNotifier extends Notifier<String?> {
   @override
   String? build() => null;
@@ -10,7 +9,6 @@ class ActiveRouteNotifier extends Notifier<String?> {
   }
 }
 
-/// Provider that holds the name of the currently active route.
 final activeRouteProvider = NotifierProvider<ActiveRouteNotifier, String?>(
   ActiveRouteNotifier.new,
 );

@@ -1,29 +1,18 @@
 import 'package:flutter/material.dart';
 
-/// Navigation tile widget for drawer menu items.
-///
-/// A tappable tile with an icon, title, optional subtitle, and optional badge.
-/// Designed for consistent navigation item presentation in the drawer.
 class DrawerNavTile extends StatelessWidget {
-  /// The title text displayed prominently.
   final String title;
 
-  /// Optional subtitle text displayed below the title.
   final String? subtitle;
 
-  /// The leading icon.
   final IconData icon;
 
-  /// Callback when the tile is tapped.
   final VoidCallback onTap;
 
-  /// Optional trailing widget (displayed before the arrow).
   final Widget? trailing;
 
-  /// Whether to show a notification badge on the icon.
   final bool showBadge;
 
-  /// Creates a drawer navigation tile.
   const DrawerNavTile({
     super.key,
     required this.title,

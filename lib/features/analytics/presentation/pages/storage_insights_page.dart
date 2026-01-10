@@ -11,20 +11,7 @@ import '../widgets/storage_app_item.dart';
 import '../widgets/storage_stats_card.dart';
 import '../widgets/top_count_filter_button.dart';
 
-/// Storage insights analytics page.
-///
-/// Displays app storage data with:
-/// - Total storage breakdown (code, data, cache)
-/// - Interactive pie chart of heaviest apps
-/// - Searchable/filterable app list with expandable details
-///
-/// ## Features
-/// - Search by app name or package
-/// - Filter top N apps (5, 10, 20)
-/// - Touch to expand app details (cache breakdown)
-/// - Touch interaction between chart and list
 class StorageInsightsPage extends ConsumerStatefulWidget {
-  /// Creates the storage insights page.
   const StorageInsightsPage({super.key});
 
   @override
@@ -44,10 +31,6 @@ class _StorageInsightsPageState extends ConsumerState<StorageInsightsPage> {
     super.dispose();
   }
 
-  // ---------------------------------------------------------------------------
-  // Build
-  // ---------------------------------------------------------------------------
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -64,14 +47,12 @@ class _StorageInsightsPageState extends ConsumerState<StorageInsightsPage> {
   }
 
   Widget _buildDataState(List<DeviceApp> apps, ThemeData theme) {
-    // Filter by search query
     final filteredApps = apps.where((app) {
       final query = _searchQuery.toLowerCase();
       return app.appName.toLowerCase().contains(query) ||
           app.packageName.toLowerCase().contains(query);
     }).toList();
 
-    // Filter by size > 0 and sort
     final validApps = filteredApps.where((a) => a.size > 0).toList()
       ..sort((a, b) => b.size.compareTo(a.size));
 
@@ -111,13 +92,11 @@ class _StorageInsightsPageState extends ConsumerState<StorageInsightsPage> {
   }
 
   Widget _buildStorageContent(List<DeviceApp> validApps, ThemeData theme) {
-    // Calculate totals
     final totalSize = validApps.fold<int>(0, (sum, app) => sum + app.size);
     final appCodeSize = validApps.fold<int>(0, (sum, app) => sum + app.appSize);
     final dataSize = validApps.fold<int>(0, (sum, app) => sum + app.dataSize);
     final cacheSize = validApps.fold<int>(0, (sum, app) => sum + app.cacheSize);
 
-    // Top apps for chart
     final topAppsForChart = validApps.take(_showTopCount).toList();
     final topSizeForChart = topAppsForChart.fold<int>(
       0,
@@ -142,10 +121,6 @@ class _StorageInsightsPageState extends ConsumerState<StorageInsightsPage> {
       ],
     );
   }
-
-  // ---------------------------------------------------------------------------
-  // Sliver Builders
-  // ---------------------------------------------------------------------------
 
   Widget _buildSearchBarSliver() {
     return SliverToBoxAdapter(
@@ -259,10 +234,6 @@ class _StorageInsightsPageState extends ConsumerState<StorageInsightsPage> {
       ),
     );
   }
-
-  // ---------------------------------------------------------------------------
-  // Helpers
-  // ---------------------------------------------------------------------------
 
   String _formatBytes(int bytes) {
     if (bytes <= 0) return '0 B';

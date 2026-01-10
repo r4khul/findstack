@@ -3,10 +3,6 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 
-/// A smart overlay that detects scroll activity in its [child] and displays
-/// a vertical app count badge on the left edge.
-///
-/// The badge appears only after the user stops scrolling for [debounceDuration].
 class AppCountOverlay extends StatefulWidget {
   final Widget child;
   final int count;
@@ -30,7 +26,6 @@ class _AppCountOverlayState extends State<AppCountOverlay>
   late Animation<double> _slideAnimation;
   late Animation<double> _fadeAnimation;
 
-  // Logic flag only, does not trigger rebuilds
   bool _isLogicallyVisible = true;
 
   @override
@@ -40,10 +35,9 @@ class _AppCountOverlayState extends State<AppCountOverlay>
       vsync: this,
       duration: const Duration(
         milliseconds: 500,
-      ), // Slightly longer for sleekness
+      ),
     );
 
-    // Sleek entry: Smooth deceleration
     _slideAnimation = Tween<double>(begin: -80.0, end: 0.0).animate(
       CurvedAnimation(
         parent: _controller,
@@ -73,7 +67,6 @@ class _AppCountOverlayState extends State<AppCountOverlay>
   void _hide() {
     if (_isLogicallyVisible) {
       _isLogicallyVisible = false;
-      // No setState needed - animation drives the view
       _controller.reverse();
     }
     _scrollEndTimer?.cancel();
@@ -90,22 +83,19 @@ class _AppCountOverlayState extends State<AppCountOverlay>
   }
 
   void _onScrollNotification(ScrollNotification notification) {
-    // Ignore horizontal scrolls
     if (notification.metrics.axis == Axis.horizontal) return;
 
     if (notification is UserScrollNotification) {
-      // Immediate hide on interaction
       if (notification.direction != ScrollDirection.idle) {
         _hide();
       } else {
         _show();
       }
     } else if (notification is ScrollUpdateNotification) {
-      // Hide on updates (momentum or drag)
       if (notification.scrollDelta != null &&
           notification.scrollDelta!.abs() > 0.5) {
         _hide();
-        _show(); // Debounce the show
+        _show();
       }
     } else if (notification is ScrollEndNotification) {
       _show();
@@ -122,10 +112,8 @@ class _AppCountOverlayState extends State<AppCountOverlay>
       child: Stack(
         fit: StackFit.passthrough,
         children: [
-          // Main Content - Stable, never rebuilt by this widget's logic
           widget.child,
 
-          // Badge Overlay
           Align(
             alignment: Alignment.centerLeft,
             child: RepaintBoundary(
@@ -133,7 +121,6 @@ class _AppCountOverlayState extends State<AppCountOverlay>
                 animation: _controller,
                 builder: (context, child) {
                   final val = _controller.value;
-                  // Zero-cost when hidden
                   if (val == 0.0) return const SizedBox.shrink();
 
                   return Transform.translate(
@@ -143,7 +130,7 @@ class _AppCountOverlayState extends State<AppCountOverlay>
                       child: IgnorePointer(
                         ignoring:
                             val <
-                            0.1, // Ignore touches during mostly-hidden phase
+                            0.1,
                         child: child,
                       ),
                     ),
@@ -170,7 +157,7 @@ class _VerticalBadgeContent extends StatelessWidget {
     final isDark = theme.brightness == Brightness.dark;
 
     return Container(
-      margin: const EdgeInsets.only(left: 0), // Flush to edge
+      margin: const EdgeInsets.only(left: 0),
       child: ClipRRect(
         borderRadius: const BorderRadius.only(
           topRight: Radius.circular(12),
@@ -217,15 +204,13 @@ class _VerticalBadgeContent extends StatelessWidget {
                     color: theme.colorScheme.primary,
                   ),
                   const SizedBox(height: 12),
-                  // Rotated Text
                   RotatedBox(
-                    quarterTurns: 3, // Reads bottom to top
+                    quarterTurns: 3,
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       mainAxisAlignment:
-                          MainAxisAlignment.center, // Center content
+                          MainAxisAlignment.center,
                       children: [
-                        // Number with animation
                         AnimatedSwitcher(
                           duration: const Duration(milliseconds: 300),
                           transitionBuilder: (child, animation) {
@@ -237,8 +222,6 @@ class _VerticalBadgeContent extends StatelessWidget {
                               ),
                             );
                           },
-                          // Use a layout builder to prevent layout jumps during cross-fade if possible,
-                          // but MainAxisAlignment.center + AnimatedSize handles most.
                           child: Text(
                             "$count",
                             key: ValueKey<int>(count),
@@ -248,7 +231,7 @@ class _VerticalBadgeContent extends StatelessWidget {
                               color: theme.colorScheme.onSurface,
                               fontFeatures: [
                                 const FontFeature.tabularFigures(),
-                              ], // Stable scale width
+                              ],
                             ),
                           ),
                         ),

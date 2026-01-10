@@ -1,30 +1,15 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 
-/// Premium sliver app bar with glassmorphism effect.
-///
-/// A floating, compact app bar with backdrop blur that supports:
-/// - Optional resync action
-/// - Optional share action
-/// - Custom trailing actions
-/// - Automatic back button when navigation is possible
-///
-/// The app bar uses a glass-like aesthetic with blur effects and
-/// subtle borders for a premium feel.
 class PremiumSliverAppBar extends StatefulWidget {
-  /// Title displayed in the center of the app bar.
   final String title;
 
-  /// Callback for resync action. If null, resync option is hidden.
   final VoidCallback? onResync;
 
-  /// Callback for share action. If null, share option is hidden.
   final VoidCallback? onShare;
 
-  /// Optional additional actions to display.
   final List<Widget>? actions;
 
-  /// Creates a premium sliver app bar.
   const PremiumSliverAppBar({
     super.key,
     required this.title,
@@ -47,10 +32,6 @@ class _PremiumSliverAppBarState extends State<PremiumSliverAppBar> {
     _removeOverlay(fromDispose: true);
     super.dispose();
   }
-
-  // ---------------------------------------------------------------------------
-  // Overlay Menu Management
-  // ---------------------------------------------------------------------------
 
   void _removeOverlay({bool fromDispose = false}) {
     _overlayEntry?.remove();
@@ -163,10 +144,6 @@ class _PremiumSliverAppBarState extends State<PremiumSliverAppBar> {
     );
   }
 
-  // ---------------------------------------------------------------------------
-  // Build
-  // ---------------------------------------------------------------------------
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -240,7 +217,7 @@ class _PremiumSliverAppBarState extends State<PremiumSliverAppBar> {
             const SizedBox(width: 8),
             _buildMenuButton(theme),
           ] else if (canPop && !hasActions) ...[
-            const SizedBox(width: 36), // Balance the leading icon width
+            const SizedBox(width: 36),
           ],
         ],
       ),
@@ -309,11 +286,6 @@ class _PremiumSliverAppBarState extends State<PremiumSliverAppBar> {
   }
 }
 
-// -----------------------------------------------------------------------------
-// Private Widgets
-// -----------------------------------------------------------------------------
-
-/// Menu item for the overlay dropdown.
 class _OverlayMenuItem extends StatelessWidget {
   final IconData icon;
   final String label;

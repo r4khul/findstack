@@ -2,8 +2,6 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
-/// Subtle tech icons with tilt, only visible on first page.
-/// Uses real SVG colors, varied sizes and rotations.
 class FloatingTechIcons extends StatefulWidget {
   final bool isDark;
   final int pageIndex;
@@ -43,7 +41,6 @@ class _FloatingTechIconsState extends State<FloatingTechIcons>
 
   @override
   Widget build(BuildContext context) {
-    // Only show on first page
     if (widget.pageIndex != 0) {
       return const SizedBox.shrink();
     }
@@ -55,7 +52,6 @@ class _FloatingTechIconsState extends State<FloatingTechIcons>
         child: Stack(
           clipBehavior: Clip.none,
           children: [
-            // Flutter - Half cut from left, upper area, tilted -15°
             _buildIcon(
               asset: 'assets/vectors/icon_flutter.svg',
               size: 52,
@@ -65,7 +61,6 @@ class _FloatingTechIconsState extends State<FloatingTechIcons>
               delay: 0.0,
             ),
 
-            // Android - Half cut from left, lower area, tilted 12°
             _buildIcon(
               asset: 'assets/vectors/icon_android.svg',
               size: 40,
@@ -75,7 +70,6 @@ class _FloatingTechIconsState extends State<FloatingTechIcons>
               delay: 0.15,
             ),
 
-            // Kotlin - Top right, smaller, tilted 20°
             _buildIcon(
               asset: 'assets/vectors/icon_kotlin.svg',
               size: 28,
@@ -85,7 +79,6 @@ class _FloatingTechIconsState extends State<FloatingTechIcons>
               delay: 0.25,
             ),
 
-            // React Native - Bottom right, medium, tilted -8°
             _buildIcon(
               asset: 'assets/vectors/icon_reactnative.svg',
               size: 36,
@@ -140,12 +133,11 @@ class _FloatingTechIconsState extends State<FloatingTechIcons>
           child: Transform.rotate(
             angle: rotation * math.pi / 180,
             child: Opacity(
-              opacity: 0.35, // Subtle but visible
+              opacity: 0.35,
               child: SvgPicture.asset(
                 asset,
                 width: size,
                 height: size,
-                // No colorFilter - use real SVG colors
               ),
             ),
           ),

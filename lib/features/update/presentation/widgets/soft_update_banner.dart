@@ -1,8 +1,3 @@
-/// A banner widget displayed when a soft (optional) update is available.
-///
-/// This banner appears at the bottom of the screen with a slide-in animation
-/// and can be dismissed by the user. It provides a quick way to download
-/// the update without blocking app usage.
 library;
 
 import 'dart:ui';
@@ -14,30 +9,9 @@ import '../../domain/update_service.dart';
 import 'constants.dart';
 import 'update_download_button.dart';
 
-/// A dismissible banner shown when an optional update is available.
-///
-/// The banner:
-/// - Slides in from the bottom with an elastic animation
-/// - Shows version information
-/// - Contains a download button
-/// - Can be dismissed without updating
-/// - Uses glassmorphism for a premium look
-///
-/// ## Animation Behavior
-/// - Appears 2 seconds after mounting to avoid interfering with initial load
-/// - Uses [Curves.elasticOut] for a bouncy entrance
-/// - Slides out when dismissed
-///
-/// ## Usage
-/// This is typically shown by [VersionCheckGate] when the update check
-/// returns [UpdateStatus.softUpdate].
 class SoftUpdateBanner extends ConsumerStatefulWidget {
-  /// The result of the update check containing version information.
   final UpdateCheckResult result;
 
-  /// Creates a soft update banner.
-  ///
-  /// [result] contains the update check result with version details.
   const SoftUpdateBanner({super.key, required this.result});
 
   @override
@@ -57,7 +31,6 @@ class _SoftUpdateBannerState extends ConsumerState<SoftUpdateBanner>
     _scheduleEntrance();
   }
 
-  /// Initializes the slide animation controller and offset animation.
   void _initializeAnimations() {
     _controller = AnimationController(
       duration: UpdateAnimationDurations.slideIn,
@@ -69,7 +42,6 @@ class _SoftUpdateBannerState extends ConsumerState<SoftUpdateBanner>
     ).animate(CurvedAnimation(parent: _controller, curve: Curves.elasticOut));
   }
 
-  /// Schedules the banner entrance with a delay.
   void _scheduleEntrance() {
     Future.delayed(UpdateAnimationDurations.bannerDelay, () {
       if (mounted) _controller.forward();
@@ -82,7 +54,6 @@ class _SoftUpdateBannerState extends ConsumerState<SoftUpdateBanner>
     super.dispose();
   }
 
-  /// Dismisses the banner with a slide-out animation.
   void _dismiss() {
     _controller.reverse().then((_) {
       if (mounted) {
@@ -137,7 +108,6 @@ class _SoftUpdateBannerState extends ConsumerState<SoftUpdateBanner>
     );
   }
 
-  /// Builds the glassmorphism decoration for the banner.
   BoxDecoration _buildDecoration(ThemeData theme) {
     return BoxDecoration(
       color: theme.cardColor.withOpacity(UpdateOpacity.nearlyOpaque),
@@ -155,7 +125,6 @@ class _SoftUpdateBannerState extends ConsumerState<SoftUpdateBanner>
     );
   }
 
-  /// Builds the header row with icon, version info, and dismiss button.
   Widget _buildHeader(ThemeData theme) {
     return Row(
       children: [
@@ -167,7 +136,6 @@ class _SoftUpdateBannerState extends ConsumerState<SoftUpdateBanner>
     );
   }
 
-  /// Builds the update icon container.
   Widget _buildIconContainer(ThemeData theme) {
     return Container(
       padding: const EdgeInsets.all(10),
@@ -183,7 +151,6 @@ class _SoftUpdateBannerState extends ConsumerState<SoftUpdateBanner>
     );
   }
 
-  /// Builds the version information column.
   Widget _buildVersionInfo(ThemeData theme) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -206,7 +173,6 @@ class _SoftUpdateBannerState extends ConsumerState<SoftUpdateBanner>
     );
   }
 
-  /// Builds the dismiss button.
   Widget _buildDismissButton(ThemeData theme) {
     return IconButton(
       onPressed: _dismiss,

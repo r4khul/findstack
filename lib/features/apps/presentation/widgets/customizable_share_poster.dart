@@ -3,8 +3,6 @@ import 'package:flutter_svg/flutter_svg.dart';
 import '../../domain/entities/device_app.dart';
 import 'share_options_config.dart';
 
-/// A customizable shareable poster for app details.
-/// Supports both light and dark themes based on config.
 class CustomizableSharePoster extends StatelessWidget {
   final DeviceApp app;
   final ShareOptionsConfig config;
@@ -15,7 +13,6 @@ class CustomizableSharePoster extends StatelessWidget {
     required this.config,
   });
 
-  // Theme colors based on posterDarkMode
   Color get _bgStart =>
       config.posterDarkMode ? const Color(0xFF1A1A1A) : const Color(0xFFF8F8F8);
   Color get _bgEnd =>
@@ -40,7 +37,6 @@ class CustomizableSharePoster extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Calculate usage stats
     final totalDuration = Duration(milliseconds: app.totalTimeInForeground);
     final usageHours = totalDuration.inHours;
     final usageMinutes = totalDuration.inMinutes % 60;
@@ -50,7 +46,6 @@ class CustomizableSharePoster extends StatelessWidget {
 
     final daysSinceInstall = DateTime.now().difference(app.installDate).inDays;
 
-    // Collect visible insight items
     final insightItems = <_InsightItem>[];
     if (config.showSize) {
       insightItems.add(_InsightItem("Size on Device", _formatBytes(app.size)));
@@ -95,24 +90,20 @@ class CustomizableSharePoster extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Header with Branding
           _buildHeader(),
 
           const SizedBox(height: 32),
 
-          // App Icon + Name Hero Section
           _buildHeroSection(),
 
           const SizedBox(height: 24),
 
-          // Quick Stats Grid (conditional)
           if (config.showVersion ||
               config.showSdk ||
               config.showUsage ||
               config.showInstallDate)
             _buildStatsGrid(usageString, daysSinceInstall),
 
-          // Deep Insights (conditional)
           if (insightItems.isNotEmpty) ...[
             const SizedBox(height: 24),
             _buildInsightsSection(insightItems),
@@ -120,7 +111,6 @@ class CustomizableSharePoster extends StatelessWidget {
 
           const SizedBox(height: 32),
 
-          // Footer
           _buildFooter(),
         ],
       ),
@@ -403,7 +393,6 @@ class CustomizableSharePoster extends StatelessWidget {
   Widget _buildFooter() {
     return Column(
       children: [
-        // Branding
         Row(
           mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.center,
@@ -421,7 +410,6 @@ class CustomizableSharePoster extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 10),
-        // Disclaimer
         Text(
           "Detection based on primary libraries · Apps may use hybrid frameworks",
           textAlign: TextAlign.center,

@@ -5,13 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../../core/providers/theme_provider.dart';
 import '../../../../../core/widgets/theme_transition_wrapper.dart';
 
-/// Theme switcher widget with animated sliding indicator.
-///
-/// Displays three theme options (Light, Auto, Dark) with a smooth
-/// sliding indicator animation. Integrates with the app's theme provider
-/// and supports the circular reveal transition effect.
 class DrawerThemeSwitcher extends ConsumerWidget {
-  /// Creates a drawer theme switcher.
   const DrawerThemeSwitcher({super.key});
 
   @override
@@ -19,8 +13,6 @@ class DrawerThemeSwitcher extends ConsumerWidget {
     final theme = Theme.of(context);
     final currentTheme = ref.watch(themeProvider);
 
-    // Calculate alignment for the sliding indicator
-    // -1.0 (Left/Light), 0.0 (Center/Auto), 1.0 (Right/Dark)
     final alignmentX = switch (currentTheme) {
       ThemeMode.light => -1.0,
       ThemeMode.dark => 1.0,
@@ -39,7 +31,6 @@ class DrawerThemeSwitcher extends ConsumerWidget {
       ),
       child: Stack(
         children: [
-          // Animated sliding indicator
           AnimatedAlign(
             alignment: Alignment(alignmentX, 0),
             duration: const Duration(milliseconds: 250),
@@ -62,7 +53,6 @@ class DrawerThemeSwitcher extends ConsumerWidget {
               ),
             ),
           ),
-          // Theme option buttons
           Row(
             children: [
               _ThemeOption(
@@ -91,7 +81,6 @@ class DrawerThemeSwitcher extends ConsumerWidget {
   }
 }
 
-/// Individual theme option button within the switcher.
 class _ThemeOption extends ConsumerWidget {
   final ThemeMode mode;
   final IconData icon;

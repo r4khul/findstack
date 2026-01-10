@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-/// Clean onboarding content with subtle fade animation.
 class OnboardingPageContent extends StatefulWidget {
   final String title;
   final String description;

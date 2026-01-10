@@ -1,13 +1,6 @@
 import 'package:flutter/material.dart';
 import '../navigation/motion_tokens.dart';
 
-/// Apple-grade page transitions for MaterialApp.theme.pageTransitionsTheme.
-///
-/// Motion principles:
-/// - Momentum-based entry (pages feel already moving)
-/// - Spatial depth via scale + desaturation
-/// - Early opacity ramp masks layout jank
-/// - Long deceleration, fast attack
 class ProPageTransitionsBuilder extends PageTransitionsBuilder {
   const ProPageTransitionsBuilder();
 
@@ -48,7 +41,6 @@ class _ProPageTransition extends StatelessWidget {
     final size = MediaQuery.of(context).size;
     final theme = Theme.of(context);
 
-    // Jank killer
     final Widget optimizedChild = RepaintBoundary(child: child);
 
     final bool isBackground = secondaryAnimation.value > 0.001;
@@ -58,22 +50,17 @@ class _ProPageTransition extends StatelessWidget {
       animation: Listenable.merge([animation, secondaryAnimation]),
       child: optimizedChild,
       builder: (context, staticChild) {
-        // ====== BACKGROUND PAGE ======
         if (isBackground) {
           final value = MotionTokens.pageEnter.transform(
             secondaryAnimation.value,
           );
 
-          // Parallax
           final slideX = -size.width * MotionTokens.parallaxOffset * value;
 
-          // Scale for depth
           final scale = 1.0 - (value * (1.0 - MotionTokens.backgroundScale));
 
-          // Dim
           final dim = value * MotionTokens.backgroundDimOpacity;
 
-          // Border radius
           final radius = MotionTokens.cardBorderRadius * value;
 
           return Transform(
@@ -109,11 +96,9 @@ class _ProPageTransition extends StatelessWidget {
           );
         }
 
-        // ====== ENTERING PAGE ======
         if (isEntering) {
           final value = MotionTokens.pageEnter.transform(animation.value);
 
-          // Early opacity (complete at 35%)
           final opacityProgress =
               (animation.value / MotionTokens.opacityCompletionPoint).clamp(
                 0.0,
@@ -121,18 +106,15 @@ class _ProPageTransition extends StatelessWidget {
               );
           final opacity = Curves.easeOut.transform(opacityProgress);
 
-          // Slide direction
           final slideX = isVertical ? 0.0 : size.width * (1.0 - value);
           final slideY = isVertical
               ? size.height * (1.0 - value)
               : MotionTokens.verticalParallax * (1.0 - value);
 
-          // Momentum scale
           final scale =
               MotionTokens.foregroundStartScale +
               ((1.0 - MotionTokens.foregroundStartScale) * value);
 
-          // Elevation
           final elevation = MotionTokens.pageElevation * value;
 
           return Opacity(
@@ -188,7 +170,6 @@ class _ProPageTransition extends StatelessWidget {
   }
 }
 
-/// Legacy compatibility
 @Deprecated('Use PremiumModals.showDialog instead')
 Future<T?> showProDialog<T>({
   required BuildContext context,

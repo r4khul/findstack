@@ -4,12 +4,7 @@ import '../../widgets/external_link_tile.dart';
 import '../../widgets/github_cta_card.dart';
 import '../../widgets/premium_sliver_app_bar.dart';
 
-/// Privacy policy page explaining data handling.
-///
-/// Displays information about the app's privacy practices including
-/// local processing, minimal permissions, and no tracking policies.
 class PrivacyPage extends StatelessWidget {
-  /// Creates the privacy page.
   const PrivacyPage({super.key});
 
   @override
@@ -106,11 +101,6 @@ class PrivacyPage extends StatelessWidget {
   }
 }
 
-// -----------------------------------------------------------------------------
-// Private Widgets
-// -----------------------------------------------------------------------------
-
-/// Policy section with icon and description.
 class _PolicySection extends StatelessWidget {
   final String title;
   final String content;

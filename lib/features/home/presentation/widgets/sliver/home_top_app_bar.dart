@@ -3,18 +3,11 @@ import 'package:flutter/material.dart';
 import '../scan_button.dart';
 import '../settings_menu.dart';
 
-/// Top app bar section with logo/title and action buttons.
-///
-/// Handles the transition between expanded title and collapsed logo view.
-/// Contains the scan button and settings menu.
 class HomeTopAppBar extends StatelessWidget {
-  /// App count to display in collapsed state.
   final int appCount;
 
-  /// Animation progress value (0.0 to 1.0) for title/logo transition.
   final double transitionProgress;
 
-  /// Creates a home top app bar.
   const HomeTopAppBar({
     super.key,
     required this.appCount,
@@ -28,7 +21,7 @@ class HomeTopAppBar extends StatelessWidget {
     return SafeArea(
       bottom: false,
       child: Container(
-        height: 56, // Standard toolbar height
+        height: 56,
         padding: const EdgeInsets.symmetric(horizontal: 20),
         child: Row(
           children: [
@@ -48,7 +41,6 @@ class HomeTopAppBar extends StatelessWidget {
     return Stack(
       alignment: Alignment.centerLeft,
       children: [
-        // Expanded Title (Exiting)
         Transform.translate(
           offset: Offset(0, -10 * transitionProgress),
           child: Opacity(
@@ -62,7 +54,6 @@ class HomeTopAppBar extends StatelessWidget {
           ),
         ),
 
-        // Collapsed Logo (Entering)
         Transform.translate(
           offset: Offset(0, 10 * (1 - transitionProgress)),
           child: Opacity(

@@ -2,27 +2,17 @@ import 'package:flutter/material.dart';
 
 import 'constants.dart';
 
-/// Global storage stats card showing total size breakdown.
-///
-/// Displays the total storage consumed with a breakdown by
-/// app code, user data, and cache.
 class StorageStatsCard extends StatelessWidget {
-  /// Total storage size in bytes.
   final int totalSize;
 
-  /// App code size in bytes.
   final int appCodeSize;
 
-  /// User data size in bytes.
   final int dataSize;
 
-  /// Cache size in bytes.
   final int cacheSize;
 
-  /// Whether results are filtered by search.
   final bool isFiltered;
 
-  /// Creates a storage stats card.
   const StorageStatsCard({
     super.key,
     required this.totalSize,
@@ -111,7 +101,6 @@ class StorageStatsCard extends StatelessWidget {
   }
 }
 
-/// Individual stat item in the storage breakdown row.
 class _StorageStatItem extends StatelessWidget {
   final String label;
   final int bytes;

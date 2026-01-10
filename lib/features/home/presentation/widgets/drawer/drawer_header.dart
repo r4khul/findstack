@@ -1,11 +1,6 @@
 import 'package:flutter/material.dart';
 
-/// Header widget for the app drawer.
-///
-/// Displays the "Menu" title with a subtitle and a close button.
-/// This is a stateless, pure UI composition widget.
 class AppDrawerHeader extends StatelessWidget {
-  /// Creates a drawer header widget.
   const AppDrawerHeader({super.key});
 
   @override

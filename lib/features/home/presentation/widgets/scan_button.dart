@@ -5,12 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/navigation/navigation.dart';
 import '../../../apps/presentation/providers/apps_provider.dart';
 
-/// Scan button widget for the home page app bar.
-///
-/// Displays a tappable button that opens scan options dialog with
-/// "Full System Scan" and "Smart Revalidate" options.
 class ScanButton extends ConsumerStatefulWidget {
-  /// Creates a scan button.
   const ScanButton({super.key});
 
   @override
@@ -57,7 +52,6 @@ class _ScanButtonState extends ConsumerState<ScanButton> {
   void _handleRevalidate(BuildContext dialogContext) {
     Navigator.pop(dialogContext);
 
-    // Show loading dialog
     showGeneralDialog(
       context: context,
       barrierDismissible: false,
@@ -72,7 +66,6 @@ class _ScanButtonState extends ConsumerState<ScanButton> {
       },
     );
 
-    // Capture navigator to ensure we can pop even if widget rebuilds
     final navigator = Navigator.of(context);
 
     final minWait = Future.delayed(const Duration(milliseconds: 1200));
@@ -135,11 +128,6 @@ class _ScanButtonState extends ConsumerState<ScanButton> {
   }
 }
 
-// -----------------------------------------------------------------------------
-// Private Dialog Widgets
-// -----------------------------------------------------------------------------
-
-/// Dialog showing scan options.
 class _ScanOptionsDialog extends StatelessWidget {
   final VoidCallback onFullScan;
   final VoidCallback onRevalidate;
@@ -245,7 +233,6 @@ class _ScanOptionsDialog extends StatelessWidget {
   }
 }
 
-/// Single scan option tile widget.
 class _ScanOptionTile extends StatelessWidget {
   final String title;
   final String description;
@@ -325,7 +312,6 @@ class _ScanOptionTile extends StatelessWidget {
   }
 }
 
-/// Loading dialog shown during revalidation.
 class _RevalidateLoadingDialog extends StatelessWidget {
   const _RevalidateLoadingDialog();
 

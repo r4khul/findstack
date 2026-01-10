@@ -22,12 +22,10 @@ class UsageChart extends StatefulWidget {
 }
 
 class _UsageChartState extends State<UsageChart> {
-  String _selectedRange = '1Y'; // 1W, 1M, 3M, 6M, 1Y
+  String _selectedRange = '1Y';
   int? _touchedIndex;
 
-  // Processed points for the chart (grouped/filtered)
   late List<AppUsagePoint> _chartPoints;
-  // Maximum Y value for scaling
   late double _maxY;
 
   @override
@@ -52,7 +50,6 @@ class _UsageChartState extends State<UsageChart> {
       return;
     }
 
-    // 1. Filter by Range
     final now = DateTime.now();
     Duration rangeDuration;
     switch (_selectedRange) {
@@ -77,21 +74,18 @@ class _UsageChartState extends State<UsageChart> {
     final cutoff = now.subtract(rangeDuration);
     final filtered = full.where((p) => p.date.isAfter(cutoff)).toList();
 
-    // 2. Data Grouping (Optimization for Performance)
-    // If we have too many points, the chart lags. We group by week for > 60 days.
     if (filtered.length > 60) {
       _chartPoints = _groupByWeek(filtered);
     } else {
       _chartPoints = filtered;
     }
 
-    // 3. Calculate Scale
     if (_chartPoints.isNotEmpty) {
       final maxUsage = _chartPoints
           .map((e) => e.usage.inMinutes.toDouble())
           .reduce(max);
-      _maxY = maxUsage * 1.2; // 20% buffer
-      if (_maxY < 60) _maxY = 60; // Min 1 hour scale
+      _maxY = maxUsage * 1.2;
+      if (_maxY < 60) _maxY = 60;
     } else {
       _maxY = 60;
     }
@@ -100,11 +94,7 @@ class _UsageChartState extends State<UsageChart> {
   List<AppUsagePoint> _groupByWeek(List<AppUsagePoint> points) {
     if (points.isEmpty) return [];
 
-    // Sort just in case
-    // points.sort((a, b) => a.date.compareTo(b.date)); // Assume already sorted
-
     final grouped = <AppUsagePoint>[];
-    // Efficient single pass:
     int i = 0;
     const int groupSize = 7;
 
@@ -121,7 +111,6 @@ class _UsageChartState extends State<UsageChart> {
       }
 
       if (count > 0 && firstDate != null) {
-        // Average daily usage for this week
         final avg = sumMinutes ~/ count;
         grouped.add(
           AppUsagePoint(
@@ -141,14 +130,12 @@ class _UsageChartState extends State<UsageChart> {
       return const Center(child: Text("No data for period"));
     }
 
-    // Calculate focused value (Header)
     AppUsagePoint focusedPoint;
     if (_touchedIndex != null &&
         _touchedIndex! >= 0 &&
         _touchedIndex! < _chartPoints.length) {
       focusedPoint = _chartPoints[_touchedIndex!];
     } else {
-      // Default: Average of displayed period
       final totalMins = _chartPoints.fold(
         0,
         (sum, p) => sum + p.usage.inMinutes,
@@ -236,7 +223,6 @@ class _UsageChartState extends State<UsageChart> {
   Widget _buildChart() {
     final theme = widget.theme;
 
-    // Create rich gradient
     final gradientColors = [
       theme.colorScheme.primary.withOpacity(0.4),
       theme.colorScheme.primary.withOpacity(0.0),
@@ -326,7 +312,7 @@ class _UsageChartState extends State<UsageChart> {
           ),
         ],
       ),
-      duration: const Duration(milliseconds: 300), // Smooth animation
+      duration: const Duration(milliseconds: 300),
       curve: Curves.easeOutCubic,
     );
   }
