@@ -1,19 +1,54 @@
+/// The main Task Manager page for viewing system and app processes.
+///
+/// This page displays:
+/// - Real-time system statistics (RAM, battery, GPU, thermal)
+/// - Kernel/system processes
+/// - Active user applications with recent usage
+library;
+
 import 'dart:async';
+
+import 'package:battery_plus/battery_plus.dart';
+import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:system_info2/system_info2.dart';
-import 'package:battery_plus/battery_plus.dart';
-import 'package:device_info_plus/device_info_plus.dart';
 
-import '../../../../core/navigation/navigation.dart';
-import '../../../apps/domain/entities/device_app.dart';
 import '../../../home/presentation/widgets/premium_sliver_app_bar.dart';
-import '../providers/process_provider.dart';
-import '../providers/task_manager_view_model.dart';
 import '../../domain/entities/android_process.dart';
+import '../../../apps/domain/entities/device_app.dart';
+import '../providers/task_manager_view_model.dart';
+import '../widgets/constants.dart';
+import '../widgets/process_list_items.dart';
+import '../widgets/system_stats_card.dart';
+import '../widgets/task_manager_search_bar.dart';
 import '../widgets/task_manager_stage.dart';
 
+/// The main Task Manager page that displays system info and running processes.
+///
+/// This page provides a real-time view of:
+/// - Device information and kernel version
+/// - Memory (RAM) and battery usage
+/// - GPU, thermal, and Android version stats
+/// - Shell/kernel processes
+/// - Active user applications
+///
+/// ## Features
+/// - Auto-refresh of stats every 5 seconds
+/// - Search/filter functionality for processes
+/// - Tap user apps to navigate to app details
+/// - Live indicators for active processes
+///
+/// ## Usage
+/// Navigate to this page from the drawer or app bar:
+/// ```dart
+/// Navigator.push(
+///   context,
+///   MaterialPageRoute(builder: (_) => const TaskManagerPage()),
+/// );
+/// ```
 class TaskManagerPage extends ConsumerStatefulWidget {
+  /// Creates a task manager page.
   const TaskManagerPage({super.key});
 
   @override
@@ -23,10 +58,12 @@ class TaskManagerPage extends ConsumerStatefulWidget {
 class _TaskManagerPageState extends ConsumerState<TaskManagerPage> {
   final Battery _battery = Battery();
   Timer? _refreshTimer;
+
+  // Search state
   String _searchQuery = "";
   final TextEditingController _searchController = TextEditingController();
 
-  // System Stats
+  // System stats state
   int _totalRam = 0;
   int _freeRam = 0;
   int _batteryLevel = 0;
@@ -36,15 +73,15 @@ class _TaskManagerPageState extends ConsumerState<TaskManagerPage> {
 
   bool _isLoadingStats = true;
 
+  // ===========================================================================
+  // LIFECYCLE
+  // ===========================================================================
+
   @override
   void initState() {
     super.initState();
     _initSystemStats();
-    // Refresh stats every 5 seconds to give a "live" feel while saving battery
-    _refreshTimer = Timer.periodic(const Duration(seconds: 5), (timer) {
-      _refreshRam();
-      _refreshBattery();
-    });
+    _startRefreshTimer();
   }
 
   @override
@@ -54,11 +91,20 @@ class _TaskManagerPageState extends ConsumerState<TaskManagerPage> {
     super.dispose();
   }
 
+  /// Starts the periodic refresh timer for system stats.
+  void _startRefreshTimer() {
+    _refreshTimer = Timer.periodic(TaskManagerDurations.refreshInterval, (
+      timer,
+    ) {
+      _refreshRam();
+      _refreshBattery();
+    });
+  }
+
+  /// Initializes all system stats with a minimum loading delay.
   Future<void> _initSystemStats() async {
-    // Artificial delay to allow the "Premium" scanning animation to play
-    // This gives a sense of "Deep Scanning" and "Processing"
-    // We increase this slightly to 2500ms to ensure all status messages are seen
-    final minWait = Future.delayed(const Duration(milliseconds: 2500));
+    // Artificial delay for premium scanning animation
+    final minWait = Future.delayed(TaskManagerDurations.minLoadingWait);
     final fetchTask = Future.wait([
       _refreshRam(),
       _refreshBattery(),
@@ -72,6 +118,7 @@ class _TaskManagerPageState extends ConsumerState<TaskManagerPage> {
     }
   }
 
+  /// Refreshes RAM statistics from system info.
   Future<void> _refreshRam() async {
     try {
       const int mb = 1024 * 1024;
@@ -79,10 +126,11 @@ class _TaskManagerPageState extends ConsumerState<TaskManagerPage> {
       _freeRam = SysInfo.getFreePhysicalMemory() ~/ mb;
       if (mounted) setState(() {});
     } catch (e) {
-      // Fallback
+      // Graceful fallback - keep previous values
     }
   }
 
+  /// Refreshes battery level and state.
   Future<void> _refreshBattery() async {
     try {
       final level = await _battery.batteryLevel;
@@ -94,10 +142,11 @@ class _TaskManagerPageState extends ConsumerState<TaskManagerPage> {
         });
       }
     } catch (e) {
-      // Ignore
+      // Graceful fallback - keep previous values
     }
   }
 
+  /// Gets device information (model and Android version).
   Future<void> _getDeviceInfo() async {
     try {
       final deviceInfo = DeviceInfoPlugin();
@@ -109,9 +158,13 @@ class _TaskManagerPageState extends ConsumerState<TaskManagerPage> {
         });
       }
     } catch (e) {
-      // Ignore
+      // Graceful fallback - keep default values
     }
   }
+
+  // ===========================================================================
+  // BUILD METHOD
+  // ===========================================================================
 
   @override
   Widget build(BuildContext context) {
@@ -127,835 +180,161 @@ class _TaskManagerPageState extends ConsumerState<TaskManagerPage> {
           slivers: [
             const PremiumSliverAppBar(title: "Task Manager"),
 
-            // System Stats Header
+            // System Stats Card
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: _buildSystemStatsCard(theme),
+                padding: const EdgeInsets.all(TaskManagerSpacing.lg),
+                child: SystemStatsCard(
+                  deviceModel: _deviceModel,
+                  androidVersion: _androidVersion,
+                  totalRam: _totalRam,
+                  freeRam: _freeRam,
+                  batteryLevel: _batteryLevel,
+                  batteryState: _batteryState,
+                ),
               ),
             ),
+
             const SliverToBoxAdapter(child: SizedBox(height: 10)),
 
             // Search Bar
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: _buildSearchBar(theme),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: TaskManagerSpacing.lg,
+                ),
+                child: TaskManagerSearchBar(
+                  controller: _searchController,
+                  searchQuery: _searchQuery,
+                  onChanged: (val) => setState(() => _searchQuery = val),
+                ),
               ),
             ),
 
-            // Unified List Logic
-            viewModelState.when(
-              data: (data) {
-                var shellProcesses = data.shellProcesses;
-                var activeApps = data.activeApps;
-                final matches = data.matches;
+            // Process List
+            _buildProcessList(viewModelState, theme),
 
-                // Filter by Search Query
-                if (_searchQuery.isNotEmpty) {
-                  final query = _searchQuery.toLowerCase();
-                  shellProcesses = shellProcesses.where((proc) {
-                    return proc.name.toLowerCase().contains(query) ||
-                        proc.user.toLowerCase().contains(query) ||
-                        proc.pid.contains(query);
-                  }).toList();
-
-                  activeApps = activeApps.where((app) {
-                    return app.appName.toLowerCase().contains(query) ||
-                        app.packageName.toLowerCase().contains(query);
-                  }).toList();
-                }
-
-                final List<Widget> listItems = [];
-
-                // HEADER: KERNEL / SYSTEM
-                if (shellProcesses.isNotEmpty) {
-                  listItems.add(
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(20, 24, 20, 8),
-                      child: Row(
-                        children: [
-                          Text(
-                            "KERNEL / SYSTEM",
-                            style: theme.textTheme.labelSmall?.copyWith(
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: 2.0,
-                              color: theme.colorScheme.onSurface.withOpacity(
-                                0.4,
-                              ),
-                            ),
-                          ),
-                          const Spacer(),
-                          _LiveIndicator(color: theme.colorScheme.error),
-                        ],
-                      ),
-                    ),
-                  );
-
-                  for (var proc in shellProcesses) {
-                    listItems.add(_buildShellProcessItem(context, theme, proc));
-                  }
-                }
-
-                // HEADER: USER APPS
-                if (activeApps.isNotEmpty) {
-                  listItems.add(
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(20, 32, 20, 8),
-                      child: Row(
-                        children: [
-                          Text(
-                            "USER SPACE (ACTIVE)",
-                            style: theme.textTheme.labelSmall?.copyWith(
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: 2.0,
-                              color: theme.colorScheme.onSurface.withOpacity(
-                                0.4,
-                              ),
-                            ),
-                          ),
-                          const Spacer(),
-                          if (shellProcesses.length < 5)
-                            Text(
-                              "SANDBOXED",
-                              style: theme.textTheme.labelSmall?.copyWith(
-                                fontSize: 9,
-                                fontWeight: FontWeight.bold,
-                                color: theme.colorScheme.onSurfaceVariant
-                                    .withOpacity(0.5),
-                              ),
-                            )
-                          else
-                            _LiveIndicator(color: theme.colorScheme.primary),
-                        ],
-                      ),
-                    ),
-                  );
-
-                  for (var app in activeApps) {
-                    listItems.add(
-                      _buildUsageBasedItem(
-                        context,
-                        theme,
-                        app,
-                        matchingShell: matches[app.packageName],
-                      ),
-                    );
-                  }
-                }
-
-                if (listItems.isEmpty) {
-                  final message = _searchQuery.isNotEmpty
-                      ? "No processes match your search"
-                      : "No process data available";
-                  return SliverFillRemaining(
-                    child: Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          if (_searchQuery.isNotEmpty)
-                            Icon(
-                              Icons.search_off_rounded,
-                              size: 48,
-                              color: theme.colorScheme.outline,
-                            ),
-                          if (_searchQuery.isNotEmpty)
-                            const SizedBox(height: 16),
-                          Text(
-                            message,
-                            style: theme.textTheme.bodyLarge?.copyWith(
-                              color: theme.colorScheme.onSurfaceVariant,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                }
-
-                return SliverList(
-                  delegate: SliverChildBuilderDelegate(
-                    (context, index) => listItems[index],
-                    childCount: listItems.length,
-                  ),
-                );
-              },
-              loading: () => const SliverToBoxAdapter(child: SizedBox.shrink()),
-              error: (_, __) => const SliverFillRemaining(
-                child: Center(child: Text("Error loading tasks")),
-              ),
+            const SliverPadding(
+              padding: EdgeInsets.only(bottom: TaskManagerSpacing.listBottom),
             ),
-
-            const SliverPadding(padding: EdgeInsets.only(bottom: 32)),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildSystemStatsCard(ThemeData theme) {
-    final systemDetailsValues = ref.watch(systemDetailsProvider).asData?.value;
-
-    final int displayTotalRam = _totalRam;
-    final int displayFreeRam = _freeRam;
-    final int usedRam = displayTotalRam - displayFreeRam;
-
-    final double ramPercent = displayTotalRam > 0
-        ? usedRam / displayTotalRam
-        : 0.0;
-
-    final int cachedKb = systemDetailsValues?.cachedRealKb ?? 0;
-    final int cachedMb = cachedKb ~/ 1024;
-
-    final String gpuUsage = systemDetailsValues?.gpuUsage ?? "N/A";
-
-    final double cpuTemp = systemDetailsValues?.cpuTemp ?? 0.0;
-
-    final String kernelVer = systemDetailsValues?.kernel ?? "Loading...";
-
-    final displayBatteryLevel = _batteryLevel;
-    final displayBatteryState = _batteryState;
-
-    return Container(
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(32),
-        border: Border.all(
-          color: theme.colorScheme.outlineVariant.withOpacity(0.2),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          // Main Card Content
-          Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            _deviceModel,
-                            style: theme.textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          Text(
-                            "Kernel: ${kernelVer.length > 20 ? kernelVer.substring(0, 20) + "..." : kernelVer}",
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: theme.colorScheme.onSurfaceVariant,
-                              fontFamily: 'monospace',
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
-                      ),
-                    ),
-                    Icon(
-                      Icons.developer_board,
-                      size: 32,
-                      color: theme.colorScheme.primary.withOpacity(0.8),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 24),
-
-                // RAM Usage
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text("Memory Usage", style: theme.textTheme.labelMedium),
-                    Text(
-                      "${usedRam}MB / ${_totalRam}MB",
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        fontFamily: 'monospace',
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(4),
-                  child: LinearProgressIndicator(
-                    value: ramPercent,
-                    minHeight: 6,
-                    backgroundColor: theme.colorScheme.surfaceContainerHighest,
-                    valueColor: AlwaysStoppedAnimation<Color>(
-                      ramPercent > 0.85
-                          ? theme.colorScheme.error
-                          : theme.colorScheme.primary,
-                    ),
-                  ),
-                ),
-
-                // Cached RAM Indicator
-                if (cachedMb > 0) ...[
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      Container(
-                        width: 6,
-                        height: 6,
-                        decoration: BoxDecoration(
-                          color: theme.colorScheme.tertiary,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        "Cached Processes: ${cachedMb}MB",
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          fontSize: 10,
-                          color: theme.colorScheme.tertiary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-
-                const SizedBox(height: 16),
-
-                // Battery Usage
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text("Battery Power", style: theme.textTheme.labelMedium),
-                    Row(
-                      children: [
-                        if (displayBatteryState == BatteryState.charging)
-                          Padding(
-                            padding: const EdgeInsets.only(right: 4),
-                            child: Icon(
-                              Icons.bolt,
-                              size: 14,
-                              color: theme.colorScheme.primary,
-                            ),
-                          ),
-                        Text(
-                          "$displayBatteryLevel%",
-                          style: theme.textTheme.labelSmall?.copyWith(
-                            fontFamily: 'monospace',
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(4),
-                  child: LinearProgressIndicator(
-                    value: displayBatteryLevel / 100,
-                    minHeight: 6,
-                    backgroundColor: theme.colorScheme.surfaceContainerHighest,
-                    valueColor: AlwaysStoppedAnimation<Color>(
-                      displayBatteryLevel < 20
-                          ? theme.colorScheme.error
-                          : displayBatteryState == BatteryState.charging
-                          ? Colors.green
-                          : theme.colorScheme.primary,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          Divider(
-            height: 1,
-            color: theme.colorScheme.outlineVariant.withOpacity(0.2),
-          ),
-
-          // Bottom Stats Grid
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _buildMiniStat(
-                  theme,
-                  "GPU CORE",
-                  gpuUsage.contains('N/A') ? "LOCKED" : gpuUsage,
-                  isError: gpuUsage.contains('N/A'),
-                ),
-                Container(
-                  width: 1,
-                  height: 30,
-                  color: theme.colorScheme.outlineVariant.withOpacity(0.2),
-                ),
-                _buildMiniStat(
-                  theme,
-                  "THERMAL",
-                  "${cpuTemp.toStringAsFixed(1)}°C",
-                ),
-                Container(
-                  width: 1,
-                  height: 30,
-                  color: theme.colorScheme.outlineVariant.withOpacity(0.2),
-                ),
-                _buildMiniStat(
-                  theme,
-                  "ANDROID",
-                  _androidVersion.replaceAll("Android ", ""),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMiniStat(
+  /// Builds the process list based on the view model state.
+  Widget _buildProcessList(
+    AsyncValue<TaskManagerData> viewModelState,
     ThemeData theme,
-    String label,
-    String value, {
-    bool isError = false,
-  }) {
-    return Column(
-      children: [
-        Text(
-          label,
-          style: theme.textTheme.labelSmall?.copyWith(
-            fontSize: 9,
-            color: theme.colorScheme.onSurfaceVariant.withOpacity(0.7),
-            letterSpacing: 1.0,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          value,
-          style: theme.textTheme.labelMedium?.copyWith(
-            fontFamily: 'monospace',
-            fontWeight: FontWeight.bold,
-            color: isError
-                ? theme.colorScheme.error
-                : theme.colorScheme.onSurface,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildShellProcessItem(
-    BuildContext context,
-    ThemeData theme,
-    AndroidProcess process,
   ) {
-    final bool isRoot = process.user == 'root';
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: theme.colorScheme.surface,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: theme.colorScheme.outlineVariant.withOpacity(0.1),
-          ),
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: isRoot
-                    ? theme.colorScheme.error.withOpacity(0.1)
-                    : theme.colorScheme.surfaceContainerHighest.withOpacity(
-                        0.3,
-                      ),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                process.pid,
-                style: theme.textTheme.labelSmall?.copyWith(
-                  fontFamily: 'monospace',
-                  fontWeight: FontWeight.bold,
-                  color: isRoot
-                      ? theme.colorScheme.error
-                      : theme.colorScheme.primary,
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    process.name.length > 30
-                        ? "...${process.name.substring(process.name.length - 28)}"
-                        : process.name,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 13,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 2),
-                  Row(
-                    children: [
-                      Text(
-                        process.user,
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          fontSize: 10,
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Container(
-                        width: 1,
-                        height: 10,
-                        color: theme.colorScheme.outlineVariant,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        "RSS: ${process.res}",
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          fontSize: 10,
-                          fontFamily: 'monospace',
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                  "${process.cpu}%",
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    fontFamily: 'monospace',
-                    color: process.cpu != "0.0" && process.cpu != "0"
-                        ? theme.colorScheme.primary
-                        : theme.colorScheme.onSurfaceVariant,
-                  ),
-                ),
-                Text(
-                  "CPU",
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    fontSize: 8,
-                    color: theme.colorScheme.onSurfaceVariant.withOpacity(0.5),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
+    return viewModelState.when(
+      data: (data) => _buildProcessListContent(data, theme),
+      loading: () => const SliverToBoxAdapter(child: SizedBox.shrink()),
+      error: (_, __) => const SliverFillRemaining(
+        child: Center(child: Text("Error loading tasks")),
       ),
     );
   }
 
-  Widget _buildUsageBasedItem(
-    BuildContext context,
-    ThemeData theme,
-    DeviceApp app, {
-    AndroidProcess? matchingShell,
-  }) {
-    final lastUsed = DateTime.fromMillisecondsSinceEpoch(app.lastTimeUsed);
-    final diff = DateTime.now().difference(lastUsed);
+  /// Builds the process list content with filtered data.
+  Widget _buildProcessListContent(TaskManagerData data, ThemeData theme) {
+    // Apply search filter
+    var shellProcesses = data.shellProcesses;
+    var activeApps = data.activeApps;
+    final matches = data.matches;
 
-    String timeAgo;
-    if (diff.inSeconds < 60) {
-      timeAgo = "Active now";
-    } else if (diff.inMinutes < 60) {
-      timeAgo = "${diff.inMinutes}m ago";
-    } else if (diff.inHours < 24) {
-      timeAgo = "${diff.inHours}h ago";
-    } else {
-      timeAgo = "${diff.inDays}d ago";
+    if (_searchQuery.isNotEmpty) {
+      final query = _searchQuery.toLowerCase();
+      shellProcesses = _filterShellProcesses(shellProcesses, query);
+      activeApps = _filterActiveApps(activeApps, query);
     }
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: () {
-            AppRouteFactory.toAppDetails(context, app);
-          },
-          borderRadius: BorderRadius.circular(16),
-          child: Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: theme.colorScheme.surface,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: theme.colorScheme.outlineVariant.withOpacity(0.2),
-              ),
-            ),
-            child: Row(
-              children: [
-                Hero(
-                  tag: 'task_manager_${app.packageName}',
-                  child: _AppIcon(app: app, size: 40),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        app.appName,
-                        style: theme.textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      Text(
-                        app.packageName,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
-                          fontSize: 10,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                  ),
-                ),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    if (matchingShell != null) ...[
-                      Text(
-                        "${matchingShell.cpu}% CPU",
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: theme.colorScheme.primary,
-                          fontFamily: 'monospace',
-                        ),
-                      ),
-                      Text(
-                        "RSS: ${matchingShell.res}",
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          fontSize: 9,
-                          color: theme.colorScheme.onSurfaceVariant,
-                          fontFamily: 'monospace',
-                        ),
-                      ),
-                    ] else ...[
-                      Text(
-                        timeAgo,
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          color: diff.inMinutes < 5
-                              ? theme.colorScheme.primary
-                              : theme.colorScheme.onSurfaceVariant,
-                          fontWeight: diff.inMinutes < 5
-                              ? FontWeight.bold
-                              : FontWeight.normal,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 6,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: theme.colorScheme.surfaceContainerHighest,
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(
-                          "CACHED",
-                          style: theme.textTheme.labelSmall?.copyWith(
-                            fontSize: 9,
-                            color: theme.colorScheme.onSurfaceVariant,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ],
-            ),
-          ),
+    final List<Widget> listItems = [];
+
+    // Add kernel/system section
+    if (shellProcesses.isNotEmpty) {
+      listItems.add(
+        ProcessSectionHeader(
+          title: "KERNEL / SYSTEM",
+          trailing: LiveIndicator(color: theme.colorScheme.error),
         ),
+      );
+      for (var proc in shellProcesses) {
+        listItems.add(ShellProcessItem(process: proc));
+      }
+    }
+
+    // Add user apps section
+    if (activeApps.isNotEmpty) {
+      listItems.add(
+        UserSpaceSectionHeader(
+          showSandboxedBadge: shellProcesses.length < 5,
+          indicatorColor: theme.colorScheme.primary,
+        ),
+      );
+      for (var app in activeApps) {
+        listItems.add(
+          UserAppItem(app: app, matchingProcess: matches[app.packageName]),
+        );
+      }
+    }
+
+    // Handle empty state
+    if (listItems.isEmpty) {
+      return _buildEmptyState(theme);
+    }
+
+    return SliverList(
+      delegate: SliverChildBuilderDelegate(
+        (context, index) => listItems[index],
+        childCount: listItems.length,
       ),
     );
   }
 
-  Widget _buildSearchBar(ThemeData theme) {
-    return Container(
-      height: 50,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(
-        color: theme.brightness == Brightness.dark
-            ? theme.colorScheme.surface
-            : Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: theme.colorScheme.outline.withOpacity(0.2),
-          width: 1.5,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.02),
-            blurRadius: 15,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Icon(
-            Icons.search,
-            size: 20,
-            color: theme.colorScheme.onSurfaceVariant,
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: TextField(
-              controller: _searchController,
-              textAlignVertical: TextAlignVertical.center,
-              decoration: InputDecoration(
-                hintText: "Search processes...",
-                border: InputBorder.none,
-                focusedBorder: InputBorder.none,
-                enabledBorder: InputBorder.none,
-                errorBorder: InputBorder.none,
-                disabledBorder: InputBorder.none,
-                fillColor: theme.colorScheme.surface,
-                hintStyle: theme.textTheme.bodyLarge?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant.withOpacity(0.6),
-                ),
-                contentPadding: EdgeInsets.zero,
-                isDense: true,
-              ),
-              style: theme.textTheme.bodyLarge?.copyWith(fontSize: 16),
-              onChanged: (val) {
-                setState(() {
-                  _searchQuery = val;
-                });
-              },
-            ),
-          ),
-          if (_searchQuery.isNotEmpty)
-            GestureDetector(
-              onTap: () {
-                _searchController.clear();
-                setState(() => _searchQuery = "");
-              },
-              child: Icon(
-                Icons.close,
-                size: 20,
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-class _AppIcon extends StatelessWidget {
-  final DeviceApp app;
-  final double size;
-
-  const _AppIcon({required this.app, required this.size});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        shape: BoxShape.circle,
-      ),
-      child: ClipOval(
-        child: app.icon != null
-            ? Image.memory(
-                app.icon!,
-                fit: BoxFit.cover,
-                gaplessPlayback: true,
-                errorBuilder: (_, __, ___) => const Icon(Icons.android),
-              )
-            : const Icon(Icons.android),
-      ),
-    );
-  }
-}
-
-class _LiveIndicator extends StatefulWidget {
-  final Color color;
-  const _LiveIndicator({required this.color});
-
-  @override
-  State<_LiveIndicator> createState() => _LiveIndicatorState();
-}
-
-class _LiveIndicatorState extends State<_LiveIndicator>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 1),
-    )..repeat(reverse: true);
+  /// Filters shell processes by search query.
+  List<AndroidProcess> _filterShellProcesses(
+    List<AndroidProcess> processes,
+    String query,
+  ) {
+    return processes.where((proc) {
+      return proc.name.toLowerCase().contains(query) ||
+          proc.user.toLowerCase().contains(query) ||
+          proc.pid.contains(query);
+    }).toList();
   }
 
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
+  /// Filters active apps by search query.
+  List<DeviceApp> _filterActiveApps(List<DeviceApp> apps, String query) {
+    return apps.where((app) {
+      return app.appName.toLowerCase().contains(query) ||
+          app.packageName.toLowerCase().contains(query);
+    }).toList();
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return FadeTransition(
-      opacity: _controller,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-        decoration: BoxDecoration(
-          color: widget.color.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: widget.color.withOpacity(0.5)),
-        ),
-        child: Row(
+  /// Builds the empty state for when no processes match.
+  Widget _buildEmptyState(ThemeData theme) {
+    final message = _searchQuery.isNotEmpty
+        ? "No processes match your search"
+        : "No process data available";
+
+    return SliverFillRemaining(
+      child: Center(
+        child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              width: 6,
-              height: 6,
-              decoration: BoxDecoration(
-                color: widget.color,
-                shape: BoxShape.circle,
+            if (_searchQuery.isNotEmpty)
+              Icon(
+                Icons.search_off_rounded,
+                size: 48,
+                color: theme.colorScheme.outline,
               ),
-            ),
-            const SizedBox(width: 4),
+            if (_searchQuery.isNotEmpty) const SizedBox(height: 16),
             Text(
-              "LIVE",
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.bold,
-                color: widget.color,
+              message,
+              style: theme.textTheme.bodyLarge?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
               ),
             ),
           ],

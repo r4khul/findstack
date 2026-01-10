@@ -1,3 +1,11 @@
+/// A premium loading stage for the Task Manager.
+///
+/// This widget provides a polished loading experience with:
+/// - Skeleton placeholders that match the actual UI layout
+/// - Progress-based status messages that update during loading
+/// - Smooth animated transitions between loading and content states
+library;
+
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:skeletonizer/skeletonizer.dart';
@@ -6,10 +14,30 @@ import 'package:skeletonizer/skeletonizer.dart';
 ///
 /// This widget handles the transition between initialization and content display
 /// with smooth animations, progress-based status messaging, and high-fidelity skeletons.
+///
+/// ## Features
+/// - Skeleton UI that mirrors the actual Task Manager layout
+/// - Animated status messages that cycle through loading stages
+/// - Smooth crossfade transition when loading completes
+///
+/// ## Usage
+/// ```dart
+/// TaskManagerStage(
+///   isLoading: _isLoadingStats,
+///   child: MyActualContent(),
+/// )
+/// ```
 class TaskManagerStage extends StatefulWidget {
+  /// Whether the stage is in loading state.
+  ///
+  /// When true, shows skeleton UI with status messages.
+  /// When false, shows the child widget.
   final bool isLoading;
+
+  /// The actual content to display when loading is complete.
   final Widget child;
 
+  /// Creates a task manager stage.
   const TaskManagerStage({
     super.key,
     required this.isLoading,
