@@ -78,9 +78,11 @@ class TechStackFilter extends ConsumerWidget {
                     onTap: () {
                       ref
                           .read(techStackFilterProvider.notifier)
-                          .state = stack['name'] == TechStacks.all
-                          ? null
-                          : stack['name'];
+                          .setStack(
+                            stack['name'] == TechStacks.all
+                                ? null
+                                : stack['name'],
+                          );
                       Navigator.pop(context);
                     },
                     child: Column(

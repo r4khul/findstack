@@ -70,7 +70,7 @@ class SearchPage extends ConsumerWidget {
                     ),
                     style: theme.textTheme.bodyLarge?.copyWith(fontSize: 16),
                     onChanged: (val) =>
-                        ref.read(searchFilterProvider.notifier).state = val,
+                        ref.read(searchFilterProvider.notifier).setQuery(val),
                     controller: TextEditingController(text: searchQuery)
                       ..selection = TextSelection.fromPosition(
                         TextPosition(offset: searchQuery.length),
@@ -80,7 +80,7 @@ class SearchPage extends ConsumerWidget {
                 if (searchQuery.isNotEmpty)
                   GestureDetector(
                     onTap: () =>
-                        ref.read(searchFilterProvider.notifier).state = '',
+                        ref.read(searchFilterProvider.notifier).clear(),
                     child: Icon(
                       Icons.close,
                       size: 20,

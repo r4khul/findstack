@@ -1,6 +1,18 @@
-import 'package:flutter_riverpod/legacy.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-final techStackFilterProvider = StateProvider<String?>((ref) => null);
+class TechStackFilterNotifier extends Notifier<String?> {
+  @override
+  String? build() => null;
+
+  void setStack(String? stack) {
+    state = stack;
+  }
+}
+
+final techStackFilterProvider =
+    NotifierProvider<TechStackFilterNotifier, String?>(
+      TechStackFilterNotifier.new,
+    );
 
 // Constants for tech stacks matching SVG names or logic
 class TechStacks {
