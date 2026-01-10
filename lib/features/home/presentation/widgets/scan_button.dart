@@ -1,10 +1,16 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../../../core/navigation/navigation.dart';
 import '../../../apps/presentation/providers/apps_provider.dart';
 
+/// Scan button widget for the home page app bar.
+///
+/// Displays a tappable button that opens scan options dialog with
+/// "Full System Scan" and "Smart Revalidate" options.
 class ScanButton extends ConsumerStatefulWidget {
+  /// Creates a scan button.
   const ScanButton({super.key});
 
   @override
@@ -16,49 +22,16 @@ class _ScanButtonState extends ConsumerState<ScanButton> {
     showGeneralDialog(
       context: context,
       barrierDismissible: true,
-      barrierLabel: "Scan Options",
+      barrierLabel: 'Scan Options',
       barrierColor: Colors.black.withOpacity(0.5),
       transitionDuration: const Duration(milliseconds: 200),
       pageBuilder: (context, anim1, anim2) {
-        return _ScanDialog(
-          onFullScan: () async {
+        return _ScanOptionsDialog(
+          onFullScan: () {
             Navigator.pop(context);
-            // Navigate to full scan page with premium transition
             AppRouteFactory.toScan(context);
           },
-          onRevalidate: () {
-            Navigator.pop(context);
-
-            showGeneralDialog(
-              context: context,
-              barrierDismissible: false,
-              barrierColor: Colors.black.withOpacity(0.35),
-              transitionDuration: const Duration(milliseconds: 250),
-              pageBuilder: (_, __, ___) => const _RevalidateLoading(),
-              transitionBuilder: (context, anim1, anim2, child) {
-                return ScaleTransition(
-                  scale: CurvedAnimation(
-                    parent: anim1,
-                    curve: Curves.easeOutBack,
-                  ),
-                  child: FadeTransition(opacity: anim1, child: child),
-                );
-              },
-            );
-
-            // Capture navigator to ensure we can pop even if widget rebuilds
-            final navigator = Navigator.of(context);
-
-            final minWait = Future.delayed(const Duration(milliseconds: 1200));
-            final action = ref
-                .read(installedAppsProvider.notifier)
-                .revalidate()
-                .timeout(const Duration(seconds: 30));
-
-            Future.wait([minWait, action]).whenComplete(() {
-              navigator.pop();
-            });
-          },
+          onRevalidate: () => _handleRevalidate(context),
         );
       },
       transitionBuilder: (context, anim1, anim2, child) {
@@ -79,6 +52,38 @@ class _ScanButtonState extends ConsumerState<ScanButton> {
         );
       },
     );
+  }
+
+  void _handleRevalidate(BuildContext dialogContext) {
+    Navigator.pop(dialogContext);
+
+    // Show loading dialog
+    showGeneralDialog(
+      context: context,
+      barrierDismissible: false,
+      barrierColor: Colors.black.withOpacity(0.35),
+      transitionDuration: const Duration(milliseconds: 250),
+      pageBuilder: (_, __, ___) => const _RevalidateLoadingDialog(),
+      transitionBuilder: (context, anim1, anim2, child) {
+        return ScaleTransition(
+          scale: CurvedAnimation(parent: anim1, curve: Curves.easeOutBack),
+          child: FadeTransition(opacity: anim1, child: child),
+        );
+      },
+    );
+
+    // Capture navigator to ensure we can pop even if widget rebuilds
+    final navigator = Navigator.of(context);
+
+    final minWait = Future.delayed(const Duration(milliseconds: 1200));
+    final action = ref
+        .read(installedAppsProvider.notifier)
+        .revalidate()
+        .timeout(const Duration(seconds: 30));
+
+    Future.wait([minWait, action]).whenComplete(() {
+      navigator.pop();
+    });
   }
 
   @override
@@ -111,13 +116,13 @@ class _ScanButtonState extends ConsumerState<ScanButton> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
-              Icons.radar_rounded, // Intriguing icon
+              Icons.radar_rounded,
               size: 18,
               color: theme.colorScheme.primary,
             ),
             const SizedBox(width: 8),
             Text(
-              "Scan",
+              'Scan',
               style: theme.textTheme.labelLarge?.copyWith(
                 fontWeight: FontWeight.w600,
                 color: theme.colorScheme.primary,
@@ -130,11 +135,19 @@ class _ScanButtonState extends ConsumerState<ScanButton> {
   }
 }
 
-class _ScanDialog extends StatelessWidget {
+// -----------------------------------------------------------------------------
+// Private Dialog Widgets
+// -----------------------------------------------------------------------------
+
+/// Dialog showing scan options.
+class _ScanOptionsDialog extends StatelessWidget {
   final VoidCallback onFullScan;
   final VoidCallback onRevalidate;
 
-  const _ScanDialog({required this.onFullScan, required this.onRevalidate});
+  const _ScanOptionsDialog({
+    required this.onFullScan,
+    required this.onRevalidate,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -166,55 +179,25 @@ class _ScanDialog extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.primary.withOpacity(0.1),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    Icons.radar_rounded,
-                    color: theme.colorScheme.primary,
-                    size: 28,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  "Scan Options",
-                  style: theme.textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: -0.5,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  "Choose how you want to update your app database.",
-                  textAlign: TextAlign.center,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                    height: 1.4,
-                  ),
-                ),
+                _buildHeader(theme),
                 const SizedBox(height: 24),
-                _buildOptionTile(
-                  context,
-                  title: "Full System Scan",
-                  description: "Deep analysis & stack detection",
+                _ScanOptionTile(
+                  title: 'Full System Scan',
+                  description: 'Deep analysis & stack detection',
                   icon: Icons.travel_explore_rounded,
                   color: isDark
                       ? const Color(0xFF64B5F6)
-                      : const Color(0xFF1976D2), // Blue
+                      : const Color(0xFF1976D2),
                   onTap: onFullScan,
                 ),
                 const SizedBox(height: 12),
-                _buildOptionTile(
-                  context,
-                  title: "Smart Revalidate",
-                  description: "Quickly check for app changes",
+                _ScanOptionTile(
+                  title: 'Smart Revalidate',
+                  description: 'Quickly check for app changes',
                   icon: Icons.published_with_changes_rounded,
                   color: isDark
                       ? const Color(0xFF81C784)
-                      : const Color(0xFF388E3C), // Green
+                      : const Color(0xFF388E3C),
                   onTap: onRevalidate,
                 ),
               ],
@@ -225,14 +208,61 @@ class _ScanDialog extends StatelessWidget {
     );
   }
 
-  Widget _buildOptionTile(
-    BuildContext context, {
-    required String title,
-    required String description,
-    required IconData icon,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
+  Widget _buildHeader(ThemeData theme) {
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: theme.colorScheme.primary.withOpacity(0.1),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(
+            Icons.radar_rounded,
+            color: theme.colorScheme.primary,
+            size: 28,
+          ),
+        ),
+        const SizedBox(height: 16),
+        Text(
+          'Scan Options',
+          style: theme.textTheme.headlineSmall?.copyWith(
+            fontWeight: FontWeight.bold,
+            letterSpacing: -0.5,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Choose how you want to update your app database.',
+          textAlign: TextAlign.center,
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+            height: 1.4,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Single scan option tile widget.
+class _ScanOptionTile extends StatelessWidget {
+  final String title;
+  final String description;
+  final IconData icon;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _ScanOptionTile({
+    required this.title,
+    required this.description,
+    required this.icon,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
@@ -295,8 +325,9 @@ class _ScanDialog extends StatelessWidget {
   }
 }
 
-class _RevalidateLoading extends StatelessWidget {
-  const _RevalidateLoading();
+/// Loading dialog shown during revalidation.
+class _RevalidateLoadingDialog extends StatelessWidget {
+  const _RevalidateLoadingDialog();
 
   @override
   Widget build(BuildContext context) {
@@ -340,7 +371,7 @@ class _RevalidateLoading extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               Text(
-                "Checking updates",
+                'Checking updates',
                 style: theme.textTheme.labelLarge?.copyWith(
                   fontWeight: FontWeight.w600,
                   color: theme.colorScheme.onSurface.withOpacity(0.9),
