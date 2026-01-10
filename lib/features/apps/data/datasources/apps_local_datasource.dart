@@ -4,7 +4,7 @@ import 'dart:typed_data';
 import 'package:path_provider/path_provider.dart';
 import '../../domain/entities/device_app.dart';
 
-import 'package:flutter/foundation.dart'; // for compute
+import 'package:flutter/foundation.dart';
 
 class AppsLocalDataSource {
   static const _fileName = 'apps_cache.json';
@@ -21,7 +21,6 @@ class AppsLocalDataSource {
 
   Future<void> cacheApps(List<DeviceApp> apps) async {
     final file = await _localFile;
-    // Offload heavy JSON serialization to an isolate
     final jsonString = await compute(_encodeApps, apps);
     await file.writeAsString(jsonString);
   }
@@ -34,7 +33,6 @@ class AppsLocalDataSource {
       final content = await file.readAsString();
       if (content.isEmpty) return [];
 
-      // Offload heavy JSON deserialization to an isolate
       return await compute(_decodeApps, content);
     } catch (e) {
       print('Error reading cache: $e');
@@ -42,7 +40,6 @@ class AppsLocalDataSource {
     }
   }
 
-  // Pure functions for compute
   static String _encodeApps(List<DeviceApp> apps) {
     final jsonList = apps.map((app) {
       final map = app.toMap();

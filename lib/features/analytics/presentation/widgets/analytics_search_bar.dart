@@ -1,26 +1,16 @@
 import 'package:flutter/material.dart';
 
-/// Reusable search bar for analytics pages.
-///
-/// A styled container with a search icon, text field, and clear button.
-/// Used consistently across usage statistics and storage insights pages.
 class AnalyticsSearchBar extends StatelessWidget {
-  /// Controller for the text field.
   final TextEditingController controller;
 
-  /// Current search query (for showing/hiding clear button).
   final String searchQuery;
 
-  /// Callback when search text changes.
   final ValueChanged<String> onChanged;
 
-  /// Callback when clear button is tapped.
   final VoidCallback onClear;
 
-  /// Placeholder text.
   final String hintText;
 
-  /// Creates an analytics search bar.
   const AnalyticsSearchBar({
     super.key,
     required this.controller,

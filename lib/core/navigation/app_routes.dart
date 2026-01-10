@@ -16,7 +16,6 @@ import 'navigation.dart';
 
 import '../../features/onboarding/presentation/pages/onboarding_page.dart';
 
-/// Centralized route names for type-safe navigation.
 abstract class AppRoutes {
   static const String splash = '/';
   static const String onboarding = '/onboarding';
@@ -33,11 +32,9 @@ abstract class AppRoutes {
   static const String updateCheck = '/update-check';
 }
 
-/// Centralized route factory.
 class AppRouteFactory {
   AppRouteFactory._();
 
-  /// Generate a route based on settings.
   static Route<dynamic>? onGenerateRoute(RouteSettings settings) {
     switch (settings.name) {
       case AppRoutes.splash:
@@ -141,13 +138,7 @@ class AppRouteFactory {
     }
   }
 
-  // ============================================================
-  // CONVENIENCE NAVIGATION METHODS
-  // ============================================================
-
-  /// Push to home with premium reveal.
   static Future<void> toHome(BuildContext context) {
-    // Use replacement navigation with simple fade for faster startup
     return Navigator.of(context).pushReplacement(
       PageRouteBuilder(
         pageBuilder: (_, __, ___) => const HomePage(),
@@ -158,57 +149,46 @@ class AppRouteFactory {
     );
   }
 
-  /// Push to search page.
   static Future<void> toSearch(BuildContext context) {
     return PremiumNavigation.push(context, const SearchPage());
   }
 
-  /// Push to scan page.
   static Future<void> toScan(BuildContext context) {
     return PremiumNavigation.push(context, const ScanPage());
   }
 
-  /// Push to analytics page.
   static Future<void> toAnalytics(BuildContext context) {
     return PremiumNavigation.push(context, const AnalyticsPage());
   }
 
-  /// Push to task manager.
   static Future<void> toTaskManager(BuildContext context) {
     return PremiumNavigation.push(context, const TaskManagerPage());
   }
 
-  /// Push to about page.
   static Future<void> toAbout(BuildContext context) {
     return PremiumNavigation.push(context, const AboutPage());
   }
 
-  /// Push to how it works page.
   static Future<void> toHowItWorks(BuildContext context) {
     return PremiumNavigation.push(context, const HowItWorksPage());
   }
 
-  /// Push to privacy page.
   static Future<void> toPrivacy(BuildContext context) {
     return PremiumNavigation.push(context, const PrivacyPage());
   }
 
-  /// Push to storage insights page.
   static Future<void> toStorageInsights(BuildContext context) {
     return PremiumNavigation.push(context, const StorageInsightsPage());
   }
 
-  /// Push to app details page with premium reveal.
   static Future<void> toAppDetails(BuildContext context, DeviceApp app) {
     return PremiumNavigation.push(context, AppDetailsPage(app: app));
   }
 
-  /// Push to update check page.
   static Future<void> toUpdateCheck(BuildContext context) {
     return PremiumNavigation.push(context, const UpdateCheckPage());
   }
 
-  /// Push replacement to onboarding.
   static Future<void> toOnboarding(BuildContext context) {
     return Navigator.of(context).pushReplacementNamed(AppRoutes.onboarding);
   }

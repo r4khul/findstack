@@ -5,12 +5,10 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shorebird_code_push/shorebird_code_push.dart';
 import 'version_models.dart';
 
-/// Service responsible for managing app updates and version checking.
 class UpdateService {
   final ShorebirdUpdater _shorebirdUpdater;
   final String _configUrl;
 
-  // Cache the update status to avoid repeated fetches
   AppVersion? _currentVersion;
 
   UpdateService({
@@ -20,17 +18,14 @@ class UpdateService {
   }) : _shorebirdUpdater = shorebirdUpdater ?? ShorebirdUpdater(),
        _configUrl = configUrl;
 
-  /// Gets the current application version, including Shorebird patch if applicable.
   Future<AppVersion> getCurrentVersion() async {
     if (_currentVersion != null) return _currentVersion!;
 
     final packageInfo = await PackageInfo.fromPlatform();
-    // Assuming packageInfo.version is x.y.z
     final nativeVersion = AppVersion.parse(
       '${packageInfo.version}+${packageInfo.buildNumber}',
     );
 
-    // Check for Shorebird patch
     int? patchNumber;
     try {
       final patch = await _shorebirdUpdater.readCurrentPatch();
@@ -43,13 +38,11 @@ class UpdateService {
     return _currentVersion!;
   }
 
-  /// Checks for updates against the remote configuration.
   Future<UpdateState> checkUpdate() async {
     try {
       final current = await getCurrentVersion();
       final config = await _fetchConfig();
 
-      // 1. Check Force Update (Blocking)
       if (current.isLowerThan(
         config.minSupportedNativeVersion,
         ignoreBuild: true,
@@ -61,7 +54,6 @@ class UpdateService {
         );
       }
 
-      // 2. Check Soft Update (Optional)
       if (current.isLowerThan(config.latestNativeVersion, ignoreBuild: true)) {
         return UpdateState(
           status: AppUpdateStatus.softUpdate,
@@ -100,7 +92,6 @@ class UpdateService {
     }
   }
 
-  /// Trigger a Shorebird background update check/download.
   Future<void> checkForShorebirdUpdate() async {
     try {
       final status = await _shorebirdUpdater.checkForUpdate();

@@ -111,10 +111,8 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage>
       extendBodyBehindAppBar: true,
       body: Stack(
         children: [
-          // Subtle corner tech icons
           FloatingTechIcons(isDark: isDark, pageIndex: _currentPage),
 
-          // Main Content
           SafeArea(
             child: Column(
               children: [
@@ -125,7 +123,6 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage>
                         setState(() => _currentPage = index),
                     physics: const BouncingScrollPhysics(),
                     children: [
-                      // Page 1: Intro
                       OnboardingPageContent(
                         title: "UnFilter",
                         description: "The Real Truth Of Apps.",
@@ -134,7 +131,6 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage>
                         isBrandTitle: true,
                       ),
 
-                      // Page 2: Features
                       OnboardingPageContent(
                         title: "Deep\nInsights",
                         description:
@@ -147,7 +143,6 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage>
                         extraContent: _buildFeatureList(theme),
                       ),
 
-                      // Page 3: Permissions
                       OnboardingPageContent(
                         title: "System\nAccess",
                         description:
@@ -191,13 +186,11 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage>
                   ),
                 ),
 
-                // Footer
                 Padding(
                   padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      // Page indicators
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: List.generate(3, (index) {
@@ -219,7 +212,6 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage>
                         }),
                       ),
                       const SizedBox(height: 32),
-                      // CTA Button
                       SizedBox(
                         width: double.infinity,
                         height: 56,
@@ -244,7 +236,6 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage>
                         ),
                       ),
                       const SizedBox(height: 20),
-                      // Privacy Policy
                       TextButton(
                         onPressed: () =>
                             _launchURL('https://rakhul.com/privacy'),

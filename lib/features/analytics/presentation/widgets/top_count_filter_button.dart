@@ -1,17 +1,10 @@
 import 'package:flutter/material.dart';
 
-/// Filter dropdown button for top N app selection.
-///
-/// Displays a styled button that opens a popup menu to select
-/// how many top apps to display in the analytics view.
 class TopCountFilterButton extends StatelessWidget {
-  /// Currently selected count.
   final int currentCount;
 
-  /// Callback when a new count is selected.
   final ValueChanged<int> onCountSelected;
 
-  /// Creates a top count filter button.
   const TopCountFilterButton({
     super.key,
     required this.currentCount,

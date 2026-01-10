@@ -1,22 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-/// Tile widget for displaying external link items.
-///
-/// Shows a label, value, and arrow icon that launches the provided URL
-/// in an external browser when tapped. Used in info pages for social
-/// links and external references.
 class ExternalLinkTile extends StatelessWidget {
-  /// Descriptive label for the link.
   final String label;
 
-  /// Display value (e.g., username, "View", etc.).
   final String value;
 
-  /// URL to launch when tapped.
   final String url;
 
-  /// Creates an external link tile.
   const ExternalLinkTile({
     super.key,
     required this.label,

@@ -3,18 +3,11 @@ import 'package:skeletonizer/skeletonizer.dart';
 
 import '../constants.dart';
 
-/// Stats section widget displaying the app count.
-///
-/// Shows "Your Device has X Installed Apps" with skeleton loading support.
-/// This section fades out as the header collapses.
 class HomeStatsSection extends StatelessWidget {
-  /// Total number of installed apps.
   final int appCount;
 
-  /// Whether to show skeleton loading state.
   final bool isLoading;
 
-  /// Creates a home stats section.
   const HomeStatsSection({
     super.key,
     required this.appCount,

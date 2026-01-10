@@ -2,19 +2,9 @@ import 'dart:async';
 import 'package:flutter/services.dart';
 import '../../domain/entities/storage_breakdown.dart';
 
-/// Repository for advanced storage breakdown analysis.
-/// Communicates with native platform to fetch granular storage data.
 class StorageRepository {
   static const _channel = MethodChannel('com.rakhul.unfilter/apps');
 
-  /// Get storage breakdown for a specific package.
-  ///
-  /// [packageName] - Package to analyze
-  /// [detailed] - If true, performs deep file analysis; if false, uses only official APIs
-  /// [timeout] - Maximum time to wait for analysis
-  ///
-  /// Returns [StorageBreakdown] with all available data.
-  /// Throws [PlatformException] on error.
   Future<StorageBreakdown> getStorageBreakdown(
     String packageName, {
     bool detailed = false,
@@ -56,7 +46,6 @@ class StorageRepository {
       return breakdown;
     } on TimeoutException {
       print('⏱️ TIMEOUT for $packageName after $timeout');
-      // On timeout, try to cancel and return a minimal breakdown
       try {
         await cancelAnalysis(packageName);
       } catch (_) {}
@@ -76,11 +65,6 @@ class StorageRepository {
     }
   }
 
-  /// Get storage breakdowns for multiple packages.
-  /// Fetches them sequentially to avoid overwhelming the system.
-  ///
-  /// Returns a map of packageName -> StorageBreakdown.
-  /// Failed packages are omitted from the result.
   Future<Map<String, StorageBreakdown>> getStorageBreakdownBatch(
     List<String> packageNames, {
     bool detailed = false,
@@ -97,7 +81,6 @@ class StorageRepository {
         );
         results[packageName] = breakdown;
       } catch (e) {
-        // Skip failed packages
       }
 
       current++;
@@ -107,33 +90,26 @@ class StorageRepository {
     return results;
   }
 
-  /// Cancel ongoing analysis for a specific package.
   Future<void> cancelAnalysis(String packageName) async {
     try {
       await _channel.invokeMethod('cancelStorageAnalysis', {
         'packageName': packageName,
       });
     } catch (e) {
-      // Ignore cancellation errors
     }
   }
 
-  /// Cancel all ongoing analyses.
   Future<void> cancelAll() async {
     try {
       await _channel.invokeMethod('cancelStorageAnalysis');
     } catch (e) {
-      // Ignore cancellation errors
     }
   }
 
-  /// Clear the storage analysis cache.
-  /// Next analysis will fetch fresh data.
   Future<void> clearCache() async {
     try {
       await _channel.invokeMethod('clearStorageCache');
     } catch (e) {
-      // Ignore cache clear errors
     }
   }
 }

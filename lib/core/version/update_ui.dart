@@ -20,10 +20,6 @@ class VersionGate extends ConsumerWidget {
           return ForceUpdateScreen(state: state);
         }
 
-        // Use a side-effect to show soft update if needed, but return child.
-        // We can't show a dialog easily from build, so we might overlay a banner
-        // or just rely on the child to show it if we pass the state down?
-        // Better: Stack a SoftUpdateBanner if status is softUpdate.
         if (state.status == AppUpdateStatus.softUpdate) {
           return Stack(
             children: [
@@ -40,8 +36,8 @@ class VersionGate extends ConsumerWidget {
 
         return child;
       },
-      loading: () => child, // Show app (likely splash) while loading
-      error: (e, s) => child, // Fail safe: show app
+      loading: () => child,
+      error: (e, s) => child,
     );
   }
 }
@@ -54,7 +50,7 @@ class ForceUpdateScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black, // Premium dark
+      backgroundColor: Colors.black,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(24.0),
@@ -173,7 +169,7 @@ class SoftUpdateBanner extends StatelessWidget {
         margin: const EdgeInsets.all(16),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: const Color(0xFF1A1A1A), // Dark slate
+          color: const Color(0xFF1A1A1A),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: Colors.white.withOpacity(0.1)),
           boxShadow: [
@@ -207,8 +203,6 @@ class SoftUpdateBanner extends StatelessWidget {
                 const Spacer(),
                 GestureDetector(
                   onTap: () {
-                    // In a real app, implement dismiss logic (e.g. shared prefs)
-                    // For now, this is a stateless visual component.
                   },
                   child: const Icon(Icons.close, color: Colors.grey, size: 20),
                 ),

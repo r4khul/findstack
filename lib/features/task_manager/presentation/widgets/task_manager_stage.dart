@@ -1,43 +1,14 @@
-/// A premium loading stage for the Task Manager.
-///
-/// This widget provides a polished loading experience with:
-/// - Skeleton placeholders that match the actual UI layout
-/// - Progress-based status messages that update during loading
-/// - Smooth animated transitions between loading and content states
 library;
 
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 
-/// A premium, theme-aware skeleton loading stage for the Task Manager.
-///
-/// This widget handles the transition between initialization and content display
-/// with smooth animations, progress-based status messaging, and high-fidelity skeletons.
-///
-/// ## Features
-/// - Skeleton UI that mirrors the actual Task Manager layout
-/// - Animated status messages that cycle through loading stages
-/// - Smooth crossfade transition when loading completes
-///
-/// ## Usage
-/// ```dart
-/// TaskManagerStage(
-///   isLoading: _isLoadingStats,
-///   child: MyActualContent(),
-/// )
-/// ```
 class TaskManagerStage extends StatefulWidget {
-  /// Whether the stage is in loading state.
-  ///
-  /// When true, shows skeleton UI with status messages.
-  /// When false, shows the child widget.
   final bool isLoading;
 
-  /// The actual content to display when loading is complete.
   final Widget child;
 
-  /// Creates a task manager stage.
   const TaskManagerStage({
     super.key,
     required this.isLoading,
@@ -110,7 +81,6 @@ class _TaskManagerStageState extends State<TaskManagerStage> {
 
     return Stack(
       children: [
-        // High-Fidelity Skeletons
         Opacity(
           opacity: 0.7,
           child: CustomScrollView(
@@ -119,7 +89,7 @@ class _TaskManagerStageState extends State<TaskManagerStage> {
             slivers: [
               const SliverToBoxAdapter(
                 child: SizedBox(height: 60),
-              ), // Gap for where AppBar usually is
+              ),
               SliverPadding(
                 padding: const EdgeInsets.all(16.0),
                 sliver: SliverToBoxAdapter(
@@ -130,12 +100,11 @@ class _TaskManagerStageState extends State<TaskManagerStage> {
           ),
         ),
 
-        // Status Message Centered
         Align(
           alignment: const Alignment(
             0,
             -0.1,
-          ), // Somewhat in center, slightly above middle for focus
+          ),
           child: ValueListenableBuilder<int>(
             valueListenable: _stageNotifier,
             builder: (context, stageIndex, _) {
@@ -216,13 +185,12 @@ class _TaskManagerSkeleton extends StatelessWidget {
       effect: ShimmerEffect(
         baseColor: skeletonColor,
         highlightColor: highlightColor,
-        duration: const Duration(milliseconds: 2000), // Slower, elegant shimmer
+        duration: const Duration(milliseconds: 2000),
       ),
       containersColor: theme.colorScheme.surfaceContainerHighest,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // System Stats Card Skeleton
           Container(
             height: 240,
             width: double.infinity,
@@ -236,7 +204,6 @@ class _TaskManagerSkeleton extends StatelessWidget {
           ),
           const SizedBox(height: 24),
 
-          // Search Bar Skeleton
           Container(
             height: 50,
             width: double.infinity,
@@ -247,7 +214,6 @@ class _TaskManagerSkeleton extends StatelessWidget {
           ),
           const SizedBox(height: 32),
 
-          // List Header Skeleton
           Row(
             children: [
               Container(
@@ -271,7 +237,6 @@ class _TaskManagerSkeleton extends StatelessWidget {
           ),
           const SizedBox(height: 12),
 
-          // List Items Skeletons
           ...List.generate(4, (index) => _buildListItemSkeleton()),
         ],
       ),

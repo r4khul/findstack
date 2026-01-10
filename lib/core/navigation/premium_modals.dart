@@ -3,19 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'motion_tokens.dart';
 
-/// Apple-grade modal system.
-///
-/// Principles:
-/// - Modals feel lifted, not slid in
-/// - Soft overshoot, gentle settle
-/// - Background dims with slight lag
-/// - All motion is interruptible
 class PremiumModals {
   PremiumModals._();
-
-  // ============================================================
-  // BOTTOM SHEET - Lifted from surface
-  // ============================================================
 
   static Future<T?> showBottomSheet<T>({
     required BuildContext context,
@@ -39,7 +28,7 @@ class PremiumModals {
       isDismissible: isDismissible,
       enableDrag: enableDrag,
       backgroundColor: Colors.transparent,
-      barrierColor: Colors.transparent, // We handle dimming ourselves
+      barrierColor: Colors.transparent,
       transitionAnimationController: AnimationController(
         vsync: Navigator.of(context),
         duration: MotionTokens.bottomSheet,
@@ -92,10 +81,6 @@ class PremiumModals {
     );
   }
 
-  // ============================================================
-  // DIALOG - Lifted with soft overshoot
-  // ============================================================
-
   static Future<T?> showDialog<T>({
     required BuildContext context,
     required WidgetBuilder builder,
@@ -107,7 +92,7 @@ class PremiumModals {
     return showGeneralDialog<T>(
       context: context,
       barrierDismissible: barrierDismissible,
-      barrierColor: Colors.transparent, // We animate this
+      barrierColor: Colors.transparent,
       barrierLabel: 'Dismiss',
       transitionDuration: MotionTokens.dialog,
       pageBuilder: (context, animation, secondaryAnimation) {
@@ -118,14 +103,10 @@ class PremiumModals {
         );
       },
       transitionBuilder: (context, animation, secondaryAnimation, child) {
-        return child; // Transition handled in _DialogWrapper
+        return child;
       },
     );
   }
-
-  // ============================================================
-  // FULL SCREEN OVERLAY
-  // ============================================================
 
   static Future<T?> showFullScreenOverlay<T>({
     required BuildContext context,
@@ -166,7 +147,6 @@ class PremiumModals {
   }
 }
 
-/// Bottom sheet with lagged dim and lift animation
 class _BottomSheetWrapper extends StatefulWidget {
   final WidgetBuilder builder;
   final bool useBlur;
@@ -195,7 +175,6 @@ class _BottomSheetWrapperState extends State<_BottomSheetWrapper>
   @override
   void initState() {
     super.initState();
-    // Dim animation lags behind modal by ~15ms
     _dimController = AnimationController(
       vsync: this,
       duration: Duration(
@@ -205,7 +184,6 @@ class _BottomSheetWrapperState extends State<_BottomSheetWrapper>
       ),
     );
 
-    // Start dim slightly delayed
     Future.delayed(
       Duration(milliseconds: MotionTokens.backgroundDimDelayMs),
       () {
@@ -231,7 +209,6 @@ class _BottomSheetWrapperState extends State<_BottomSheetWrapper>
 
         return Stack(
           children: [
-            // Background dim with blur
             Positioned.fill(
               child: GestureDetector(
                 onTap: () => Navigator.of(context).pop(),
@@ -250,7 +227,6 @@ class _BottomSheetWrapperState extends State<_BottomSheetWrapper>
                       ),
               ),
             ),
-            // Sheet content
             Positioned(
               left: 0,
               right: 0,
@@ -301,7 +277,6 @@ class _BottomSheetWrapperState extends State<_BottomSheetWrapper>
   }
 }
 
-/// Scrollable bottom sheet
 class _ScrollableBottomSheet extends StatefulWidget {
   final ScrollableWidgetBuilder builder;
   final double initialChildSize;
@@ -360,7 +335,6 @@ class _ScrollableBottomSheetState extends State<_ScrollableBottomSheet>
 
         return Stack(
           children: [
-            // Background
             Positioned.fill(
               child: GestureDetector(
                 onTap: () => Navigator.of(context).pop(),
@@ -375,7 +349,6 @@ class _ScrollableBottomSheetState extends State<_ScrollableBottomSheet>
                 ),
               ),
             ),
-            // Sheet
             DraggableScrollableSheet(
               initialChildSize: widget.initialChildSize,
               minChildSize: widget.minChildSize,
@@ -401,7 +374,6 @@ class _ScrollableBottomSheetState extends State<_ScrollableBottomSheet>
   }
 }
 
-/// Dialog with lagged dim and soft overshoot
 class _DialogWrapper extends StatefulWidget {
   final Animation<double> animation;
   final bool useBlur;
@@ -440,7 +412,6 @@ class _DialogWrapperState extends State<_DialogWrapper>
       },
     );
 
-    // Sync with route animation for dismissal
     widget.animation.addStatusListener((status) {
       if (status == AnimationStatus.reverse) {
         _dimController.reverse();
@@ -459,7 +430,6 @@ class _DialogWrapperState extends State<_DialogWrapper>
     return AnimatedBuilder(
       animation: Listenable.merge([widget.animation, _dimController]),
       builder: (context, _) {
-        // Dialog scale with soft overshoot
         final scaleValue = MotionTokens.overshoot.transform(
           widget.animation.value,
         );
@@ -467,15 +437,12 @@ class _DialogWrapperState extends State<_DialogWrapper>
             MotionTokens.modalStartScale +
             ((1.0 - MotionTokens.modalStartScale) * scaleValue);
 
-        // Early opacity
         final opacityProgress = (widget.animation.value / 0.4).clamp(0.0, 1.0);
 
-        // Lagged dim
         final dimValue = MotionTokens.settle.transform(_dimController.value);
 
         return Stack(
           children: [
-            // Background
             Positioned.fill(
               child: GestureDetector(
                 onTap: () => Navigator.of(context).pop(),
@@ -494,7 +461,6 @@ class _DialogWrapperState extends State<_DialogWrapper>
                       ),
               ),
             ),
-            // Dialog
             Center(
               child: Opacity(
                 opacity: opacityProgress,
@@ -511,7 +477,6 @@ class _DialogWrapperState extends State<_DialogWrapper>
   }
 }
 
-/// Full screen overlay
 class _FullScreenWrapper extends StatelessWidget {
   final Animation<double> animation;
   final WidgetBuilder builder;
@@ -525,21 +490,17 @@ class _FullScreenWrapper extends StatelessWidget {
       builder: (context, _) {
         final value = MotionTokens.settle.transform(animation.value);
 
-        // Early opacity
         final opacityProgress = (animation.value / 0.3).clamp(0.0, 1.0);
 
-        // Slide up
         final offset = Offset(0, (1.0 - value) * 0.15);
 
         return Stack(
           children: [
-            // Background
             Positioned.fill(
               child: ColoredBox(
                 color: Colors.black.withValues(alpha: 0.85 * value),
               ),
             ),
-            // Content
             Positioned.fill(
               child: Opacity(
                 opacity: opacityProgress,
@@ -556,7 +517,6 @@ class _FullScreenWrapper extends StatelessWidget {
   }
 }
 
-/// Sheet container with rounded corners
 class _SheetContainer extends StatelessWidget {
   final Widget child;
   final Color backgroundColor;
@@ -585,7 +545,6 @@ class _SheetContainer extends StatelessWidget {
   }
 }
 
-/// Drag handle
 class _DragHandle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {

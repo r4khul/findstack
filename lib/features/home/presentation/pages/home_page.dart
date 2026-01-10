@@ -15,20 +15,7 @@ import '../widgets/constants.dart';
 import '../widgets/home_sliver_delegate.dart';
 import '../widgets/permission_dialog.dart';
 
-/// Home page of the application.
-///
-/// Displays the list of installed apps with a collapsible header containing
-/// search, category filters, and app statistics. Handles usage permission
-/// requests and app lifecycle events for background revalidation.
-///
-/// ## Features
-/// - Collapsible header with stats, search, and filters
-/// - Back-to-top floating action button (appears after scrolling)
-/// - Skeleton loading state during initial scan
-/// - Empty state when no apps match filters
-/// - Automatic permission handling
 class HomePage extends ConsumerStatefulWidget {
-  /// Creates the home page.
   const HomePage({super.key});
 
   @override
@@ -61,18 +48,10 @@ class _HomePageState extends ConsumerState<HomePage>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       _checkPermissions(fromResume: true);
-      // Trigger background revalidation with built-in throttling
       ref.read(installedAppsProvider.notifier).backgroundRevalidate();
     }
   }
 
-  // ---------------------------------------------------------------------------
-  // Permission Handling
-  // ---------------------------------------------------------------------------
-
-  /// Checks usage permission and handles navigation based on permission state.
-  ///
-  /// When [fromResume] is true, this is called from app lifecycle resume event.
   Future<void> _checkPermissions({bool fromResume = false}) async {
     if (!mounted) return;
 
@@ -92,9 +71,7 @@ class _HomePageState extends ConsumerState<HomePage>
     }
   }
 
-  /// Handles the case when permission is already granted.
   Future<void> _handlePermissionGranted(bool fromResume) async {
-    // Dismiss permission dialog if showing
     if (_isDialogShowing) {
       Navigator.of(context).pop();
       _isDialogShowing = false;
@@ -102,18 +79,15 @@ class _HomePageState extends ConsumerState<HomePage>
 
     if (!fromResume && _isDialogShowing) return;
 
-    // Wait for provider initialization if loading
     try {
       if (ref.read(installedAppsProvider).isLoading) {
         await ref.read(installedAppsProvider.future);
       }
     } catch (_) {
-      // Ignore errors - provider state will reflect error
     }
 
     if (!mounted) return;
 
-    // Navigate to scan if no data available
     final appsState = ref.read(installedAppsProvider);
     final hasData = appsState.value?.isNotEmpty ?? false;
 
@@ -127,15 +101,12 @@ class _HomePageState extends ConsumerState<HomePage>
     }
   }
 
-  /// Handles the case when permission is denied.
   void _handlePermissionDenied(bool fromResume, dynamic repository) {
     if (!fromResume && !_isDialogShowing) {
       _showPermissionDialog(repository);
     }
-    // If fromResume and dialog is showing, let user interact with it
   }
 
-  /// Shows the permission request dialog.
   Future<void> _showPermissionDialog(dynamic repository) async {
     _isDialogShowing = true;
 
@@ -167,11 +138,6 @@ class _HomePageState extends ConsumerState<HomePage>
     _isDialogShowing = false;
   }
 
-  // ---------------------------------------------------------------------------
-  // Scroll Handling
-  // ---------------------------------------------------------------------------
-
-  /// Handles scroll events to toggle the back-to-top FAB visibility.
   void _onScroll() {
     if (!mounted) return;
 
@@ -183,7 +149,6 @@ class _HomePageState extends ConsumerState<HomePage>
     }
   }
 
-  /// Animates scroll to top of the list.
   void _scrollToTop() {
     _scrollController.animateTo(
       0,
@@ -191,10 +156,6 @@ class _HomePageState extends ConsumerState<HomePage>
       curve: Curves.easeOutCubic,
     );
   }
-
-  // ---------------------------------------------------------------------------
-  // Build Methods
-  // ---------------------------------------------------------------------------
 
   @override
   Widget build(BuildContext context) {
@@ -219,16 +180,13 @@ class _HomePageState extends ConsumerState<HomePage>
     );
   }
 
-  /// Builds the main apps list with header.
   Widget _buildAppsList(List<DeviceApp> apps, {required bool isLoading}) {
     final theme = Theme.of(context);
     final topPadding = MediaQuery.of(context).padding.top;
 
-    // Header height calculations
     const minHeight = 170.0;
     const maxHeight = 260.0;
 
-    // Apply filters
     final filteredApps = isLoading ? apps : _filterApps(apps);
     final isDark = theme.brightness == Brightness.dark;
 
@@ -259,7 +217,6 @@ class _HomePageState extends ConsumerState<HomePage>
     );
   }
 
-  /// Filters apps based on current category and tech stack selections.
   List<DeviceApp> _filterApps(List<DeviceApp> apps) {
     final category = ref.watch(categoryFilterProvider);
     final techStack = ref.watch(techStackFilterProvider);
@@ -280,7 +237,6 @@ class _HomePageState extends ConsumerState<HomePage>
     }).toList();
   }
 
-  /// Builds the empty state shown when no apps match filters.
   Widget _buildEmptyState(ThemeData theme) {
     return SliverFillRemaining(
       hasScrollBody: false,
@@ -306,7 +262,6 @@ class _HomePageState extends ConsumerState<HomePage>
     );
   }
 
-  /// Builds the apps sliver list with skeleton loading.
   Widget _buildAppsSliver(
     List<DeviceApp> apps,
     bool isLoading,
@@ -348,7 +303,6 @@ class _HomePageState extends ConsumerState<HomePage>
     );
   }
 
-  /// Builds the error state widget.
   Widget _buildErrorState(ThemeData theme, Object error) {
     return Center(
       key: const ValueKey('error'),
@@ -366,13 +320,6 @@ class _HomePageState extends ConsumerState<HomePage>
   }
 }
 
-// -----------------------------------------------------------------------------
-// Private Constants
-// -----------------------------------------------------------------------------
-
-/// Dummy apps for skeleton loading state.
-///
-/// Used to display placeholder cards while the actual app data is loading.
 final List<DeviceApp> _dummyApps = List.generate(
   10,
   (index) => DeviceApp(

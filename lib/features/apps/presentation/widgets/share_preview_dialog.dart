@@ -10,14 +10,11 @@ import '../../domain/entities/device_app.dart';
 import 'customizable_share_poster.dart';
 import 'share_options_config.dart';
 
-/// A premium share preview dialog with real-time customization.
-/// Compact layout: options at top, preview fills the rest.
 class SharePreviewDialog extends StatefulWidget {
   final DeviceApp app;
 
   const SharePreviewDialog({super.key, required this.app});
 
-  /// Shows the dialog with a smooth slide-up animation
   static Future<void> show(BuildContext context, DeviceApp app) {
     return showModalBottomSheet<void>(
       context: context,
@@ -41,7 +38,6 @@ class _SharePreviewDialogState extends State<SharePreviewDialog>
   ShareOptionsConfig _config = const ShareOptionsConfig();
   bool _isSharing = false;
 
-  // Animation controller for entrance animation
   late final AnimationController _entranceController;
   late final Animation<double> _scaleAnimation;
   late final Animation<double> _fadeAnimation;
@@ -84,13 +80,11 @@ class _SharePreviewDialogState extends State<SharePreviewDialog>
     if (_isSharing) return;
     setState(() => _isSharing = true);
 
-    // Capture navigator before async gap
     final navigator = Navigator.of(context);
     final scaffoldMessenger = ScaffoldMessenger.of(context);
     final errorColor = Theme.of(context).colorScheme.error;
 
     try {
-      // Wait for render
       await Future.delayed(const Duration(milliseconds: 100));
       await _waitForFrame();
 
@@ -101,7 +95,6 @@ class _SharePreviewDialogState extends State<SharePreviewDialog>
           posterContext.findRenderObject() as RenderRepaintBoundary?;
       if (boundary == null) throw Exception("Boundary not found");
 
-      // Additional frame waits for safety
       for (int i = 0; i < 3; i++) {
         await _waitForFrame();
       }
@@ -203,7 +196,6 @@ class _SharePreviewDialogState extends State<SharePreviewDialog>
           child: Container(
             height: screenHeight * 0.85,
             decoration: BoxDecoration(
-              // More distinct background in dark mode
               color: isDark
                   ? const Color(0xFF0D0D0D).withOpacity(0.95)
                   : const Color(0xFFF8F8F8).withOpacity(0.95),
@@ -218,16 +210,12 @@ class _SharePreviewDialogState extends State<SharePreviewDialog>
             ),
             child: Column(
               children: [
-                // Drag Handle + Header
                 _buildHeader(theme, isDark),
 
-                // Options - Horizontal ListView at top
                 _buildOptionsRow(theme, isDark),
 
-                // Preview Section - Fills remaining space
                 Expanded(child: _buildPreviewSection(theme, isDark)),
 
-                // Share Button
                 _buildShareButton(theme, isDark),
               ],
             ),
@@ -242,7 +230,6 @@ class _SharePreviewDialogState extends State<SharePreviewDialog>
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
       child: Column(
         children: [
-          // Drag Handle
           Container(
             width: 40,
             height: 4,
@@ -254,7 +241,6 @@ class _SharePreviewDialogState extends State<SharePreviewDialog>
           const SizedBox(height: 16),
           Row(
             children: [
-              // Close button
               GestureDetector(
                 onTap: () => Navigator.of(context).pop(),
                 behavior: HitTestBehavior.opaque,
@@ -281,7 +267,6 @@ class _SharePreviewDialogState extends State<SharePreviewDialog>
                   ),
                 ),
               ),
-              // Theme toggle
               _buildThemeToggle(theme, isDark),
             ],
           ),

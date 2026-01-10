@@ -33,17 +33,14 @@ class _AppDetailsPageState extends ConsumerState<AppDetailsPage> {
     _currentApp = widget.app;
   }
 
-  /// Handles resync: fetches fresh app details and updates UI
   Future<void> _handleResync() async {
     if (_isResyncing) return;
 
     setState(() => _isResyncing = true);
 
     try {
-      // Refresh usage history
       ref.invalidate(appUsageHistoryProvider(_currentApp.packageName));
 
-      // Fetch fresh app details
       final updatedApp = await ref
           .read(installedAppsProvider.notifier)
           .resyncApp(_currentApp.packageName);
@@ -73,7 +70,6 @@ class _AppDetailsPageState extends ConsumerState<AppDetailsPage> {
     }
   }
 
-  /// Shows a premium glassmorphic styled snackbar matching the app's design theme
   void _showPremiumSnackbar({
     required IconData icon,
     required String message,
@@ -83,7 +79,7 @@ class _AppDetailsPageState extends ConsumerState<AppDetailsPage> {
     final isDark = theme.brightness == Brightness.dark;
 
     final iconColor = isSuccess
-        ? const Color(0xFF4CAF50) // Premium green
+        ? const Color(0xFF4CAF50)
         : theme.colorScheme.error;
 
     ScaffoldMessenger.of(context).clearSnackBars();
@@ -143,7 +139,6 @@ class _AppDetailsPageState extends ConsumerState<AppDetailsPage> {
     );
   }
 
-  /// Opens the customizable share preview dialog
   void _openShareDialog() {
     SharePreviewDialog.show(context, app);
   }
@@ -256,7 +251,7 @@ class _AppDetailsPageState extends ConsumerState<AppDetailsPage> {
       default:
         stackColor = isDark
             ? const Color(0xFF81C784)
-            : const Color(0xFF2E7D32); // Android Green fallback
+            : const Color(0xFF2E7D32);
     }
 
     return Column(
@@ -355,7 +350,6 @@ class _AppDetailsPageState extends ConsumerState<AppDetailsPage> {
           ),
         ),
         const SizedBox(height: 20),
-        // Share Button - Opens customizable share dialog
         GestureDetector(
           onTap: _openShareDialog,
           child: Container(
@@ -464,7 +458,6 @@ class _AppDetailsPageState extends ConsumerState<AppDetailsPage> {
     AsyncValue<List<AppUsagePoint>> historyAsync,
     bool isDark,
   ) {
-    // Calculate total duration string
     final totalDuration = Duration(milliseconds: app.totalTimeInForeground);
     String totalUsageStr;
     if (totalDuration.inHours > 0) {
@@ -842,7 +835,6 @@ class _AppDetailsPageState extends ConsumerState<AppDetailsPage> {
               _buildDetailItem(context, theme, "Data Dir", app.dataDir),
 
               const SizedBox(height: 24),
-              // Component Counts Grid
               Row(
                 children: [
                   _buildComponentCount(

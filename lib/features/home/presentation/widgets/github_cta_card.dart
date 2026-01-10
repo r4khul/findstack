@@ -2,15 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-/// GitHub call-to-action card widget.
-///
-/// A styled card that links to the project's GitHub repository.
-/// Used in info pages to encourage users to explore the source code.
 class GithubCtaCard extends StatelessWidget {
-  /// Creates a GitHub CTA card.
   const GithubCtaCard({super.key});
 
-  /// GitHub repository URL.
   static const _repoUrl = 'https://github.com/r4khul/unfilter';
 
   @override

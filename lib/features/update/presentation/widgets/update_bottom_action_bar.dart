@@ -1,7 +1,3 @@
-/// A glassmorphic bottom action bar for the update check page.
-///
-/// This widget provides a floating action bar at the bottom of the screen
-/// with blur effects and customizable content.
 library;
 
 import 'dart:ui';
@@ -10,46 +6,19 @@ import 'package:flutter/material.dart';
 
 import 'constants.dart';
 
-/// A floating bottom action bar with glassmorphism styling.
-///
-/// This bar can display either a custom child widget or a standard
-/// filled button with optional loading state.
-///
-/// ## Usage
-/// ```dart
-/// UpdateBottomActionBar(
-///   label: "Check Again",
-///   icon: Icons.refresh_rounded,
-///   onPressed: _handleRefresh,
-/// )
-/// ```
-///
-/// Or with a custom child:
-/// ```dart
-/// UpdateBottomActionBar(
-///   child: UpdateDownloadButton(...),
-/// )
-/// ```
 class UpdateBottomActionBar extends StatelessWidget {
-  /// Optional button label text.
   final String? label;
 
-  /// Optional button icon.
   final IconData? icon;
 
-  /// Callback when button is pressed.
   final VoidCallback? onPressed;
 
-  /// Whether to show a loading indicator.
   final bool isLoading;
 
-  /// Whether to use secondary (muted) styling.
   final bool isSecondary;
 
-  /// Optional custom child widget to display instead of standard button.
   final Widget? child;
 
-  /// Creates an update bottom action bar.
   const UpdateBottomActionBar({
     super.key,
     this.label,

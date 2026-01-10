@@ -1,10 +1,6 @@
 import 'package:flutter/material.dart';
 import 'motion_tokens.dart';
 
-/// A premium circular reveal page route that originates from a specific tap position.
-///
-/// This route is designed to mask jank by using a smooth, GPU-accelerated
-/// circular clip that expands from the user's point of interaction.
 class BubbleRevealPageRoute<T> extends PageRouteBuilder<T> {
   final Widget page;
   final Offset? tapPosition;
@@ -33,7 +29,6 @@ class BubbleRevealPageRoute<T> extends PageRouteBuilder<T> {
     Animation<double> secondaryAnimation,
     Widget child,
   ) {
-    // Determine the center of the reveal. Default to screen center if no tap position.
     final size = MediaQuery.of(context).size;
     final center = tapPosition ?? Offset(size.width / 2, size.height / 2);
 
@@ -63,13 +58,12 @@ class _BubbleRevealTransition extends AnimatedWidget {
 
   @override
   Widget build(BuildContext context) {
-    // ====== BACKGROUND PAGE (being pushed over) ======
     if (secondaryAnimation.value > 0.001) {
       final secValue = MotionTokens.pageEnter.transform(
         secondaryAnimation.value,
       );
-      final scale = 1.0 - (secValue * 0.05); // Slight scale down
-      final dim = secValue * 0.3; // Subtle dim
+      final scale = 1.0 - (secValue * 0.05);
+      final dim = secValue * 0.3;
 
       return Transform.scale(
         scale: scale,
@@ -86,14 +80,10 @@ class _BubbleRevealTransition extends AnimatedWidget {
       );
     }
 
-    // ====== ENTERING PAGE ======
-    // Use the dramatic bubble reveal curve
     final value = MotionTokens.bubbleRevealCurve.transform(
       primaryAnimation.value,
     );
 
-    // Optimize: If animation is complete, don't clip.
-    // This removes the clipping layer as soon as it's not needed, improving performance.
     if (primaryAnimation.isCompleted) {
       return child;
     }
@@ -102,18 +92,16 @@ class _BubbleRevealTransition extends AnimatedWidget {
       builder: (context, constraints) {
         final size = constraints.biggest;
 
-        // Calculate the maximum radius required to cover the whole screen.
         final maxRadius = _calcMaxRadius(size, center);
         final currentRadius = maxRadius * value;
 
         return Stack(
           children: [
-            // The expanding page
             CustomDisplayListClip(
               center: center,
               radius: currentRadius,
               child: Opacity(
-                opacity: (value / 0.25).clamp(0.0, 1.0), // Fast intro
+                opacity: (value / 0.25).clamp(0.0, 1.0),
                 child: Transform.scale(
                   scale: 0.94 + (0.06 * value),
                   child: child,
@@ -121,7 +109,6 @@ class _BubbleRevealTransition extends AnimatedWidget {
               ),
             ),
 
-            // THE WOW FACTOR: A subtle leading edge ring/glow
             if (primaryAnimation.value > 0.01 && primaryAnimation.value < 0.99)
               IgnorePointer(
                 child: CustomPaint(
@@ -129,7 +116,7 @@ class _BubbleRevealTransition extends AnimatedWidget {
                   painter: _BubbleRingPainter(
                     center: center,
                     radius: currentRadius,
-                    opacity: 1.0 - value, // Fade out as it expands
+                    opacity: 1.0 - value,
                     color: Theme.of(context).colorScheme.primary,
                   ),
                 ),
@@ -141,7 +128,6 @@ class _BubbleRevealTransition extends AnimatedWidget {
   }
 
   double _calcMaxRadius(Size size, Offset center) {
-    // Distance to corners
     final corners = [
       Offset.zero,
       Offset(size.width, 0),
@@ -158,7 +144,6 @@ class _BubbleRevealTransition extends AnimatedWidget {
   }
 }
 
-/// Paints a premium glow ring around the expanding bubble
 class _BubbleRingPainter extends CustomPainter {
   final Offset center;
   final double radius;
@@ -184,7 +169,6 @@ class _BubbleRingPainter extends CustomPainter {
 
     canvas.drawCircle(center, radius, paint);
 
-    // Inner sharper ring
     final sharpPaint = Paint()
       ..color = color.withOpacity(opacity * 0.6)
       ..style = PaintingStyle.stroke
@@ -198,9 +182,6 @@ class _BubbleRingPainter extends CustomPainter {
       oldDelegate.radius != radius || oldDelegate.opacity != opacity;
 }
 
-/// A highly optimized clipping widget that uses [ClipPath] with [Path.addOval].
-/// We wrap this in a [RepaintBoundary] to ensure the child isn't repainted
-/// just because the clip radius changed.
 class CustomDisplayListClip extends StatelessWidget {
   final Offset center;
   final double radius;
@@ -217,9 +198,6 @@ class CustomDisplayListClip extends StatelessWidget {
   Widget build(BuildContext context) {
     return ClipPath(
       clipper: _CircularClipper(center: center, radius: radius),
-      // CRITICAL: RepaintBoundary here ensures that the heavy child widget
-      // subtree is only painted once and then cached as a layer.
-      // The animation only re-applies the mask, which is a cheap GPU operation.
       child: RepaintBoundary(child: child),
     );
   }

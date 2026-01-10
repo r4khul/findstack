@@ -8,7 +8,6 @@ import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
-import '../../../../core/navigation/navigation.dart';
 import '../../../apps/domain/entities/device_app.dart';
 import '../../../apps/presentation/providers/apps_provider.dart';
 import '../../../home/presentation/widgets/premium_sliver_app_bar.dart';
@@ -21,21 +20,7 @@ import '../widgets/usage_app_item.dart';
 import '../widgets/usage_permission_card.dart';
 import '../widgets/usage_roast_card.dart';
 
-/// Usage statistics analytics page.
-///
-/// Displays app usage data with:
-/// - Total screen time with "roast" message
-/// - Interactive pie chart of top apps
-/// - Searchable/filterable app list
-/// - Share functionality for social poster
-///
-/// ## Features
-/// - Search by app name or package
-/// - Filter top N apps (5, 10, 20)
-/// - Touch interaction between chart and list
-/// - Share usage stats as image
 class AnalyticsPage extends ConsumerStatefulWidget {
-  /// Creates the analytics page.
   const AnalyticsPage({super.key});
 
   @override
@@ -71,10 +56,6 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage>
     }
   }
 
-  // ---------------------------------------------------------------------------
-  // Build
-  // ---------------------------------------------------------------------------
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -91,7 +72,6 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage>
   }
 
   Widget _buildDataState(List<DeviceApp> apps, ThemeData theme) {
-    // Filter by usage > 0 and search query
     var validApps = apps.where((a) => a.totalTimeInForeground > 0).toList();
 
     if (_searchQuery.isNotEmpty) {
@@ -105,17 +85,14 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage>
     final permissionAsync = ref.watch(usagePermissionProvider);
     final hasPermission = permissionAsync.value ?? false;
 
-    // Empty state: no apps with usage data
     if (validApps.isEmpty && _searchQuery.isEmpty) {
       return _buildEmptyState(hasPermission);
     }
 
-    // Empty state: search returned no results
     if (validApps.isEmpty && _searchQuery.isNotEmpty) {
       return _buildSearchEmptyState(theme);
     }
 
-    // Data state
     validApps.sort(
       (a, b) => b.totalTimeInForeground.compareTo(a.totalTimeInForeground),
     );
@@ -175,10 +152,8 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage>
     return Stack(
       clipBehavior: Clip.none,
       children: [
-        // Hidden poster for sharing
         _buildHiddenSharePoster(topApps, totalUsage),
 
-        // Main content
         CustomScrollView(
           physics: const BouncingScrollPhysics(),
           slivers: [
@@ -198,10 +173,6 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage>
       ],
     );
   }
-
-  // ---------------------------------------------------------------------------
-  // Sliver Builders
-  // ---------------------------------------------------------------------------
 
   Widget _buildSearchBarSliver() {
     return SliverToBoxAdapter(
@@ -316,10 +287,6 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage>
     );
   }
 
-  // ---------------------------------------------------------------------------
-  // Share Functionality
-  // ---------------------------------------------------------------------------
-
   Widget _buildHiddenSharePoster(List<DeviceApp> topApps, int totalUsage) {
     return Positioned(
       left: -9999,
@@ -401,7 +368,6 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage>
     setState(() => _isSharing = true);
 
     try {
-      // Wait for frames to complete
       for (int i = 0; i < 3; i++) {
         await WidgetsBinding.instance.endOfFrame;
       }
@@ -419,7 +385,6 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage>
         throw Exception('RenderRepaintBoundary not found.');
       }
 
-      // Check paint status in debug mode
       bool needsPaint = false;
       assert(() {
         needsPaint = boundary.debugNeedsPaint;
@@ -456,7 +421,7 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage>
 
 100% open source. No trackers. No BS.
 
-Get it → https://github.com/r4khul/unfilter/releases/latest
+Get it → https:
 
 Love open source? Give a ⭐ on GitHub!
 
@@ -477,10 +442,6 @@ Love open source? Give a ⭐ on GitHub!
       if (mounted) setState(() => _isSharing = false);
     }
   }
-
-  // ---------------------------------------------------------------------------
-  // Helpers
-  // ---------------------------------------------------------------------------
 
   String _formatDuration(Duration duration) {
     if (duration.inHours > 0) {

@@ -1,7 +1,3 @@
-/// A dialog widget for displaying connectivity errors with tips.
-///
-/// This dialog shows when connectivity checks fail before an update check,
-/// providing helpful tips to the user for resolving the issue.
 library;
 
 import 'package:flutter/material.dart';
@@ -9,17 +5,6 @@ import 'package:flutter/material.dart';
 import '../../../../core/services/connectivity_service.dart';
 import 'constants.dart';
 
-/// Shows a connectivity warning dialog with helpful tips.
-///
-/// This function displays a premium-styled dialog when the user attempts
-/// to check for updates but has no connectivity.
-///
-/// [context] The build context to show the dialog in.
-/// [title] The dialog title (e.g., "No Internet Connection").
-/// [message] The main message describing the issue.
-/// [icon] The icon to display in the dialog header.
-/// [status] The connectivity status for determining which tips to show.
-/// [onRetry] Callback when user taps "Try Again".
 void showConnectivityDialog({
   required BuildContext context,
   required String title,
@@ -59,7 +44,6 @@ void showConnectivityDialog({
   );
 }
 
-/// The content widget for the connectivity dialog.
 class _ConnectivityDialogContent extends StatelessWidget {
   final String title;
   final String message;

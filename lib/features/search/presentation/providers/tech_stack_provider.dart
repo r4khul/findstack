@@ -14,7 +14,6 @@ final techStackFilterProvider =
       TechStackFilterNotifier.new,
     );
 
-// Constants for tech stacks matching SVG names or logic
 class TechStacks {
   static const all = 'All';
   static const android = 'Android';

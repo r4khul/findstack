@@ -2,19 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'dart:ui';
 
-/// Permission dialog for requesting usage stats access.
-///
-/// Displays a modal dialog explaining why the app needs usage permission
-/// and provides a button to request access. The dialog cannot be dismissed
-/// when [isPermanent] is true, ensuring users address the permission request.
 class PermissionDialog extends StatefulWidget {
-  /// Callback when the grant button is pressed.
   final VoidCallback onGrantPressed;
 
-  /// If true, the dialog cannot be dismissed without granting permission.
   final bool isPermanent;
 
-  /// Creates a permission dialog.
   const PermissionDialog({
     super.key,
     required this.onGrantPressed,

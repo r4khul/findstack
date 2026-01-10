@@ -5,36 +5,23 @@ import '../../../apps/domain/entities/device_app.dart';
 import 'analytics_app_icon.dart';
 import 'constants.dart';
 
-/// Interactive pie chart for usage/storage analytics.
-///
-/// Displays a donut chart with app icons as badges, animated transitions,
-/// and a center display showing total or selected app information.
 class AnalyticsPieChart extends StatelessWidget {
-  /// Apps to display in the chart.
   final List<DeviceApp> apps;
 
-  /// Total value (usage time or storage size).
   final int total;
 
-  /// "Other" segment value (items not shown individually).
   final int otherValue;
 
-  /// Currently touched/selected index (-1 for none).
   final int touchedIndex;
 
-  /// Callback when a section is touched.
   final ValueChanged<int> onSectionTouched;
 
-  /// Function to get value from app (usage time or size).
   final int Function(DeviceApp) getValue;
 
-  /// Function to format the total value.
   final String Function(int) formatTotal;
 
-  /// Label for the center when nothing is selected.
   final String centerLabel;
 
-  /// Creates an analytics pie chart.
   const AnalyticsPieChart({
     super.key,
     required this.apps,
@@ -174,7 +161,6 @@ class AnalyticsPieChart extends StatelessWidget {
       final app = apps[i];
       final value = getValue(app).toDouble();
 
-      // Monochrome palette with gradient opacity
       final normalizedIndex = i / (apps.isNotEmpty ? apps.length : 1);
       final opacity = 0.9 - (normalizedIndex * 0.7);
       final color = theme.colorScheme.primary.withValues(
@@ -227,7 +213,6 @@ class AnalyticsPieChart extends StatelessWidget {
   }
 }
 
-/// Helper class for center display information.
 class _CenterInfo {
   final String topText;
   final String bottomText;

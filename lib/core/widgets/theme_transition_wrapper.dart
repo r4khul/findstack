@@ -3,17 +3,6 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 
-/// A wrapper that facilitates a smooth circular reveal animation when switching themes.
-///
-/// This widget should be placed in the [MaterialApp.builder] property.
-/// It works by:
-/// 1. Capturing a screenshot of the current UI (old theme).
-/// 2. Switching the theme (which rebuilds the app with the new theme).
-/// 3. Overlaying the screenshot on top of the new theme.
-/// 4. Animating a circular clip (hole) in the screenshot to reveal the new theme underneath.
-///
-/// NOTE: For unified jank masking across themes and navigation,
-/// consider using [JankMaskingWrapper] instead.
 class ThemeTransitionWrapper extends StatefulWidget {
   final Widget child;
 
@@ -62,7 +51,6 @@ class ThemeTransitionWrapperState extends State<ThemeTransitionWrapper>
     super.dispose();
   }
 
-  /// Triggers the theme switch animation.
   Future<void> switchTheme({
     required Offset center,
     required VoidCallback onThemeSwitch,
@@ -86,7 +74,6 @@ class ThemeTransitionWrapperState extends State<ThemeTransitionWrapper>
         onThemeSwitch();
         _controller.forward(from: 0.0);
       } catch (e) {
-        // Fallback if screenshot fails
         onThemeSwitch();
       }
     } else {
@@ -142,7 +129,6 @@ class _ClipRevealPainter extends CustomPainter {
 
     final maxRadius = (dX * dX + dY * dY).toDouble() + 50;
 
-    // Liquid curve
     final curvedPercent = _liquidCurve(percent);
     final radius = math.sqrt(maxRadius) * curvedPercent;
 

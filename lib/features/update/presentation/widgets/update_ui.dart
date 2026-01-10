@@ -1,7 +1,3 @@
-/// Update UI widgets barrel file.
-///
-/// This file re-exports all update-related UI widgets for convenient access.
-/// Individual widgets are now in their own files for better maintainability.
 library;
 
 export 'version_check_gate.dart';

@@ -4,30 +4,19 @@ import '../../../../core/navigation/navigation.dart';
 import '../../../apps/domain/entities/device_app.dart';
 import 'analytics_app_icon.dart';
 
-/// App item widget for storage insights list.
-///
-/// Displays an app with its storage size, progress bar, and detailed
-/// breakdown when expanded (tapped).
 class StorageAppItem extends StatelessWidget {
-  /// The app to display.
   final DeviceApp app;
 
-  /// Storage percentage (0.0 to 1.0).
   final double percent;
 
-  /// Index in the list.
   final int index;
 
-  /// Whether this item is currently selected/touched.
   final bool isTouched;
 
-  /// Callback when item is tapped down.
   final VoidCallback onTapDown;
 
-  /// Callback when tap is cancelled.
   final VoidCallback onTapCancel;
 
-  /// Creates a storage app item.
   const StorageAppItem({
     super.key,
     required this.app,
@@ -145,7 +134,6 @@ class StorageAppItem extends StatelessWidget {
         const SizedBox(height: 12),
         Divider(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.2)),
         const SizedBox(height: 8),
-        // Core stats row
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
@@ -155,7 +143,6 @@ class StorageAppItem extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 8),
-        // Cache breakdown row
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: BoxDecoration(

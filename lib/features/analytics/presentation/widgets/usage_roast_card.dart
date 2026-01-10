@@ -1,14 +1,8 @@
 import 'package:flutter/material.dart';
 
-/// Roast section displaying total usage with a humorous message.
-///
-/// Shows the total screen time in a styled card with a "lifespan consumed"
-/// badge and a contextual "roast" message based on the duration.
 class UsageRoastCard extends StatelessWidget {
-  /// Total usage duration.
   final Duration totalUsage;
 
-  /// Creates a usage roast card.
   const UsageRoastCard({super.key, required this.totalUsage});
 
   @override
@@ -93,7 +87,6 @@ class UsageRoastCard extends StatelessWidget {
     );
   }
 
-  /// Returns a contextual roast message based on hours used.
   static String _getRoastMessage(Duration duration) {
     final hours = duration.inHours;
 
@@ -112,7 +105,6 @@ class UsageRoastCard extends StatelessWidget {
     }
   }
 
-  /// Formats duration to a readable string.
   static String _formatDuration(Duration d) {
     if (d.inHours > 0) {
       return '${d.inHours}h ${d.inMinutes % 60}m';
@@ -120,7 +112,6 @@ class UsageRoastCard extends StatelessWidget {
     return '${d.inMinutes}m';
   }
 
-  /// Static method to get roast message (for sharing poster).
   static String getRoastForDuration(Duration duration) =>
       _getRoastMessage(duration);
 }

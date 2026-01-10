@@ -1,32 +1,21 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 
-/// Floating action button to scroll back to top.
-///
-/// Appears with a scale animation when visible and uses backdrop blur
-/// for a glass-like appearance. Typically shown after scrolling past
-/// a threshold in the home page.
 class BackToTopFab extends StatelessWidget {
-  /// Callback when the button is pressed.
   final VoidCallback onPressed;
 
-  /// Whether the FAB should be visible.
   final bool isVisible;
 
-  /// Creates a back to top FAB.
   const BackToTopFab({
     super.key,
     required this.onPressed,
     required this.isVisible,
   });
 
-  /// FAB size dimensions.
   static const double _size = 56.0;
 
-  /// Animation duration for scale transition.
   static const Duration _animationDuration = Duration(milliseconds: 300);
 
-  /// Blur intensity for backdrop filter.
   static const double _blurSigma = 10.0;
 
   @override

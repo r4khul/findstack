@@ -4,18 +4,9 @@ import '../../../apps/presentation/providers/apps_provider.dart';
 import '../../../scan/presentation/pages/scan_page.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-/// Permission/empty state card for usage analytics.
-///
-/// Displayed when:
-/// - Usage permission is not granted
-/// - No usage data is available (needs a deep scan)
-///
-/// Shows contextual messaging and an action button.
 class UsagePermissionCard extends ConsumerWidget {
-  /// Whether usage permission has been granted.
   final bool hasPermission;
 
-  /// Creates a usage permission card.
   const UsagePermissionCard({super.key, required this.hasPermission});
 
   @override

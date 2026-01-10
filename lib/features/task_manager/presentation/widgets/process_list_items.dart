@@ -1,9 +1,3 @@
-/// List item widgets for displaying processes in the task manager.
-///
-/// Contains widgets for:
-/// - Shell/system processes (kernel level)
-/// - User app processes (active apps)
-/// - Section headers with live indicators
 library;
 
 import 'package:flutter/material.dart';
@@ -13,21 +7,11 @@ import '../../../apps/domain/entities/device_app.dart';
 import '../../domain/entities/android_process.dart';
 import 'constants.dart';
 
-// =============================================================================
-// SECTION HEADERS
-// =============================================================================
-
-/// A section header for process lists with optional live indicator.
-///
-/// Displays a label and optionally a live indicator or badge.
 class ProcessSectionHeader extends StatelessWidget {
-  /// The section title text.
   final String title;
 
-  /// Optional widget to display on the right side.
   final Widget? trailing;
 
-  /// Creates a process section header.
   const ProcessSectionHeader({super.key, required this.title, this.trailing});
 
   @override
@@ -61,15 +45,11 @@ class ProcessSectionHeader extends StatelessWidget {
   }
 }
 
-/// User space section header with conditional badge.
 class UserSpaceSectionHeader extends StatelessWidget {
-  /// Whether the sandboxed badge should be shown instead of live indicator.
   final bool showSandboxedBadge;
 
-  /// The color for the live indicator.
   final Color indicatorColor;
 
-  /// Creates a user space section header.
   const UserSpaceSectionHeader({
     super.key,
     required this.showSandboxedBadge,
@@ -119,18 +99,9 @@ class UserSpaceSectionHeader extends StatelessWidget {
   }
 }
 
-// =============================================================================
-// LIVE INDICATOR
-// =============================================================================
-
-/// An animated live indicator with pulsing effect.
-///
-/// Shows a "LIVE" badge with dot indicator that fades in and out.
 class LiveIndicator extends StatefulWidget {
-  /// The color of the indicator.
   final Color color;
 
-  /// Creates a live indicator.
   const LiveIndicator({super.key, required this.color});
 
   @override
@@ -199,18 +170,9 @@ class _LiveIndicatorState extends State<LiveIndicator>
   }
 }
 
-// =============================================================================
-// SHELL PROCESS ITEM
-// =============================================================================
-
-/// A list item for displaying shell/kernel processes.
-///
-/// Shows process ID, name, user, RSS memory, and CPU usage.
 class ShellProcessItem extends StatelessWidget {
-  /// The Android process to display.
   final AndroidProcess process;
 
-  /// Creates a shell process item.
   const ShellProcessItem({super.key, required this.process});
 
   @override
@@ -246,7 +208,6 @@ class ShellProcessItem extends StatelessWidget {
     );
   }
 
-  /// Builds the PID badge container.
   Widget _buildPidBadge(ThemeData theme, bool isRoot) {
     return Container(
       padding: const EdgeInsets.all(TaskManagerSizes.pidContainerPadding),
@@ -269,7 +230,6 @@ class ShellProcessItem extends StatelessWidget {
     );
   }
 
-  /// Builds the process name and user info.
   Widget _buildProcessInfo(ThemeData theme) {
     final displayName = process.name.length > 30
         ? "...${process.name.substring(process.name.length - 28)}"
@@ -318,7 +278,6 @@ class ShellProcessItem extends StatelessWidget {
     );
   }
 
-  /// Builds the CPU usage display.
   Widget _buildCpuUsage(ThemeData theme) {
     final isActive = process.cpu != "0.0" && process.cpu != "0";
 
@@ -349,22 +308,11 @@ class ShellProcessItem extends StatelessWidget {
   }
 }
 
-// =============================================================================
-// USER APP ITEM
-// =============================================================================
-
-/// A list item for displaying active user applications.
-///
-/// Shows app icon, name, package name, and either CPU/RSS stats
-/// or last used time with cached badge.
 class UserAppItem extends StatelessWidget {
-  /// The device app to display.
   final DeviceApp app;
 
-  /// Optional matching shell process for CPU/memory stats.
   final AndroidProcess? matchingProcess;
 
-  /// Creates a user app item.
   const UserAppItem({super.key, required this.app, this.matchingProcess});
 
   @override
@@ -409,7 +357,6 @@ class UserAppItem extends StatelessWidget {
     );
   }
 
-  /// Builds the app name and package info.
   Widget _buildAppInfo(ThemeData theme) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -435,7 +382,6 @@ class UserAppItem extends StatelessWidget {
     );
   }
 
-  /// Builds the stats section (CPU/RSS or time ago).
   Widget _buildStats(ThemeData theme) {
     if (matchingProcess != null) {
       return _buildActiveStats(theme, matchingProcess!);
@@ -443,7 +389,6 @@ class UserAppItem extends StatelessWidget {
     return _buildCachedStats(theme);
   }
 
-  /// Builds stats for apps with active processes.
   Widget _buildActiveStats(ThemeData theme, AndroidProcess process) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.end,
@@ -468,7 +413,6 @@ class UserAppItem extends StatelessWidget {
     );
   }
 
-  /// Builds stats for cached (inactive) apps.
   Widget _buildCachedStats(ThemeData theme) {
     final lastUsed = DateTime.fromMillisecondsSinceEpoch(app.lastTimeUsed);
     final diff = DateTime.now().difference(lastUsed);
@@ -521,11 +465,6 @@ class UserAppItem extends StatelessWidget {
   }
 }
 
-// =============================================================================
-// APP ICON
-// =============================================================================
-
-/// A circular app icon widget.
 class _AppIcon extends StatelessWidget {
   final DeviceApp app;
   final double size;

@@ -18,8 +18,8 @@ class DeviceApp extends Equatable {
   final String appName;
   final String packageName;
   final String version;
-  final Uint8List? icon; // Only simple icon passing for now
-  final String stack; // Detected stack (Flutter, React Native, etc.)
+  final Uint8List? icon;
+  final String stack;
   final List<String> nativeLibraries;
   final List<String> permissions;
   final List<String> services;
@@ -32,23 +32,20 @@ class DeviceApp extends Equatable {
   final int uid;
   final int versionCode;
 
-  // Usage stats (requires permission)
-  final int totalTimeInForeground; // in milliseconds
-  final int lastTimeUsed; // timestamp
+  final int totalTimeInForeground;
+  final int lastTimeUsed;
 
-  final AppCategory category; // New field
+  final AppCategory category;
 
-  final int size; // Total size
+  final int size;
   final String apkPath;
   final String dataDir;
 
-  // Storage breakdown (Unfiltered Truth)
-  final int appSize; // Code/APK
-  final int dataSize; // User Data
-  final int cacheSize; // Total Cache
-  final int externalCacheSize; // External Portion of Cache
+  final int appSize;
+  final int dataSize;
+  final int cacheSize;
+  final int externalCacheSize;
 
-  // Deep Analysis Fields
   final String installerStore;
   final String? signingSha1;
   final String? signingSha256;

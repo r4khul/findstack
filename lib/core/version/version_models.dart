@@ -1,6 +1,5 @@
 import 'package:equatable/equatable.dart';
 
-/// Represents a Semantic Version (x.y.z+build).
 class AppVersion extends Equatable implements Comparable<AppVersion> {
   final int major;
   final int minor;
@@ -16,7 +15,6 @@ class AppVersion extends Equatable implements Comparable<AppVersion> {
     this.shorebirdPatch,
   });
 
-  /// Parse from standard string "1.0.0+1"
   factory AppVersion.parse(String versionString) {
     try {
       final parts = versionString.split('+');
@@ -47,12 +45,6 @@ class AppVersion extends Equatable implements Comparable<AppVersion> {
   String get nativeVersion => '$major.$minor.$patch';
   String get fullVersion => '$major.$minor.$patch+$build';
 
-  /// Returns the display version.
-  /// If shorebird patch is present, we append it.
-  /// User rule: "Build number +N = Shorebird patch number"
-  /// We will format it as x.y.z+(Build+Patch) or x.y.z+Build (Patch N)
-  /// for clarity and safety, showing both is better, but obeying strict rule:
-  /// We can just render string as x.y.z+(build + (shorebirdPatch ?? 0))
   String get displayString {
     final effectiveBuild = build + (shorebirdPatch ?? 0);
     return '$major.$minor.$patch+$effectiveBuild';
@@ -92,8 +84,8 @@ class AppVersion extends Equatable implements Comparable<AppVersion> {
 
 enum AppUpdateStatus {
   upToDate,
-  softUpdate, // Optional update available
-  forceUpdate, // Mandatory update required
+  softUpdate,
+  forceUpdate,
 }
 
 class UpdateConfig extends Equatable {

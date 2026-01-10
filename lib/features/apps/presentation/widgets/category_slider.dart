@@ -57,12 +57,11 @@ class CategorySlider extends ConsumerWidget {
   }) {
     final theme = Theme.of(context);
 
-    // Dimensions based on compactness
     final horizontalPadding = isCompact ? 12.0 : 16.0;
     final verticalPadding = isCompact ? 8.0 : 10.0;
     final borderRadius = isCompact ? 12.0 : 16.0;
     final iconSize = isCompact ? 16.0 : 18.0;
-    final fontSize = isCompact ? 11.0 : 13.0; // slightly adjusted
+    final fontSize = isCompact ? 11.0 : 13.0;
     final gap = isCompact ? 6.0 : 8.0;
 
     return Padding(
@@ -88,7 +87,7 @@ class CategorySlider extends ConsumerWidget {
                         ? theme.colorScheme.surface
                         : Colors
                               .grey
-                              .shade100), // Light grey for light mode unselected
+                              .shade100),
               borderRadius: BorderRadius.circular(borderRadius),
               border: Border.all(
                 color: isSelected

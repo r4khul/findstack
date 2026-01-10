@@ -1,7 +1,3 @@
-/// A full-screen widget displayed when a critical update is required.
-///
-/// This screen blocks the app and forces the user to update before continuing.
-/// It displays version information, release notes, and a download button.
 library;
 
 import 'dart:ui';
@@ -13,24 +9,9 @@ import '../../domain/update_service.dart';
 import 'constants.dart';
 import 'update_download_button.dart';
 
-/// A blocking screen shown when a force update is required.
-///
-/// This widget:
-/// - Prevents back navigation (user cannot dismiss it)
-/// - Shows the current vs required version
-/// - Displays release notes if available
-/// - Provides a download button for the update
-///
-/// ## Usage
-/// This is typically shown by [VersionCheckGate] when the update check
-/// returns [UpdateStatus.forceUpdate].
 class ForceUpdateScreen extends ConsumerWidget {
-  /// The result of the update check containing version information.
   final UpdateCheckResult result;
 
-  /// Creates a force update screen.
-  ///
-  /// [result] contains the update check result with version details.
   const ForceUpdateScreen({super.key, required this.result});
 
   @override
@@ -38,16 +19,13 @@ class ForceUpdateScreen extends ConsumerWidget {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    // Lock Android back button - user must update
     return PopScope(
       canPop: false,
       child: Scaffold(
         backgroundColor: theme.scaffoldBackgroundColor,
         body: Stack(
           children: [
-            // Background ambient glow
             _buildAmbientGlow(theme),
-            // Main content
             SafeArea(
               child: Padding(
                 padding: const EdgeInsets.symmetric(
@@ -87,7 +65,6 @@ class ForceUpdateScreen extends ConsumerWidget {
     );
   }
 
-  /// Builds the ambient glow effect in the background.
   Widget _buildAmbientGlow(ThemeData theme) {
     return Positioned(
       top: -100,
@@ -104,7 +81,6 @@ class ForceUpdateScreen extends ConsumerWidget {
     );
   }
 
-  /// Builds the hero icon container.
   Widget _buildHeroIcon(ThemeData theme, bool isDark) {
     return Container(
       padding: const EdgeInsets.all(UpdateSpacing.hero),
@@ -135,7 +111,6 @@ class ForceUpdateScreen extends ConsumerWidget {
     );
   }
 
-  /// Builds the title text.
   Widget _buildTitle(ThemeData theme) {
     return Text(
       'Critical Update Required',
@@ -147,7 +122,6 @@ class ForceUpdateScreen extends ConsumerWidget {
     );
   }
 
-  /// Builds the description text.
   Widget _buildDescription(ThemeData theme) {
     return Text(
       'A critical update is available that improves stability and security.\nYou must update to continue using UnFilter.',
@@ -159,7 +133,6 @@ class ForceUpdateScreen extends ConsumerWidget {
     );
   }
 
-  /// Builds the version comparison row.
   Widget _buildVersionComparison(ThemeData theme) {
     return Container(
       padding: const EdgeInsets.all(UpdateSpacing.lg),
@@ -199,7 +172,6 @@ class ForceUpdateScreen extends ConsumerWidget {
     );
   }
 
-  /// Builds the release notes card.
   Widget _buildReleaseNotesCard(ThemeData theme) {
     return Container(
       padding: const EdgeInsets.all(UpdateSpacing.standard),
@@ -231,20 +203,13 @@ class ForceUpdateScreen extends ConsumerWidget {
   }
 }
 
-/// A column widget displaying a version label and number.
-///
-/// Used in the version comparison section to show current vs. new version.
 class _VersionColumn extends StatelessWidget {
-  /// The label text (e.g., "Current", "Required").
   final String label;
 
-  /// The version string to display.
   final String version;
 
-  /// Whether to highlight this column (for new version).
   final bool isHighlight;
 
-  /// Whether this is the old version column.
   final bool isOld;
 
   const _VersionColumn({
