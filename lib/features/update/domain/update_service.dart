@@ -1,24 +1,60 @@
+/// Domain service for checking and managing app updates.
+///
+/// This service provides the core business logic for:
+/// - Checking if an update is available
+/// - Downloading APK files
+/// - Installing updates
+library;
+
 import 'dart:async';
 import 'dart:io';
+
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:open_filex/open_filex.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:pub_semver/pub_semver.dart';
+
 import '../data/models/update_config_model.dart';
 import '../data/repositories/update_repository.dart';
 import '../presentation/providers/update_provider.dart' show UpdateErrorType;
 
-enum UpdateStatus { upToDate, softUpdate, forceUpdate, unknown }
+/// Possible update statuses after checking.
+enum UpdateStatus {
+  /// The app is up to date - no update needed.
+  upToDate,
 
+  /// A soft update is available - user can skip.
+  softUpdate,
+
+  /// A force update is required - user cannot skip.
+  forceUpdate,
+
+  /// Unable to determine update status (error occurred).
+  unknown,
+}
+
+/// The result of an update check operation.
+///
+/// Contains the update status, configuration details, and any errors.
 class UpdateCheckResult {
+  /// The determined update status.
   final UpdateStatus status;
+
+  /// The remote update configuration (null if fetch failed).
   final UpdateConfigModel? config;
+
+  /// The current app version.
   final Version? currentVersion;
+
+  /// Optional error message if the check failed.
   final String? error;
+
+  /// Optional error type for UI display.
   final UpdateErrorType? errorType;
 
+  /// Creates an update check result.
   const UpdateCheckResult({
     required this.status,
     this.config,
@@ -28,11 +64,41 @@ class UpdateCheckResult {
   });
 }
 
+/// Service that handles app update operations.
+///
+/// This service is responsible for:
+/// - Determining the current app version
+/// - Fetching remote update configuration
+/// - Comparing versions to determine update availability
+/// - Downloading APK files with progress reporting
+/// - Triggering APK installation
+///
+/// ## Version Comparison Logic
+/// 1. If current < minSupported → Force Update
+/// 2. If current < latest && forceUpdate flag → Force Update
+/// 3. If current < latest → Soft Update
+/// 4. Otherwise → Up to Date
+///
+/// ## Usage
+/// ```dart
+/// final service = UpdateService(repository);
+/// final result = await service.checkUpdate();
+///
+/// if (result.status == UpdateStatus.forceUpdate) {
+///   // Show force update screen
+/// }
+/// ```
 class UpdateService {
+  /// The repository for fetching update configuration.
   final UpdateRepository _repository;
 
+  /// Creates an update service with the given repository.
   UpdateService(this._repository);
 
+  /// Gets the current app version from package info.
+  ///
+  /// Returns a [Version] object that includes the build number
+  /// if available (e.g., "1.2.3+42").
   Future<Version> getCurrentVersion() async {
     final packageInfo = await PackageInfo.fromPlatform();
     String versionString = packageInfo.version;
@@ -42,6 +108,16 @@ class UpdateService {
     return Version.parse(versionString);
   }
 
+  /// Checks if an update is available.
+  ///
+  /// Fetches the remote configuration and compares versions
+  /// to determine the appropriate update status.
+  ///
+  /// Returns an [UpdateCheckResult] with:
+  /// - [UpdateStatus.forceUpdate] if current version is below minimum
+  /// - [UpdateStatus.softUpdate] if a newer version is available
+  /// - [UpdateStatus.upToDate] if on the latest version
+  /// - [UpdateStatus.unknown] if an error occurred
   Future<UpdateCheckResult> checkUpdate() async {
     try {
       final config = await _repository.fetchConfig();
@@ -52,7 +128,6 @@ class UpdateService {
       final currentVersion = await getCurrentVersion();
 
       // 1. Critical Check: Min Supported Version
-      // We use a custom comparator that respects build numbers if the semver core is equal
       if (_isLowerThan(currentVersion, config.minSupportedNativeVersion)) {
         return UpdateCheckResult(
           status: UpdateStatus.forceUpdate,
@@ -93,15 +168,19 @@ class UpdateService {
     }
   }
 
-  /// Downloads the APK from the given URL and returns a stream of progress (0.0 to 1.0).
-  /// Returns the file path when complete (as the last event, or we can use a separate future).
-  /// Actually, returning a Stream of generic event is better.
-  /// For simplicity here, I'll return a Stream of double for progress.
-  /// The caller handles the "done" state when stream completes.
-  /// BUT we need the file path.
-  /// So let's return a specific controller or object, or just pass a callback for path.
-  /// I will implement a method that returns a handle with a progress stream and a future for the file.
-
+  /// Downloads the APK from the given URL.
+  ///
+  /// Reports progress via the [onProgress] callback (0.0 to 1.0).
+  /// Returns the downloaded [File] when complete.
+  ///
+  /// If the file already exists and is non-empty, returns it immediately
+  /// (assumes it's a valid cached download).
+  ///
+  /// [url] The direct download URL for the APK.
+  /// [version] Version string used for the filename.
+  /// [onProgress] Callback invoked with download progress (0.0 to 1.0).
+  ///
+  /// Throws [Exception] if download fails.
   Future<File> downloadApk(
     String url,
     String version, {
@@ -114,10 +193,8 @@ class UpdateService {
       final String filePath = '${tempDir.path}/$fileName';
       final File file = File(filePath);
 
-      // Check if file already exists and is not empty (basic validation)
+      // Check if file already exists and is valid
       if (await file.exists() && await file.length() > 0) {
-        // We assume it's good. In a real real app, we would check SHA-256.
-        // For now, we simulate quick "download" (immediate 100%)
         onProgress(1.0);
         return file;
       }
@@ -126,7 +203,7 @@ class UpdateService {
       final response = await client.send(request);
       final contentLength = response.contentLength ?? 0;
 
-      // Create a temporary file for downloading to avoid partial files named correctly
+      // Create a temporary file to avoid partial downloads with final name
       final String tempFilePath = '${tempDir.path}/$fileName.tmp';
       final File tempFile = File(tempFilePath);
 
@@ -154,13 +231,20 @@ class UpdateService {
 
       return File(filePath);
     } catch (e) {
-      // Clean up if something failed
       throw Exception('Download failed: $e');
     } finally {
       client.close();
     }
   }
 
+  /// Triggers installation of the downloaded APK.
+  ///
+  /// Opens the APK file using the system's package installer.
+  /// Note: The actual installation is handled by Android's package manager.
+  ///
+  /// [file] The APK file to install.
+  ///
+  /// Throws [Exception] if the file doesn't exist.
   Future<void> installApk(File file) async {
     if (!await file.exists()) {
       throw Exception('APK file not found');
@@ -169,22 +253,21 @@ class UpdateService {
     debugPrint('Installing APK: ${file.path}');
     final result = await OpenFilex.open(file.path);
     if (result.type != ResultType.done) {
-      // Note: ResultType.done just means the intent was launched successfully.
-      // It doesn't mean installation succeeded.
       debugPrint('OpenFilex result: ${result.type} - ${result.message}');
     }
   }
 
-  /// Helper to compare versions respecting build number if main version is equal.
+  /// Compares versions respecting build number if main version is equal.
+  ///
+  /// The pub_semver package treats build numbers as ignored for precedence.
+  /// This method provides precise control by checking build numbers
+  /// when the semantic version parts are equal.
   bool _isLowerThan(Version current, Version target) {
     if (current < target) return true;
     if (current > target) return false;
 
-    // If SemVer equal, check build.
-    // pub_semver treats build as ignored for precedence.
-    // We want precise control.
+    // If SemVer equal, check build
     if (current == target) {
-      // Compare build numbers if they exist and are integers
       final currentBuild = _parseBuildNumber(current.build);
       final targetBuild = _parseBuildNumber(target.build);
       if (currentBuild != null && targetBuild != null) {
@@ -194,9 +277,11 @@ class UpdateService {
     return false;
   }
 
+  /// Parses the build number from the version's build list.
+  ///
+  /// Returns null if no valid build number is found.
   int? _parseBuildNumber(List<dynamic> build) {
     if (build.isEmpty) return null;
-    // Assuming first part is the build number integer
     final first = build.first;
     if (first is int) return first;
     if (first is String) return int.tryParse(first);
