@@ -71,7 +71,7 @@ class CategorySlider extends ConsumerWidget {
         color: Colors.transparent,
         child: InkWell(
           onTap: () {
-            ref.read(categoryFilterProvider.notifier).state = category;
+            ref.read(categoryFilterProvider.notifier).setCategory(category);
           },
           borderRadius: BorderRadius.circular(borderRadius),
           child: AnimatedContainer(
