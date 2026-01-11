@@ -5,14 +5,12 @@ class AppVersion extends Equatable implements Comparable<AppVersion> {
   final int minor;
   final int patch;
   final int build;
-  final int? shorebirdPatch;
 
   const AppVersion({
     required this.major,
     required this.minor,
     required this.patch,
     required this.build,
-    this.shorebirdPatch,
   });
 
   factory AppVersion.parse(String versionString) {
@@ -32,22 +30,11 @@ class AppVersion extends Equatable implements Comparable<AppVersion> {
     }
   }
 
-  AppVersion withShorebirdPatch(int? patchNumber) {
-    return AppVersion(
-      major: major,
-      minor: minor,
-      patch: patch,
-      build: build,
-      shorebirdPatch: patchNumber,
-    );
-  }
-
   String get nativeVersion => '$major.$minor.$patch';
   String get fullVersion => '$major.$minor.$patch+$build';
 
   String get displayString {
-    final effectiveBuild = build + (shorebirdPatch ?? 0);
-    return '$major.$minor.$patch+$effectiveBuild';
+    return '$major.$minor.$patch+$build';
   }
 
   bool isLowerThan(AppVersion other, {bool ignoreBuild = false}) {
@@ -76,17 +63,13 @@ class AppVersion extends Equatable implements Comparable<AppVersion> {
   }
 
   @override
-  List<Object?> get props => [major, minor, patch, build, shorebirdPatch];
+  List<Object?> get props => [major, minor, patch, build];
 
   @override
   String toString() => displayString;
 }
 
-enum AppUpdateStatus {
-  upToDate,
-  softUpdate,
-  forceUpdate,
-}
+enum AppUpdateStatus { upToDate, softUpdate, forceUpdate }
 
 class UpdateConfig extends Equatable {
   final AppVersion latestNativeVersion;

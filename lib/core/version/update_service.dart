@@ -2,21 +2,18 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
-import 'package:shorebird_code_push/shorebird_code_push.dart';
+
 import 'version_models.dart';
 
 class UpdateService {
-  final ShorebirdUpdater _shorebirdUpdater;
   final String _configUrl;
 
   AppVersion? _currentVersion;
 
   UpdateService({
-    ShorebirdUpdater? shorebirdUpdater,
     String configUrl =
         'https://raw.githubusercontent.com/r4khul/unfilter/main/version_config.json',
-  }) : _shorebirdUpdater = shorebirdUpdater ?? ShorebirdUpdater(),
-       _configUrl = configUrl;
+  }) : _configUrl = configUrl;
 
   Future<AppVersion> getCurrentVersion() async {
     if (_currentVersion != null) return _currentVersion!;
@@ -26,15 +23,7 @@ class UpdateService {
       '${packageInfo.version}+${packageInfo.buildNumber}',
     );
 
-    int? patchNumber;
-    try {
-      final patch = await _shorebirdUpdater.readCurrentPatch();
-      patchNumber = patch?.number;
-    } catch (e) {
-      debugPrint('Shorebird not available or failed: $e');
-    }
-
-    _currentVersion = nativeVersion.withShorebirdPatch(patchNumber);
+    _currentVersion = nativeVersion;
     return _currentVersion!;
   }
 
@@ -89,17 +78,6 @@ class UpdateService {
       return UpdateConfig.fromJson(jsonDecode(response.body));
     } else {
       throw Exception('Failed to load version config: ${response.statusCode}');
-    }
-  }
-
-  Future<void> checkForShorebirdUpdate() async {
-    try {
-      final status = await _shorebirdUpdater.checkForUpdate();
-      if (status == UpdateStatus.outdated) {
-        await _shorebirdUpdater.update();
-      }
-    } catch (e) {
-      debugPrint('Shorebird update check failed: $e');
     }
   }
 }
