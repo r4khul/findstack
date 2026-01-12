@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../core/navigation/navigation.dart';
 import '../../../update/presentation/providers/update_provider.dart';
@@ -124,6 +125,8 @@ class AppDrawer extends ConsumerWidget {
         ),
         _buildUpdateCheckTile(context, ref),
         _buildAboutTile(context, ref),
+        const SizedBox(height: 8),
+        _buildReportIssueButton(context),
       ],
     );
   }
@@ -176,6 +179,63 @@ class AppDrawer extends ConsumerWidget {
         Navigator.pop(context);
         AppRouteFactory.toAbout(context);
       },
+    );
+  }
+
+  Widget _buildReportIssueButton(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () async {
+          Navigator.pop(context);
+          final uri = Uri.parse('https://github.com/r4khul/unfilter/issues');
+          if (await canLaunchUrl(uri)) {
+            await launchUrl(uri, mode: LaunchMode.externalApplication);
+          }
+        },
+        borderRadius: BorderRadius.circular(16),
+        overlayColor: WidgetStateProperty.all(
+          theme.colorScheme.primary.withOpacity(0.05),
+        ),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.3),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: theme.colorScheme.outlineVariant.withOpacity(0.3),
+              width: 1,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.bug_report_outlined,
+                size: 18,
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Report Issue',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13,
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(width: 6),
+              Icon(
+                Icons.open_in_new_rounded,
+                size: 14,
+                color: theme.colorScheme.onSurfaceVariant.withOpacity(0.5),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
