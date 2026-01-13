@@ -8,6 +8,7 @@ import '../../domain/entities/device_app.dart';
 import '../providers/app_detail_provider.dart';
 import '../providers/apps_provider.dart';
 import '../widgets/app_details/app_details_widgets.dart';
+import '../widgets/app_details/snackbar_utils.dart';
 import '../widgets/share_preview_dialog.dart';
 
 class AppDetailsPage extends ConsumerStatefulWidget {
