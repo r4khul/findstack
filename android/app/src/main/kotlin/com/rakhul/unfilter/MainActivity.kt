@@ -153,10 +153,11 @@ class MainActivity : FlutterActivity() {
                 }
                 "getAppUsageHistory" -> {
                     val packageName = call.argument<String>("packageName")
+                    val installTime = call.argument<Long>("installTime")
                     if (packageName != null) {
                         executor.execute {
                             try {
-                                val history = usageManager.getAppUsageHistory(packageName)
+                                val history = usageManager.getAppUsageHistory(packageName, installTime)
                                 handler.post { result.success(history) }
                             } catch (e: Exception) {
                                 handler.post { result.error("ERROR", e.message, null) }

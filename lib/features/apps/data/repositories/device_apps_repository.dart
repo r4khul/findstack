@@ -155,12 +155,16 @@ class DeviceAppsRepository {
     }
   }
 
-  Future<List<AppUsagePoint>> getAppUsageHistory(String packageName) async {
+  Future<List<AppUsagePoint>> getAppUsageHistory(
+    String packageName, {
+    int? installTime,
+  }) async {
     try {
-      final List<Object?> result = await platform.invokeMethod(
-        'getAppUsageHistory',
-        {'packageName': packageName},
-      );
+      final List<Object?> result = await platform
+          .invokeMethod('getAppUsageHistory', {
+            'packageName': packageName,
+            if (installTime != null) 'installTime': installTime,
+          });
       return result
           .cast<Map<Object?, Object?>>()
           .map((e) => AppUsagePoint.fromMap(e))

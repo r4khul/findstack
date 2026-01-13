@@ -39,7 +39,12 @@ class _AppDetailsPageState extends ConsumerState<AppDetailsPage> {
     setState(() => _isResyncing = true);
 
     try {
-      ref.invalidate(appUsageHistoryProvider(_currentApp.packageName));
+      ref.invalidate(
+        appUsageHistoryProvider((
+          packageName: _currentApp.packageName,
+          installTime: _currentApp.installDate.millisecondsSinceEpoch,
+        )),
+      );
 
       final updatedApp = await ref
           .read(installedAppsProvider.notifier)
@@ -91,7 +96,10 @@ class _AppDetailsPageState extends ConsumerState<AppDetailsPage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final usageHistoryAsync = ref.watch(
-      appUsageHistoryProvider(app.packageName),
+      appUsageHistoryProvider((
+        packageName: app.packageName,
+        installTime: app.installDate.millisecondsSinceEpoch,
+      )),
     );
 
     return Scaffold(
