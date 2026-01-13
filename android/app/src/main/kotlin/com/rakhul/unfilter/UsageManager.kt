@@ -24,7 +24,8 @@ class UsageManager(private val context: Context) {
         val usageStatsManager = context.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
         val calendar = Calendar.getInstance()
         val endTime = calendar.timeInMillis
-        calendar.add(Calendar.YEAR, -1)
+        // Extended to 2 years to capture more historical usage data
+        calendar.add(Calendar.YEAR, -2)
         val startTime = calendar.timeInMillis
         
         return usageStatsManager.queryAndAggregateUsageStats(startTime, endTime)
@@ -36,7 +37,8 @@ class UsageManager(private val context: Context) {
         val usageStatsManager = context.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
         val calendar = Calendar.getInstance()
         val endTime = calendar.timeInMillis
-        calendar.add(Calendar.YEAR, -1)
+        // Extended to 2 years to match getUsageMap
+        calendar.add(Calendar.YEAR, -2)
         val startTime = calendar.timeInMillis
 
         val usageStatsList = usageStatsManager.queryUsageStats(
@@ -64,7 +66,7 @@ class UsageManager(private val context: Context) {
         val result = mutableListOf<Map<String, Any>>()
         val todayCal = Calendar.getInstance()
 
-        for (i in 0 until 365) {
+        for (i in 0 until 730) {
             val dateCal = Calendar.getInstance()
             dateCal.timeInMillis = todayCal.timeInMillis
             dateCal.add(Calendar.DAY_OF_YEAR, -i)

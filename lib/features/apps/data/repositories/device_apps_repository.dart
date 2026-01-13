@@ -42,8 +42,7 @@ class DeviceAppsRepository {
     if (_scanInProgress != null && _lastScanIncludedDetails == includeDetails) {
       try {
         return await _scanInProgress!.future;
-      } catch (e) {
-      }
+      } catch (e) {}
     }
 
     final completer = Completer<List<DeviceApp>>();
@@ -178,5 +177,11 @@ class DeviceAppsRepository {
 
   Future<void> clearCache() async {
     await _localDataSource.clearCache();
+    // Also clear the native Kotlin-side cache to ensure fresh data
+    try {
+      await platform.invokeMethod('clearScanCache');
+    } catch (_) {
+      // Ignore errors from native cache clear
+    }
   }
 }

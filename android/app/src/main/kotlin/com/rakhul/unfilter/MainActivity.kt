@@ -56,6 +56,13 @@ class MainActivity : FlutterActivity() {
                         }
                     }
                 }
+                "clearScanCache" -> {
+                    scanLock.withLock {
+                        lastScanResult = null
+                        lastScanIncludedDetails = false
+                    }
+                    result.success(true)
+                }
                 "getInstalledApps" -> {
                     val includeDetails = call.argument<Boolean>("includeDetails") ?: true
                     
