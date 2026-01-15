@@ -397,11 +397,7 @@ class UserAppItem extends StatelessWidget {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: () => AppRouteFactory.toAppDetailsByPackage(
-            context,
-            app.packageName,
-            appName: app.appName,
-          ),
+          onTap: () => AppRouteFactory.toAppDetails(context, app.toDeviceApp()),
           borderRadius: BorderRadius.circular(TaskManagerBorderRadius.lg),
           child: Container(
             padding: const EdgeInsets.all(TaskManagerSpacing.standard),

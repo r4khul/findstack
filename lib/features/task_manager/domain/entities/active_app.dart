@@ -2,6 +2,8 @@ library;
 
 import 'dart:typed_data';
 
+import '../../../apps/domain/entities/device_app.dart';
+
 /// Lightweight app info for Task Manager's active apps section.
 /// This is independent of the full DeviceApp model used in app scanning.
 class ActiveApp {
@@ -33,6 +35,31 @@ class ActiveApp {
       lastTimeUsed: (map['lastTimeUsed'] as num?)?.toInt() ?? 0,
       totalTimeInForeground:
           (map['totalTimeInForeground'] as num?)?.toInt() ?? 0,
+    );
+  }
+
+  /// Converts to a minimal DeviceApp for direct navigation to AppDetailsPage.
+  /// This allows seamless navigation without an intermediate loading screen.
+  /// The user can use the resync button in AppDetailsPage to fetch full details.
+  DeviceApp toDeviceApp() {
+    return DeviceApp(
+      appName: appName,
+      packageName: packageName,
+      icon: icon,
+      stack: 'Loading...',
+      nativeLibraries: const [],
+      permissions: const [],
+      services: const [],
+      receivers: const [],
+      providers: const [],
+      installDate: DateTime.now(),
+      updateDate: DateTime.now(),
+      minSdkVersion: 0,
+      targetSdkVersion: 0,
+      uid: 0,
+      versionCode: 0,
+      totalTimeInForeground: totalTimeInForeground,
+      lastTimeUsed: lastTimeUsed,
     );
   }
 
