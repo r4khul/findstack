@@ -201,6 +201,17 @@ class MainActivity : FlutterActivity() {
                         }
                     }
                 }
+                "getRecentlyActiveApps" -> {
+                    val hoursAgo = call.argument<Int>("hoursAgo") ?: 24
+                    executor.execute {
+                        try {
+                            val apps = usageManager.getRecentlyActiveApps(hoursAgo)
+                            handler.post { result.success(apps) }
+                        } catch (e: Exception) {
+                            handler.post { result.error("ERROR", e.message, null) }
+                        }
+                    }
+                }
                 "getSystemDetails" -> {
                      executor.execute {
                         try {

@@ -2,8 +2,7 @@ library;
 
 import 'package:flutter/material.dart';
 
-import '../../../../core/navigation/navigation.dart';
-import '../../../apps/domain/entities/device_app.dart';
+import '../../domain/entities/active_app.dart';
 import '../../domain/entities/android_process.dart';
 import 'constants.dart';
 
@@ -379,7 +378,7 @@ class ShellProcessItem extends StatelessWidget {
 }
 
 class UserAppItem extends StatelessWidget {
-  final DeviceApp app;
+  final ActiveApp app;
 
   final AndroidProcess? matchingProcess;
 
@@ -394,34 +393,24 @@ class UserAppItem extends StatelessWidget {
         horizontal: TaskManagerSpacing.lg,
         vertical: TaskManagerSpacing.sm + 2,
       ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: () => AppRouteFactory.toAppDetails(context, app),
+      child: Container(
+        padding: const EdgeInsets.all(TaskManagerSpacing.standard),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surface,
           borderRadius: BorderRadius.circular(TaskManagerBorderRadius.lg),
-          child: Container(
-            padding: const EdgeInsets.all(TaskManagerSpacing.standard),
-            decoration: BoxDecoration(
-              color: theme.colorScheme.surface,
-              borderRadius: BorderRadius.circular(TaskManagerBorderRadius.lg),
-              border: Border.all(
-                color: theme.colorScheme.outlineVariant.withOpacity(
-                  TaskManagerOpacity.mediumLight,
-                ),
-              ),
-            ),
-            child: Row(
-              children: [
-                Hero(
-                  tag: 'task_manager_${app.packageName}',
-                  child: _AppIcon(app: app, size: TaskManagerSizes.appIconSize),
-                ),
-                const SizedBox(width: TaskManagerSpacing.lg),
-                Expanded(child: _buildAppInfo(theme)),
-                _buildStats(theme),
-              ],
+          border: Border.all(
+            color: theme.colorScheme.outlineVariant.withOpacity(
+              TaskManagerOpacity.mediumLight,
             ),
           ),
+        ),
+        child: Row(
+          children: [
+            _AppIcon(app: app, size: TaskManagerSizes.appIconSize),
+            const SizedBox(width: TaskManagerSpacing.lg),
+            Expanded(child: _buildAppInfo(theme)),
+            _buildStats(theme),
+          ],
         ),
       ),
     );
@@ -484,59 +473,37 @@ class UserAppItem extends StatelessWidget {
   }
 
   Widget _buildCachedStats(ThemeData theme) {
-    final lastUsed = DateTime.fromMillisecondsSinceEpoch(app.lastTimeUsed);
-    final diff = DateTime.now().difference(lastUsed);
-
-    String timeAgo;
-    if (diff.inSeconds < 60) {
-      timeAgo = "Active now";
-    } else if (diff.inMinutes < 60) {
-      timeAgo = "${diff.inMinutes}m ago";
-    } else if (diff.inHours < 24) {
-      timeAgo = "${diff.inHours}h ago";
-    } else {
-      timeAgo = "${diff.inDays}d ago";
-    }
-
-    final isRecent = diff.inMinutes < 5;
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
         Text(
-          timeAgo,
+          app.timeAgo,
           style: theme.textTheme.labelSmall?.copyWith(
-            color: isRecent
+            color: app.isRecentlyActive
                 ? theme.colorScheme.primary
                 : theme.colorScheme.onSurfaceVariant,
-            fontWeight: isRecent ? FontWeight.bold : FontWeight.normal,
+            fontWeight: app.isRecentlyActive
+                ? FontWeight.bold
+                : FontWeight.normal,
           ),
         ),
         const SizedBox(height: TaskManagerSpacing.sm),
-        Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: TaskManagerSpacing.sm + 2,
-            vertical: TaskManagerSpacing.xs,
-          ),
-          decoration: BoxDecoration(
-            color: theme.colorScheme.surfaceContainerHighest,
-            borderRadius: BorderRadius.circular(TaskManagerBorderRadius.sm),
-          ),
-          child: Text(
-            "CACHED",
+        if (app.totalTimeInForeground > 0)
+          Text(
+            app.formattedUsageTime,
             style: theme.textTheme.labelSmall?.copyWith(
               fontSize: TaskManagerFontSizes.xs,
               color: theme.colorScheme.onSurfaceVariant,
+              fontFamily: 'monospace',
             ),
           ),
-        ),
       ],
     );
   }
 }
 
 class _AppIcon extends StatelessWidget {
-  final DeviceApp app;
+  final ActiveApp app;
   final double size;
 
   const _AppIcon({required this.app, required this.size});
@@ -551,7 +518,7 @@ class _AppIcon extends StatelessWidget {
         shape: BoxShape.circle,
       ),
       child: ClipOval(
-        child: app.icon != null
+        child: app.icon != null && app.icon!.isNotEmpty
             ? Image.memory(
                 app.icon!,
                 fit: BoxFit.cover,

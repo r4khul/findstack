@@ -9,8 +9,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:system_info2/system_info2.dart';
 
 import '../../../home/presentation/widgets/premium_sliver_app_bar.dart';
+import '../../domain/entities/active_app.dart';
 import '../../domain/entities/android_process.dart';
-import '../../../apps/domain/entities/device_app.dart';
 import '../providers/task_manager_view_model.dart';
 import '../widgets/constants.dart';
 import '../widgets/process_list_items.dart';
@@ -306,7 +306,7 @@ class _TaskManagerPageState extends ConsumerState<TaskManagerPage> {
     }).toList();
   }
 
-  List<DeviceApp> _filterActiveApps(List<DeviceApp> apps, String query) {
+  List<ActiveApp> _filterActiveApps(List<ActiveApp> apps, String query) {
     return apps.where((app) {
       return app.appName.toLowerCase().contains(query) ||
           app.packageName.toLowerCase().contains(query);

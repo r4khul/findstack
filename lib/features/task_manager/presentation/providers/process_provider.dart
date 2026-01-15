@@ -6,12 +6,14 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../domain/entities/active_app.dart';
 import '../../domain/entities/android_process.dart';
 import '../../domain/entities/system_details.dart';
 
 const _channel = MethodChannel('com.rakhul.unfilter/apps');
 const _fetchTimeout = Duration(seconds: 10);
 const _refreshInterval = Duration(seconds: 5);
+const _activeAppsRefreshInterval = Duration(seconds: 30);
 
 class ProcessFetchException implements Exception {
   final String message;
@@ -40,6 +42,13 @@ SystemDetails _parseSystemDetails(dynamic result) {
     gpuUsage: "N/A",
     kernel: "",
   );
+}
+
+List<ActiveApp> _parseActiveApps(dynamic result) {
+  if (result is List) {
+    return result.map((e) => ActiveApp.fromMap(e as Map)).toList();
+  }
+  return [];
 }
 
 Future<List<AndroidProcess>> _fetchProcesses() async {
@@ -79,6 +88,21 @@ Future<SystemDetails> _fetchSystemDetails() async {
       gpuUsage: "N/A",
       kernel: "",
     );
+  }
+}
+
+Future<List<ActiveApp>> _fetchRecentlyActiveApps({int hoursAgo = 24}) async {
+  try {
+    final result = await _channel
+        .invokeMethod('getRecentlyActiveApps', {'hoursAgo': hoursAgo})
+        .timeout(_fetchTimeout);
+    return await compute(_parseActiveApps, result);
+  } on TimeoutException {
+    debugPrint('Active apps fetch timed out');
+    return [];
+  } catch (e) {
+    debugPrint('Error fetching active apps: $e');
+    return [];
   }
 }
 
@@ -195,6 +219,78 @@ final activeProcessesProvider = StreamProvider.autoDispose<ProcessListState>((
           );
         } on ProcessFetchException catch (e) {
           controller.add(currentState.copyWith(isRefreshing: false, error: e));
+        }
+      });
+    },
+    onCancel: () {
+      refreshTimer?.cancel();
+      controller.close();
+    },
+  );
+
+  return controller.stream;
+});
+
+/// Independent provider for recently active apps.
+/// This fetches data directly from usage stats without requiring a full app scan.
+class ActiveAppsState {
+  final List<ActiveApp> apps;
+  final bool isLoading;
+  final String? error;
+  final DateTime? lastUpdated;
+
+  const ActiveAppsState({
+    this.apps = const [],
+    this.isLoading = false,
+    this.error,
+    this.lastUpdated,
+  });
+
+  bool get hasData => apps.isNotEmpty;
+  bool get hasError => error != null;
+}
+
+final recentlyActiveAppsProvider = StreamProvider.autoDispose<ActiveAppsState>((
+  ref,
+) {
+  late StreamController<ActiveAppsState> controller;
+  Timer? refreshTimer;
+
+  controller = StreamController<ActiveAppsState>(
+    onListen: () async {
+      controller.add(const ActiveAppsState(isLoading: true));
+
+      try {
+        final apps = await _fetchRecentlyActiveApps();
+        controller.add(
+          ActiveAppsState(
+            apps: apps,
+            isLoading: false,
+            lastUpdated: DateTime.now(),
+          ),
+        );
+      } catch (e) {
+        controller.add(ActiveAppsState(isLoading: false, error: e.toString()));
+      }
+
+      // Refresh active apps less frequently than processes
+      refreshTimer = Timer.periodic(_activeAppsRefreshInterval, (timer) async {
+        if (controller.isClosed) {
+          timer.cancel();
+          return;
+        }
+
+        try {
+          final apps = await _fetchRecentlyActiveApps();
+          controller.add(
+            ActiveAppsState(
+              apps: apps,
+              isLoading: false,
+              lastUpdated: DateTime.now(),
+            ),
+          );
+        } catch (e) {
+          debugPrint('Periodic active apps fetch failed: $e');
         }
       });
     },

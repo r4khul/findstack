@@ -2,36 +2,41 @@ library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../apps/domain/entities/device_app.dart';
-import '../../../apps/presentation/providers/apps_provider.dart';
+import '../../domain/entities/active_app.dart';
 import '../../domain/entities/android_process.dart';
 import 'process_provider.dart';
 
 class TaskManagerData {
   final List<AndroidProcess> shellProcesses;
-  final List<DeviceApp> activeApps;
+  final List<ActiveApp> activeApps;
   final Map<String, AndroidProcess> matches;
   final bool isRefreshingProcesses;
+  final bool isLoadingApps;
   final DateTime? processesLastUpdated;
   final ProcessFetchException? processError;
+  final String? appsError;
 
   const TaskManagerData({
     this.shellProcesses = const [],
     this.activeApps = const [],
     this.matches = const {},
     this.isRefreshingProcesses = false,
+    this.isLoadingApps = false,
     this.processesLastUpdated,
     this.processError,
+    this.appsError,
   });
 
   bool get hasProcessError => processError != null;
+  bool get hasAppsError => appsError != null;
   bool get hasProcessData => shellProcesses.isNotEmpty;
   bool get hasAppsData => activeApps.isNotEmpty;
 }
 
 final taskManagerViewModelProvider =
     Provider.autoDispose<AsyncValue<TaskManagerData>>((ref) {
-      final appsState = ref.watch(installedAppsProvider);
+      // Use independent recentlyActiveAppsProvider instead of installedAppsProvider
+      final activeAppsState = ref.watch(recentlyActiveAppsProvider);
       final processesState = ref.watch(activeProcessesProvider);
 
       final processListState = processesState.when(
@@ -44,19 +49,34 @@ final taskManagerViewModelProvider =
         ),
       );
 
-      if (appsState.isLoading && !processListState.hasData) {
+      final appsListState = activeAppsState.when(
+        data: (state) => state,
+        loading: () => const ActiveAppsState(isLoading: true),
+        error: (e, _) => ActiveAppsState(error: e.toString()),
+      );
+
+      // Show loading only if both are loading and have no data
+      if (processListState.isRefreshing &&
+          appsListState.isLoading &&
+          !processListState.hasData &&
+          !appsListState.hasData) {
         return const AsyncValue.loading();
       }
 
-      if (appsState.hasError && processListState.hasError) {
-        return AsyncValue.error(appsState.error!, appsState.stackTrace!);
+      // If both have errors and no data, return error
+      if (processListState.hasError &&
+          appsListState.hasError &&
+          !processListState.hasData &&
+          !appsListState.hasData) {
+        return AsyncValue.error(
+          processListState.error ??
+              const ProcessFetchException('Failed to load data'),
+          StackTrace.current,
+        );
       }
 
       final shellProcesses = processListState.processes;
-      final userApps = appsState.value ?? [];
-
-      final activeApps = _filterRecentlyActiveApps(userApps);
-      activeApps.sort((a, b) => b.lastTimeUsed.compareTo(a.lastTimeUsed));
+      final activeApps = appsListState.apps;
 
       final matches = _matchProcessesToApps(activeApps, shellProcesses);
 
@@ -66,22 +86,16 @@ final taskManagerViewModelProvider =
           activeApps: activeApps,
           matches: matches,
           isRefreshingProcesses: processListState.isRefreshing,
+          isLoadingApps: appsListState.isLoading,
           processesLastUpdated: processListState.lastUpdated,
           processError: processListState.error,
+          appsError: appsListState.error,
         ),
       );
     });
 
-List<DeviceApp> _filterRecentlyActiveApps(List<DeviceApp> apps) {
-  return apps.where((app) {
-    final lastUsed = DateTime.fromMillisecondsSinceEpoch(app.lastTimeUsed);
-    final diff = DateTime.now().difference(lastUsed);
-    return diff.inHours < 24;
-  }).toList();
-}
-
 Map<String, AndroidProcess> _matchProcessesToApps(
-  List<DeviceApp> apps,
+  List<ActiveApp> apps,
   List<AndroidProcess> processes,
 ) {
   final matches = <String, AndroidProcess>{};
