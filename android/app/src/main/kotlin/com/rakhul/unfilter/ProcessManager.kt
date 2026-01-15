@@ -1,174 +1,142 @@
 package com.rakhul.unfilter
 
+import android.util.Log
 import java.io.BufferedReader
 import java.io.InputStreamReader
 
 class ProcessManager {
+    companion object {
+        private const val TAG = "ProcessManager"
+    }
 
     fun getRunningProcesses(): List<Map<String, Any?>> {
         val processes = mutableListOf<Map<String, Any?>>()
         try {
-            // Try 'top' first as it gives CPU usage and more details
-            // -b: Batch mode
-            // -n 1: Single iteration
-            val process = Runtime.getRuntime().exec("top -b -n 1")
+            // Use sh -c top -b -n 1 for best compatibility
+            val process = Runtime.getRuntime().exec(arrayOf("sh", "-c", "top -b -n 1"))
             val reader = BufferedReader(InputStreamReader(process.inputStream))
             
             var line: String?
             var headers: List<String>? = null
-            var headerIndexMap: Map<String, Int>? = null
+            var headerIndexMap = mutableMapOf<String, Int>()
             
-            // Limit to prevent freezing in case of infinite stream
             var count = 0
-            val maxProcesses = 500
+            val maxProcesses = 400
             
             while (reader.readLine().also { line = it } != null && count < maxProcesses) {
-                 val trimmed = line?.trim() ?: continue
-                 if (trimmed.isEmpty()) continue
-                 
-                 // Skip meta info lines (Tasks:, Mem:, Swap:)
-                 if (trimmed.startsWith("Tasks:") || 
-                     trimmed.startsWith("Mem:") || 
-                     trimmed.startsWith("Swap:") || 
-                     trimmed.startsWith("%Cpu") ||
-                     (trimmed.contains("User") && trimmed.contains("System"))) {
-                     continue
-                 }
+                val trimmed = line?.trim() ?: continue
+                if (trimmed.isEmpty()) continue
+                
+                // Skip metadata lines
+                if (trimmed.startsWith("Tasks:") || trimmed.startsWith("Mem:") || 
+                    trimmed.startsWith("Swap:") || trimmed.startsWith("User") || trimmed.contains("System")) {
+                    continue
+                }
 
-                 // Detect header - more robust detection
-                 if (trimmed.contains("PID") && (trimmed.contains("USER") || trimmed.contains("UID"))) {
-                     headers = trimmed.split("\\s+".toRegex())
-                     headerIndexMap = headers.mapIndexed { index, col -> col.uppercase() to index }.toMap()
-                     continue
-                 }
-                 
-                 if (headers != null && headerIndexMap != null) {
-                     val parts = trimmed.split("\\s+".toRegex())
-                     // Ensure we have enough parts to cover the essential columns
-                     if (parts.size >= 5) { 
-                         val map = mutableMapOf<String, Any?>()
-                         
-                         // Column accessor with fallbacks
-                         fun getCol(vararg colNames: String): String? {
-                             for (colName in colNames) {
-                                 val idx = headerIndexMap!![colName.uppercase()]
-                                 if (idx != null && idx < parts.size) {
-                                     return parts[idx]
-                                 }
-                             }
-                             return null
-                         }
+                // Detect Header
+                if (trimmed.contains("PID") && (trimmed.contains("USER") || trimmed.contains("CPU"))) {
+                    headers = trimmed.split("\\s+".toRegex())
+                    headerIndexMap.clear()
+                    headers.forEachIndexed { index, col -> 
+                        headerIndexMap[col.uppercase().replace("%", "")] = index 
+                    }
+                    continue
+                }
 
-                         val pid = getCol("PID")
-                         if (pid == null || pid.toIntOrNull() == null) continue // Skip invalid lines
+                // Parse Process Line
+                if (headerIndexMap.isNotEmpty()) {
+                    val parts = trimmed.split("\\s+".toRegex())
+                    // Need at least PID, user, CPU, mem
+                    if (parts.size >= headerIndexMap.size - 2) {
+                        try {
+                            // Find indices
+                            val pidIdx = headerIndexMap["PID"]
+                            val userIdx = headerIndexMap["USER"] ?: headerIndexMap["UID"]
+                            val cpuIdx = headerIndexMap["CPU"]
+                            val memIdx = headerIndexMap["MEM"]
+                            val resIdx = headerIndexMap["RES"] ?: headerIndexMap["RSS"]
+                            val thrIdx = headerIndexMap["THR"] ?: headerIndexMap["S"] // Fallback
+                            val nameIdx = headerIndexMap["ARGS"] ?: headerIndexMap["NAME"] ?: headerIndexMap["COMMAND"] ?: (parts.size - 1)
+                            
+                            if (pidIdx != null && pidIdx < parts.size) {
+                                val pidStr = parts[pidIdx]
+                                if (pidStr.toIntOrNull() == null) continue
 
-                         map["pid"] = pid
-                         map["user"] = getCol("USER", "UID") ?: "?"
-                         map["cpu"] = getCol("%CPU", "CPU") ?: "0.0"
-                         map["mem"] = getCol("%MEM", "MEM") ?: "0.0"
-                         map["res"] = getCol("RES", "RSS") ?: "0"
-                         map["vsz"] = getCol("VIRT", "VSZ") ?: "0"
-                         map["s"] = getCol("S", "STATE") ?: "S"
-                         
-                         // Extended fields
-                         map["threads"] = getCol("THR", "THREADS", "NR")?.toIntOrNull()
-                         map["nice"] = getCol("NI", "NICE")?.toIntOrNull()
-                         map["priority"] = getCol("PR", "PRI", "PRIO")?.toIntOrNull()
-                         map["startTime"] = getCol("TIME+", "TIME", "ELAPSED")
-                         
-                         // Name/Args - tricky as it's usually at the end
-                         // Find where command/args start
-                         var nameIdx = headerIndexMap!!["ARGS"] 
-                             ?: headerIndexMap!!["COMMAND"] 
-                             ?: headerIndexMap!!["NAME"]
-                         
-                         if (nameIdx != null && nameIdx < parts.size) {
-                             // Join all remaining parts as name/args
-                             val fullCommand = parts.subList(nameIdx, parts.size).joinToString(" ")
-                             map["name"] = fullCommand.split("/").lastOrNull()?.split(" ")?.firstOrNull() ?: fullCommand
-                             map["args"] = fullCommand
-                         } else {
-                             // Fallback to last column
-                             map["name"] = parts.last()
-                             map["args"] = parts.last()
-                         }
+                                val map = mutableMapOf<String, Any?>()
+                                map["pid"] = pidStr
+                                map["user"] = if (userIdx != null && userIdx < parts.size) parts[userIdx] else "?"
+                                
+                                // Parse CPU - strip %
+                                var cpuStr = if (cpuIdx != null && cpuIdx < parts.size) parts[cpuIdx] else "0.0"
+                                cpuStr = cpuStr.replace("%", "")
+                                map["cpu"] = cpuStr
 
-                         processes.add(map)
-                         count++
-                     }
-                 }
+                                // Parse MEM - strip %
+                                var memStr = if (memIdx != null && memIdx < parts.size) parts[memIdx] else "0.0"
+                                memStr = memStr.replace("%", "")
+                                map["mem"] = memStr
+                                
+                                map["res"] = if (resIdx != null && resIdx < parts.size) parts[resIdx] else "0"
+                                map["threads"] = if (thrIdx != null && thrIdx < parts.size) parts[thrIdx].toIntOrNull() else null
+                                
+                                // Name might be the last part(s)
+                                val namePart = if (nameIdx < parts.size) {
+                                    parts.subList(nameIdx, parts.size).joinToString(" ")
+                                } else {
+                                    parts.last()
+                                }
+                                map["name"] = namePart.split("/").last().split(" ").first()
+                                map["args"] = namePart
+                                
+                                processes.add(map)
+                                count++
+                            }
+                        } catch (e: Exception) {
+                            // Ignore parsing errors for single lines
+                        }
+                    }
+                }
             }
-            
             reader.close()
             process.waitFor()
             
         } catch (e: Exception) {
-            e.printStackTrace()
-             // Fallback to ps if top fails or returns minimal info
+            Log.e(TAG, "Error running top", e)
+        }
+        
+        // Fallback to simple ps if top failed completely
+        if (processes.isEmpty()) {
              return getProcessesViaPs()
         }
-        
-        if (processes.isEmpty()) {
-            return getProcessesViaPs()
+
+        // Sort by CPU usage
+        return processes.sortedByDescending { 
+            (it["cpu"] as? String)?.toDoubleOrNull() ?: 0.0 
         }
-        
-        return processes
     }
-    
+
     private fun getProcessesViaPs(): List<Map<String, Any?>> {
-        val processes = mutableListOf<Map<String, Any?>>()
-        try {
-             // ps with extended columns
-             // -A: All processes
-             // -o: Output format
-             val columns = "PID,USER,RSS,VSZ,STAT,NI,PRI,NLWP,ELAPSED,ARGS"
-             val process = Runtime.getRuntime().exec(arrayOf("ps", "-A", "-o", columns))
+         val processes = mutableListOf<Map<String, Any?>>()
+         try {
+             // ps -A -o PID,USER,RSS,VSZ,NAME
+             val process = Runtime.getRuntime().exec(arrayOf("ps", "-A", "-o", "PID,USER,RSS,VSZ,NAME"))
              val reader = BufferedReader(InputStreamReader(process.inputStream))
+             reader.readLine() // skip header
              var line: String?
-             
-             // Skip header
-             reader.readLine()
-             
-             var count = 0
-             val maxProcesses = 500
-             
-             while (reader.readLine().also { line = it } != null && count < maxProcesses) {
-                 val trimmed = line?.trim() ?: continue
-                 if (trimmed.isEmpty()) continue
-                 
-                 // Split with limit to preserve ARGS which may have spaces
-                 val parts = trimmed.split("\\s+".toRegex(), limit = 10)
-                 if (parts.size < 9) continue
-                 
+             while (reader.readLine().also { line = it } != null) {
+                 val parts = line?.trim()?.split("\\s+".toRegex()) ?: continue
+                 if (parts.size < 5) continue
                  val map = mutableMapOf<String, Any?>()
                  map["pid"] = parts[0]
                  map["user"] = parts[1]
-                 map["res"] = parts[2] // RSS in KB
-                 map["vsz"] = parts[3]
-                 map["s"] = parts.getOrNull(4)?.firstOrNull()?.toString() ?: "S"
-                 map["nice"] = parts.getOrNull(5)?.toIntOrNull()
-                 map["priority"] = parts.getOrNull(6)?.toIntOrNull()
-                 map["threads"] = parts.getOrNull(7)?.toIntOrNull()
-                 map["startTime"] = parts.getOrNull(8)
-                 
-                 val fullCommand = parts.getOrNull(9) ?: parts.last()
-                 map["name"] = fullCommand.split("/").lastOrNull()?.split(" ")?.firstOrNull() ?: fullCommand
-                 map["args"] = fullCommand
-                 
-                 // ps doesn't directly give CPU percentage
-                 map["cpu"] = "0.0"
+                 map["res"] = parts[2]
+                 map["name"] = parts.last()
+                 map["cpu"] = "0.0" // PS doesn't support CPU on all devices
                  map["mem"] = "0.0"
-                 
                  processes.add(map)
-                 count++
              }
-             
              reader.close()
-             process.waitFor()
-             
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
-        return processes
+         } catch (e: Exception) {}
+         return processes
     }
 }

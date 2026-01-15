@@ -12,7 +12,9 @@ import '../../domain/entities/system_details.dart';
 
 const _channel = MethodChannel('com.rakhul.unfilter/apps');
 const _fetchTimeout = Duration(seconds: 10);
-const _refreshInterval = Duration(seconds: 5);
+const _refreshInterval = Duration(
+  seconds: 3,
+); // Balance between real-time and stability
 const _activeAppsRefreshInterval = Duration(seconds: 30);
 
 class ProcessFetchException implements Exception {

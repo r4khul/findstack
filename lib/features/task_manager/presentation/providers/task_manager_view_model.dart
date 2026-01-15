@@ -4,10 +4,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../domain/entities/active_app.dart';
 import '../../domain/entities/android_process.dart';
+import '../../domain/entities/process_with_history.dart';
+import 'process_history_tracker.dart';
 import 'process_provider.dart';
+
+/// Global instance of the process history tracker
+final _historyTracker = ProcessHistoryTracker();
 
 class TaskManagerData {
   final List<AndroidProcess> shellProcesses;
+  final List<ProcessWithHistory> processesWithHistory;
   final List<ActiveApp> activeApps;
   final Map<String, AndroidProcess> matches;
   final bool isRefreshingProcesses;
@@ -18,6 +24,7 @@ class TaskManagerData {
 
   const TaskManagerData({
     this.shellProcesses = const [],
+    this.processesWithHistory = const [],
     this.activeApps = const [],
     this.matches = const {},
     this.isRefreshingProcesses = false,
@@ -78,11 +85,17 @@ final taskManagerViewModelProvider =
       final shellProcesses = processListState.processes;
       final activeApps = appsListState.apps;
 
+      // Update history tracker and get enriched process data
+      final processesWithHistory = _historyTracker.updateWithProcesses(
+        shellProcesses,
+      );
+
       final matches = _matchProcessesToApps(activeApps, shellProcesses);
 
       return AsyncValue.data(
         TaskManagerData(
           shellProcesses: shellProcesses,
+          processesWithHistory: processesWithHistory,
           activeApps: activeApps,
           matches: matches,
           isRefreshingProcesses: processListState.isRefreshing,

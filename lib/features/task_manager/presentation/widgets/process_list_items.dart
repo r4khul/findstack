@@ -5,7 +5,9 @@ import 'package:flutter/material.dart';
 import '../../../../core/navigation/navigation.dart';
 import '../../domain/entities/active_app.dart';
 import '../../domain/entities/android_process.dart';
+import '../../domain/entities/process_with_history.dart';
 import 'constants.dart';
+import 'sparkline_chart.dart';
 
 class ProcessSectionHeader extends StatelessWidget {
   final String title;
@@ -373,6 +375,194 @@ class ShellProcessItem extends StatelessWidget {
               ),
             ),
           ),
+      ],
+    );
+  }
+}
+
+/// Enhanced process item with sparkline visualization.
+class EnhancedProcessItem extends StatelessWidget {
+  final ProcessWithHistory processWithHistory;
+
+  const EnhancedProcessItem({super.key, required this.processWithHistory});
+
+  AndroidProcess get process => processWithHistory.process;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final intensity = processWithHistory.intensityLevel;
+    final shouldGlow = processWithHistory.shouldGlow;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: TaskManagerSpacing.lg,
+        vertical: TaskManagerSpacing.sm,
+      ),
+      child: Container(
+        padding: const EdgeInsets.all(TaskManagerSpacing.standard),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surface,
+          borderRadius: BorderRadius.circular(TaskManagerBorderRadius.standard),
+          border: Border.all(
+            color: shouldGlow
+                ? _getIntensityColor(intensity).withOpacity(0.5)
+                : theme.colorScheme.outlineVariant.withOpacity(
+                    TaskManagerOpacity.light,
+                  ),
+            width: shouldGlow ? 1.5 : 1,
+          ),
+          boxShadow: shouldGlow
+              ? [
+                  BoxShadow(
+                    color: _getIntensityColor(intensity).withOpacity(0.2),
+                    blurRadius: 8,
+                    spreadRadius: 0,
+                  ),
+                ]
+              : null,
+        ),
+        child: Row(
+          children: [
+            _buildPidBadge(theme, intensity),
+            const SizedBox(width: TaskManagerSpacing.md),
+            Expanded(child: _buildProcessInfo(theme)),
+            const SizedBox(width: TaskManagerSpacing.sm),
+            _buildSparkline(),
+            const SizedBox(width: TaskManagerSpacing.md),
+            _buildStats(theme),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Color _getIntensityColor(int level) {
+    switch (level) {
+      case 0:
+        return const Color(0xFF4CAF50);
+      case 1:
+        return const Color(0xFF8BC34A);
+      case 2:
+        return const Color(0xFFFFC107);
+      case 3:
+        return const Color(0xFFFF9800);
+      case 4:
+        return const Color(0xFFF44336);
+      default:
+        return const Color(0xFF4CAF50);
+    }
+  }
+
+  Widget _buildPidBadge(ThemeData theme, int intensity) {
+    final color = _getIntensityColor(intensity);
+
+    return Container(
+      constraints: const BoxConstraints(minWidth: 48),
+      padding: const EdgeInsets.symmetric(
+        horizontal: TaskManagerSpacing.sm,
+        vertical: TaskManagerSpacing.xs,
+      ),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.15),
+        borderRadius: BorderRadius.circular(TaskManagerBorderRadius.sm),
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+      child: Text(
+        process.pid,
+        textAlign: TextAlign.center,
+        style: TextStyle(
+          fontWeight: FontWeight.bold,
+          fontFamily: 'monospace',
+          fontSize: TaskManagerFontSizes.sm,
+          color: color,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildProcessInfo(ThemeData theme) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          process.name,
+          style: theme.textTheme.bodyMedium?.copyWith(
+            fontWeight: FontWeight.w500,
+          ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        Row(
+          children: [
+            Container(
+              width: 6,
+              height: 6,
+              decoration: BoxDecoration(
+                color: process.isRunning
+                    ? const Color(0xFF4CAF50)
+                    : theme.colorScheme.onSurfaceVariant.withOpacity(0.5),
+                shape: BoxShape.circle,
+              ),
+            ),
+            const SizedBox(width: 4),
+            Text(
+              process.user,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+                fontSize: TaskManagerFontSizes.xs,
+              ),
+            ),
+            if (process.threads != null) ...[
+              const SizedBox(width: 8),
+              Text(
+                '${process.threads} threads',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant.withOpacity(0.7),
+                  fontSize: TaskManagerFontSizes.xs,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSparkline() {
+    // Always show sparkline - it handles minimal data gracefully
+    return SparklineChart.forIntensity(
+      data: processWithHistory.cpuHistory.isEmpty
+          ? [processWithHistory.currentCpu]
+          : processWithHistory.cpuHistory,
+      intensityLevel: processWithHistory.intensityLevel,
+      width: 70,
+      height: 24,
+    );
+  }
+
+  Widget _buildStats(ThemeData theme) {
+    final intensity = processWithHistory.intensityLevel;
+    final color = _getIntensityColor(intensity);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        Text(
+          '${process.cpu}%',
+          style: theme.textTheme.labelSmall?.copyWith(
+            fontWeight: FontWeight.bold,
+            fontFamily: 'monospace',
+            color: color,
+          ),
+        ),
+        Text(
+          'CPU',
+          style: theme.textTheme.labelSmall?.copyWith(
+            fontSize: TaskManagerFontSizes.tiny,
+            color: theme.colorScheme.onSurfaceVariant.withOpacity(0.6),
+          ),
+        ),
       ],
     );
   }

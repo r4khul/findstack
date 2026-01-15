@@ -10,11 +10,11 @@ import 'package:system_info2/system_info2.dart';
 
 import '../../../home/presentation/widgets/premium_sliver_app_bar.dart';
 import '../../domain/entities/active_app.dart';
-import '../../domain/entities/android_process.dart';
+import '../../domain/entities/process_with_history.dart';
 import '../providers/task_manager_view_model.dart';
 import '../widgets/constants.dart';
 import '../widgets/process_list_items.dart';
-import '../widgets/system_stats_card.dart';
+import '../widgets/system_overview_card.dart';
 import '../widgets/task_manager_search_bar.dart';
 import '../widgets/task_manager_stage.dart';
 
@@ -113,22 +113,34 @@ class _TaskManagerPageState extends ConsumerState<TaskManagerPage> {
     }
   }
 
+  double _calculateTotalCpu(AsyncValue<TaskManagerData> viewModelState) {
+    return viewModelState.maybeWhen(
+      data: (data) {
+        if (data.processesWithHistory.isEmpty) return 0;
+        double total = 0;
+        for (final proc in data.processesWithHistory) {
+          total += proc.currentCpu;
+        }
+        return total.clamp(0, 100);
+      },
+      orElse: () => 0,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final viewModelState = ref.watch(taskManagerViewModelProvider);
 
-    final isLoading = _isLoadingStats || viewModelState.isLoading;
-    final isRefreshing = viewModelState.maybeWhen(
-      data: (data) => data.isRefreshingProcesses,
-      orElse: () => false,
-    );
+    // Only show loading on initial load, not on refreshes
+    final isLoading = _isLoadingStats && viewModelState.isLoading;
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       body: TaskManagerStage(
         isLoading: isLoading,
-        isRefreshing: isRefreshing,
+        isRefreshing:
+            false, // Never show refresh indicator - data updates silently
         child: RefreshIndicator(
           onRefresh: () async {
             await Future.wait([_refreshRam(), _refreshBattery()]);
@@ -141,16 +153,14 @@ class _TaskManagerPageState extends ConsumerState<TaskManagerPage> {
               const PremiumSliverAppBar(title: "Task Manager"),
 
               SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.all(TaskManagerSpacing.lg),
-                  child: SystemStatsCard(
-                    deviceModel: _deviceModel,
-                    androidVersion: _androidVersion,
-                    totalRam: _totalRam,
-                    freeRam: _freeRam,
-                    batteryLevel: _batteryLevel,
-                    batteryState: _batteryState,
-                  ),
+                child: SystemOverviewCard(
+                  cpuPercentage: _calculateTotalCpu(viewModelState),
+                  usedRamMb: _totalRam - _freeRam,
+                  totalRamMb: _totalRam,
+                  batteryLevel: _batteryLevel,
+                  isCharging: _batteryState == BatteryState.charging,
+                  deviceModel: _deviceModel,
+                  androidVersion: _androidVersion,
                 ),
               ),
 
@@ -236,19 +246,19 @@ class _TaskManagerPageState extends ConsumerState<TaskManagerPage> {
   }
 
   Widget _buildProcessListContent(TaskManagerData data, ThemeData theme) {
-    var shellProcesses = data.shellProcesses;
+    var processesWithHistory = data.processesWithHistory;
     var activeApps = data.activeApps;
     final matches = data.matches;
 
     if (_searchQuery.isNotEmpty) {
       final query = _searchQuery.toLowerCase();
-      shellProcesses = _filterShellProcesses(shellProcesses, query);
+      processesWithHistory = _filterProcesses(processesWithHistory, query);
       activeApps = _filterActiveApps(activeApps, query);
     }
 
     final List<Widget> listItems = [];
 
-    if (data.hasProcessError && shellProcesses.isEmpty) {
+    if (data.hasProcessError && processesWithHistory.isEmpty) {
       listItems.add(
         _ProcessErrorBanner(
           error: data.processError!.message,
@@ -257,22 +267,22 @@ class _TaskManagerPageState extends ConsumerState<TaskManagerPage> {
       );
     }
 
-    if (shellProcesses.isNotEmpty) {
+    if (processesWithHistory.isNotEmpty) {
       listItems.add(
         ProcessSectionHeader(
           title: "KERNEL / SYSTEM",
           trailing: LiveIndicator(color: theme.colorScheme.error),
         ),
       );
-      for (var proc in shellProcesses) {
-        listItems.add(ShellProcessItem(process: proc));
+      for (var proc in processesWithHistory) {
+        listItems.add(EnhancedProcessItem(processWithHistory: proc));
       }
     }
 
     if (activeApps.isNotEmpty) {
       listItems.add(
         UserSpaceSectionHeader(
-          showSandboxedBadge: shellProcesses.length < 5,
+          showSandboxedBadge: processesWithHistory.length < 5,
           indicatorColor: theme.colorScheme.primary,
         ),
       );
@@ -295,14 +305,14 @@ class _TaskManagerPageState extends ConsumerState<TaskManagerPage> {
     );
   }
 
-  List<AndroidProcess> _filterShellProcesses(
-    List<AndroidProcess> processes,
+  List<ProcessWithHistory> _filterProcesses(
+    List<ProcessWithHistory> processes,
     String query,
   ) {
     return processes.where((proc) {
-      return proc.name.toLowerCase().contains(query) ||
-          proc.user.toLowerCase().contains(query) ||
-          proc.pid.contains(query);
+      return proc.process.name.toLowerCase().contains(query) ||
+          proc.process.user.toLowerCase().contains(query) ||
+          proc.process.pid.contains(query);
     }).toList();
   }
 
