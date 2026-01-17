@@ -3,7 +3,7 @@ library;
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
-/// Animated circular CPU gauge with percentage display.
+/// Monochromatic circular CPU gauge with percentage display.
 class CpuGauge extends StatelessWidget {
   final double percentage;
   final double size;
@@ -16,13 +16,6 @@ class CpuGauge extends StatelessWidget {
     this.strokeWidth = 8,
   });
 
-  Color get _gaugeColor {
-    if (percentage < 25) return const Color(0xFF4CAF50);
-    if (percentage < 50) return const Color(0xFFFFC107);
-    if (percentage < 75) return const Color(0xFFFF9800);
-    return const Color(0xFFF44336);
-  }
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -32,8 +25,8 @@ class CpuGauge extends StatelessWidget {
       height: size,
       child: TweenAnimationBuilder<double>(
         tween: Tween(begin: 0, end: percentage),
-        duration: const Duration(milliseconds: 500),
-        curve: Curves.easeOutCubic,
+        duration: const Duration(milliseconds: 800),
+        curve: Curves.easeOutQuart,
         builder: (context, value, child) {
           return Stack(
             alignment: Alignment.center,
@@ -43,7 +36,7 @@ class CpuGauge extends StatelessWidget {
                 size: Size(size, size),
                 painter: _GaugePainter(
                   percentage: 100,
-                  color: theme.colorScheme.surfaceContainerHighest,
+                  color: theme.colorScheme.outline.withOpacity(0.15),
                   strokeWidth: strokeWidth,
                 ),
               ),
@@ -52,7 +45,7 @@ class CpuGauge extends StatelessWidget {
                 size: Size(size, size),
                 painter: _GaugePainter(
                   percentage: value,
-                  color: _gaugeColor,
+                  color: theme.colorScheme.primary,
                   strokeWidth: strokeWidth,
                 ),
               ),
@@ -62,16 +55,21 @@ class CpuGauge extends StatelessWidget {
                 children: [
                   Text(
                     '${value.round()}%',
-                    style: theme.textTheme.titleMedium?.copyWith(
+                    style: theme.textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.bold,
                       fontFamily: 'monospace',
+                      height: 1.0,
+                      color: theme.colorScheme.onSurface,
                     ),
                   ),
+                  const SizedBox(height: 2),
                   Text(
                     'CPU',
                     style: theme.textTheme.labelSmall?.copyWith(
                       color: theme.colorScheme.onSurfaceVariant,
                       fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.5,
                     ),
                   ),
                 ],
@@ -106,7 +104,6 @@ class _GaugePainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;
 
-    // Start from top (-90 degrees)
     const startAngle = -math.pi / 2;
     final sweepAngle = (percentage / 100) * 2 * math.pi;
 
@@ -125,7 +122,7 @@ class _GaugePainter extends CustomPainter {
   }
 }
 
-/// Animated horizontal memory usage bar.
+/// Monochromatic horizontal memory usage bar.
 class MemoryBar extends StatelessWidget {
   final int usedMb;
   final int totalMb;
@@ -139,13 +136,6 @@ class MemoryBar extends StatelessWidget {
   });
 
   double get percentage => totalMb > 0 ? (usedMb / totalMb * 100) : 0;
-
-  Color get _barColor {
-    if (percentage < 50) return const Color(0xFF4CAF50);
-    if (percentage < 75) return const Color(0xFFFFC107);
-    if (percentage < 90) return const Color(0xFFFF9800);
-    return const Color(0xFFF44336);
-  }
 
   String get _usedText {
     if (usedMb >= 1024) {
@@ -193,7 +183,7 @@ class MemoryBar extends StatelessWidget {
           child: Container(
             height: height,
             decoration: BoxDecoration(
-              color: theme.colorScheme.surfaceContainerHighest,
+              color: theme.colorScheme.outline.withOpacity(0.15),
             ),
             child: TweenAnimationBuilder<double>(
               tween: Tween(begin: 0, end: percentage),
@@ -204,11 +194,7 @@ class MemoryBar extends StatelessWidget {
                   alignment: Alignment.centerLeft,
                   widthFactor: value / 100,
                   child: Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [_barColor.withOpacity(0.8), _barColor],
-                      ),
-                    ),
+                    decoration: BoxDecoration(color: theme.colorScheme.primary),
                   ),
                 );
               },
@@ -220,45 +206,44 @@ class MemoryBar extends StatelessWidget {
   }
 }
 
-/// Temperature indicator with color-coded icon.
+/// Monochromatic temperature indicator badge.
 class TemperatureBadge extends StatelessWidget {
   final double temperature;
 
   const TemperatureBadge({super.key, required this.temperature});
 
-  Color get _tempColor {
-    if (temperature < 35) return const Color(0xFF4CAF50);
-    if (temperature < 40) return const Color(0xFFFFC107);
-    if (temperature < 45) return const Color(0xFFFF9800);
-    return const Color(0xFFF44336);
-  }
-
-  bool get _isHot => temperature >= 40;
+  bool get _isHot => temperature >= 45;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final displayColor = _isHot
+        ? theme.colorScheme.error
+        : theme.colorScheme.onSurfaceVariant;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: _tempColor.withOpacity(0.15),
+        color: displayColor.withOpacity(0.1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: _tempColor.withOpacity(0.3)),
+        border: Border.all(color: displayColor.withOpacity(0.2)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           _isHot
-              ? _PulsingIcon(icon: Icons.thermostat_rounded, color: _tempColor)
-              : Icon(Icons.thermostat_rounded, size: 18, color: _tempColor),
+              ? _PulsingIcon(
+                  icon: Icons.thermostat_rounded,
+                  color: displayColor,
+                )
+              : Icon(Icons.thermostat_rounded, size: 18, color: displayColor),
           const SizedBox(width: 6),
           Text(
             '${temperature.round()}°C',
             style: theme.textTheme.labelMedium?.copyWith(
               fontWeight: FontWeight.bold,
               fontFamily: 'monospace',
-              color: _tempColor,
+              color: displayColor,
             ),
           ),
         ],
