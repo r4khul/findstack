@@ -75,14 +75,26 @@ class SystemDetailReader {
     }
 
     fun getKernelVersion(): String {
+        // First try the build property which doesn't require permission
         try {
-            File("/proc/version").readLines().firstOrNull()?.let {
-                // Example: Linux version 4.14.113 ...
-                return it.split(" ").take(3).joinToString(" ")
+            val version = System.getProperty("os.version")
+            if (!version.isNullOrBlank() && version != "?") {
+                return "Linux $version"
             }
-        } catch (e: Exception) {
-            e.printStackTrace()
+        } catch (_: Exception) {}
+        
+        // Fallback: try /proc/version (may fail on newer Android)
+        try {
+            val file = File("/proc/version")
+            if (file.exists() && file.canRead()) {
+                file.readLines().firstOrNull()?.let {
+                    return it.split(" ").take(3).joinToString(" ")
+                }
+            }
+        } catch (_: Exception) {
+            // Silently ignore - permission denied on newer Android
         }
-        return System.getProperty("os.version") ?: "Linux ?"
+        
+        return "Linux ${android.os.Build.VERSION.RELEASE}"
     }
 }
