@@ -32,6 +32,7 @@ class MainActivity : FlutterActivity() {
     private lateinit var processManager: ProcessManager
     private lateinit var systemReader: SystemDetailReader
     private lateinit var storageAnalyzer: StorageAnalyzer
+    private lateinit var batteryAnalyzer: BatteryAnalyzer
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -42,6 +43,7 @@ class MainActivity : FlutterActivity() {
         processManager = ProcessManager()
         systemReader = SystemDetailReader()
         storageAnalyzer = StorageAnalyzer(this)
+        batteryAnalyzer = BatteryAnalyzer(this)
         
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL).setMethodCallHandler { call, result ->
             when (call.method) {
@@ -263,6 +265,43 @@ class MainActivity : FlutterActivity() {
                 "clearStorageCache" -> {
                     storageAnalyzer.clearCache()
                     result.success(null)
+                }
+                "getBatteryImpactData" -> {
+                    val hoursBack = call.argument<Int>("hoursBack") ?: 24
+                    executor.execute {
+                        try {
+                            val data = batteryAnalyzer.getBatteryImpactData(hoursBack)
+                            handler.post { result.success(data) }
+                        } catch (e: Exception) {
+                            handler.post { result.error("ERROR", e.message, null) }
+                        }
+                    }
+                }
+                "getBatteryVampires" -> {
+                    executor.execute {
+                        try {
+                            val vampires = batteryAnalyzer.getBatteryVampires()
+                            handler.post { result.success(vampires) }
+                        } catch (e: Exception) {
+                            handler.post { result.error("ERROR", e.message, null) }
+                        }
+                    }
+                }
+                "getAppBatteryHistory" -> {
+                    val packageName = call.argument<String>("packageName")
+                    val daysBack = call.argument<Int>("daysBack") ?: 7
+                    if (packageName != null) {
+                        executor.execute {
+                            try {
+                                val history = batteryAnalyzer.getAppBatteryHistory(packageName, daysBack)
+                                handler.post { result.success(history) }
+                            } catch (e: Exception) {
+                                handler.post { result.error("ERROR", e.message, null) }
+                            }
+                        }
+                    } else {
+                        result.error("INVALID_ARGUMENT", "Package name is required", null)
+                    }
                 }
                 else -> result.notImplemented()
             }

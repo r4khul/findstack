@@ -12,6 +12,7 @@ import '../../../home/presentation/widgets/premium_sliver_app_bar.dart';
 import '../../domain/entities/active_app.dart';
 import '../../domain/entities/process_with_history.dart';
 import '../providers/task_manager_view_model.dart';
+import '../widgets/battery_impact_card.dart';
 import '../widgets/constants.dart';
 import '../widgets/process_list_items.dart';
 import '../widgets/system_overview_card.dart';
@@ -163,6 +164,11 @@ class _TaskManagerPageState extends ConsumerState<TaskManagerPage> {
                   androidVersion: _androidVersion,
                 ),
               ),
+
+              const SliverToBoxAdapter(child: SizedBox(height: 8)),
+
+              // Battery Impact Analysis Card
+              const SliverToBoxAdapter(child: BatteryImpactCard()),
 
               const SliverToBoxAdapter(child: SizedBox(height: 10)),
 
